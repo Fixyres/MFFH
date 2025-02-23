@@ -40,9 +40,9 @@ def safe_eval(expr: str):
             if isinstance(node.op, ast.USub):
                 return -_eval(node.operand)
             else:
-                raise TypeError("Неподдерживаемый унарный оператор")
+                raise TypeError("😔Неподдерживаемый оператор")
         else:
-            raise TypeError("Неподдерживаемый тип выражения")
+            raise TypeError("😔Неподдерживаемое выражение")
     
     tree = ast.parse(expr, mode='eval')
     return _eval(tree.body)
@@ -57,7 +57,7 @@ class CalculatorMod(loader.Module):
         """<выражение>."""
         args = utils.get_args_raw(message)
         if not args:
-            await message.edit("Использование: .calc <выражение>")
+            await message.edit("⭐Использование: .calc <выражение>")
             return
         try:
             result = safe_eval(args)
