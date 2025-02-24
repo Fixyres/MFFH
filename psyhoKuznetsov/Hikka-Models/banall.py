@@ -47,7 +47,7 @@ class BanAllModule(loader.Module):
 
     @loader.owner
     async def banallcmd(self, message: Message):
-        """[ID канала/чата] - Бан всех пользователей в канале/чате"""
+        """[тег без @!! канала/чата] - Бан всех пользователей в канале/чате"""
         if self.running:
             await message.edit("<b>❌ Операция уже выполняется!</b> Дождитесь завершения.")
             return
