@@ -5,7 +5,7 @@
 # | '--'D| '--'4| '--'N| '--'1| '--'3| '--'L| '--'3| '--'K| '--'0| '--'0|
 # `------`------`------`------`------`------`------`------`------`------'
 #
-#                     Copyright 2022 t.me/D4n13l3k00
+#                     Copyright 2023 t.me/D4n13l3k00
 #           Licensed under the Creative Commons CC BY-NC-ND 4.0
 #
 #                    Full license text can be found at:
@@ -40,7 +40,7 @@ class WttrInMod(loader.Module):
             "<code>{}</code>".format(
                 await (
                     await aiohttp.ClientSession().get(
-                        f"https://wttr.in/{rr if rr != None else ''}?0Tq&lang=ru"
+                        f"https://wttr.in/{rr if rr is not None else ''}?0Tq&lang=ru"
                     )
                 ).text()
             ),
