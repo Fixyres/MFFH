@@ -195,7 +195,6 @@ class EGSFreeGames(loader.Module):
 
     @loader.loop(interval=86400, autostart=True)
     async def loop(self, *args, **kwargs):
-        logging.error(self.chat.id)
         if not self.config["schedule_checking"]:
             return
         games = await self.get_free_games(self.config["region"])
