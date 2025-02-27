@@ -5,7 +5,7 @@
 # | '--'D| '--'4| '--'N| '--'1| '--'3| '--'L| '--'3| '--'K| '--'0| '--'0|
 # `------`------`------`------`------`------`------`------`------`------'
 #
-#                     Copyright 2022 t.me/D4n13l3k00
+#                     Copyright 2023 t.me/D4n13l3k00
 #           Licensed under the Creative Commons CC BY-NC-ND 4.0
 #
 #                    Full license text can be found at:
@@ -49,10 +49,13 @@ class YtDlMod(loader.Module):
         "reply": "<b>[YouTube-Dl]</b> No link!",
         "noargs": "<b>[YouTube-Dl]</b> No args!",
         "content_too_short": "<b>[YouTube-Dl]</b> Downloading content too short!",
-        "geoban": "<b>[YouTube-Dl]</b> The video is not available for your geographical location due to geographical restrictions set by the website!",
+        "geoban": "<b>[YouTube-Dl]</b> The video is not available "
+        "for your geographical location due to geographical "
+        "restrictions set by the website!",
         "maxdlserr": '<b>[YouTube-Dl]</b> The download limit is as follows: " oh ahah"',
         "pperr": "<b>[YouTube-Dl]</b> Error in post-processing!",
-        "noformat": "<b>[YouTube-Dl]</b> Media is not available in the requested format",
+        "noformat": "<b>[YouTube-Dl]</b> Media is not available in "
+        "the requested format",
         "xameerr": "<b>[YouTube-Dl]</b> {0.code}: {0.msg}\n{0.reason}",
         "exporterr": "<b>[YouTube-Dl]</b> Error when exporting video",
         "err": "<b>[YouTube-Dl]</b> {}",
@@ -141,7 +144,7 @@ class YtDlMod(loader.Module):
             u = rip_data["uploader"] if "uploader" in rip_data else "Northing"
             await utils.answer(
                 m,
-                open(f"{rip_data['id']}.mp3", "rb"),
+                open(f"{rip_data['id']}.mp3.mp3", "rb"),
                 supports_streaming=True,
                 reply_to=reply.id if reply else None,
                 attributes=[
