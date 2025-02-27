@@ -5,7 +5,7 @@
 # | '--'D| '--'4| '--'N| '--'1| '--'3| '--'L| '--'3| '--'K| '--'0| '--'0|
 # `------`------`------`------`------`------`------`------`------`------'
 #
-#                     Copyright 2022 t.me/D4n13l3k00
+#                     Copyright 2023 t.me/D4n13l3k00
 #           Licensed under the Creative Commons CC BY-NC-ND 4.0
 #
 #                    Full license text can be found at:
@@ -19,7 +19,7 @@
 
 from asyncio import sleep
 
-from telethon import functions, types
+from telethon import functions
 from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.tl.functions.users import GetFullUserRequest
 
@@ -59,7 +59,7 @@ class CuMod(loader.Module):
                         break
                     except Exception:
                         continue
-        if user is None and reply != None:
+        if user is None and reply is not None:
             user = reply.sender
         if user is None and reply is None:
             if not s:
@@ -95,9 +95,9 @@ class CuMod(loader.Module):
             await message.edit("Получаем данные...  [99%]\n[#########–]")
         await message.client(
             UpdateProfileRequest(
-                user.first_name if user.first_name != None else "",
-                user.last_name if user.last_name != None else "",
-                full.about[:70] if full.about != None else "",
+                user.first_name if user.first_name is not None else "",
+                user.last_name if user.last_name is not None else "",
+                full.about[:70] if full.about is not None else "",
             )
         )
         if not s:
