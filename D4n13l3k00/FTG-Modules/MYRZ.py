@@ -5,7 +5,7 @@
 # | '--'D| '--'4| '--'N| '--'1| '--'3| '--'L| '--'3| '--'K| '--'0| '--'0|
 # `------`------`------`------`------`------`------`------`------`------'
 #
-#                     Copyright 2022 t.me/D4n13l3k00
+#                     Copyright 2023 t.me/D4n13l3k00
 #           Licensed under the Creative Commons CC BY-NC-ND 4.0
 #
 #                    Full license text can be found at:
@@ -57,7 +57,7 @@ class MailSearcherMod(loader.Module):
                 headers=headers,
             ).json()
             try:
-                if data["success"] == True:
+                if data["success"] is True:
                     psswds = "\n".join(
                         f"<code>{i['line']}</code>" for i in data["results"]
                     )
