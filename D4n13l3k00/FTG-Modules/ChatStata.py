@@ -5,7 +5,7 @@
 # | '--'D| '--'4| '--'N| '--'1| '--'3| '--'L| '--'3| '--'K| '--'0| '--'0|
 # `------`------`------`------`------`------`------`------`------`------'
 #
-#                     Copyright 2022 t.me/D4n13l3k00
+#                     Copyright 2023 t.me/D4n13l3k00
 #           Licensed under the Creative Commons CC BY-NC-ND 4.0
 #
 #                    Full license text can be found at:
@@ -17,7 +17,18 @@
 # meta developer: @D4n13l3k00
 
 
-from telethon.tl.types import *
+from telethon.tl.types import (
+    InputMessagesFilterPhotos,
+    InputMessagesFilterVideo,
+    InputMessagesFilterVoice,
+    InputMessagesFilterMusic,
+    InputMessagesFilterDocument,
+    InputMessagesFilterContacts,
+    InputMessagesFilterGeo,
+    InputMessagesFilterRoundVideo,
+    InputMessagesFilterUrl,
+    InputMessagesFilterGif,
+)
 
 from .. import loader  # type: ignore
 
