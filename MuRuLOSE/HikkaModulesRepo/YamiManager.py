@@ -1,8 +1,5 @@
-import telethon
 from telethon.types import Message
 from .. import loader, utils
-from ..inline.types import InlineCall 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import asyncio
 import random
 from telethon.errors.common import AlreadyInConversationError
@@ -27,7 +24,7 @@ from telethon.errors.common import AlreadyInConversationError
 
 @loader.tds
 class YamiManager(loader.Module):
-    """Module for @YamiChat_bot """
+    """Module for @YamiChat_bot"""
 
     strings = {
         "name": "YamiManager",
@@ -58,6 +55,13 @@ class YamiManager(loader.Module):
     def __init__(self):
         self.bot = "YamiChat_bot"
 
+    async def check_ban(self, text, message):
+        if "Не пиши" in text:
+            await utils.answer(
+                message, "Как ты мог обидеть ями? Теперь я тоже обижена!"
+            )
+            return await self.invoke("unloadmod", "YamiManager", message.peer_id)
+
     @loader.command(
         ru_doc=" [команда] [запрос] - Отправить команду Ями бот\nПример: .scmmnd /img аргументы с запросом"
     )
@@ -72,23 +76,28 @@ class YamiManager(loader.Module):
                 try:
                     await conv.send_message(f"{args[0]} {req}")
                     res = await conv.get_response()
+                    await self.check_ban(res.raw_text, message)
 
-                    if "❌ Чтобы использовать эту функцию, подпишись на мой канал @YamiSpace! ><" in res.raw_text:
+                    if "Вы не подписаны на все каналы" in res.raw_text:
                         await utils.answer(
                             message, f"Check @{self.inline.bot_username}"
                         )
 
-                        return await self.yami_request_join()
+                        return await self.request_join(
+                            "YamiChannel",
+                            f"{self.strings['sub-req']}",
+                            assure_joined=True,
+                        )
 
                     if (
-                        "✅ Запрос принят"
+                        "✅ Запрос принят! Пожалуйста подожди 1-3 минуты, оно того стоит :3"
                         in res.raw_text
                     ):
                         await asyncio.sleep(10)
                         res = await conv.get_response()
 
                     elif (
-                        "❌ Технические работы. Попробуй позже.."
+                        "❌Генерация изображений отключена на данный момент! Мы уже работаем над восстановлением!"
                         in res.raw_text
                     ):
                         return await utils.answer(
@@ -133,6 +142,8 @@ class YamiManager(loader.Module):
             async with self.client.conversation(self.bot, timeout=10) as conv:
                 try:
                     await conv.send_message("/start")
+                    res = await conv.get_response()
+                    await self.check_ban(res.raw_text, message)
                 except asyncio.TimeoutError:
                     return await utils.answer(message, self.strings["dead"])
 
@@ -143,21 +154,3 @@ class YamiManager(loader.Module):
             return await utils.answer(message, self.strings["aleardyconv"])
 
         await utils.answer(message, self.strings["alive"])
-    
-    async def yami_request_join(self):
-        reply_markup = InlineKeyboardMarkup()
-        reply_markup.add(InlineKeyboardButton(text="✅ Approve", callback_data="approve"))
-        reply_markup.add(InlineKeyboardButton(text="❌ Decline", callback_data="decline"))
-        await self.inline.bot.send_message(self.tg_id, self.strings["sub-req"], reply_markup=reply_markup)
-        
-    async def yami_sub_callback_handler(self, call: InlineCall):
-        if call.data == 'decline':
-            await call.answer('❌')
-            await self.invoke("unloadmod", "YamiManager", call.message.chat.id)
-            await call.message.delete()
-        elif call.data == 'approve':
-            await self.client(telethon.tl.functions.channels.JoinChannelRequest(
-                channel='YamiSpace'
-            ))
-            await call.answer('✅')
-            await call.message.delete()
