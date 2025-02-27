@@ -109,15 +109,15 @@ class HornyHaremModule(loader.Module):
             return
         if pattern:
             await message.edit("<emoji document_id=5472146462362048818>💡</emoji>")
-            clicks = solution(pattern)
+            clicks = await self.solution(pattern)
             if not clicks:
                 await message.edit("Иди код трейси гений.")
                 return #*смачный пинок кодеру под зад.*
             await message.edit("Решение найдено.")
-            for i in len(clicks):
-                if clicks[i-1] == 1:
-                    r = await client.get_messages(r.chat_id,ids=r.id)
-                    await r.click(i-1)
+            for i in range(len(clicks)):
+                if clicks[i] == 1:
+                    r = await self.client.get_messages(r.chat_id,ids=r.id)
+                    await r.click(i)
             await message.edit("Готово.")
         else:
             await message.edit("Ты ответил не на поле игры.")
