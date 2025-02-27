@@ -5,7 +5,7 @@
 # | '--'D| '--'4| '--'N| '--'1| '--'3| '--'L| '--'3| '--'K| '--'0| '--'0|
 # `------`------`------`------`------`------`------`------`------`------'
 #
-#                     Copyright 2022 t.me/D4n13l3k00
+#                     Copyright 2023 t.me/D4n13l3k00
 #           Licensed under the Creative Commons CC BY-NC-ND 4.0
 #
 #                    Full license text can be found at:
@@ -49,7 +49,9 @@ class BackupManMod(loader.Module):
                 already_loaded += 1
         self._db.set("friendly-telegram.modules.loader", "loaded_modules", modules)
         await m.edit(
-            f"<b>[BackupMan]</b>\n\n<i>Загружено модулей:</i> <code>{valid}</code>\n<i>Загружены ранее:</i> <code>{already_loaded}</code>\n\n"
+            "<b>[BackupMan]</b>\n\n"
+            "<i>Загружено модулей:</i> <code>{valid}</code>\n"
+            "<i>Загружены ранее:</i> <code>{already_loaded}</code>\n\n"
             + (
                 "<b>> Юзербот автоматически перезагрузится</b>"
                 if valid != 0
@@ -68,7 +70,10 @@ class BackupManMod(loader.Module):
         await m.client.send_file(
             m.to_id,
             txt,
-            caption=f"<b>[BackupMan]</b> <i>Бэкап модулей</i>\n<i>Модулей:</i> <code>{len(modules)}</code>\n<i>Для загрузки бэкапа используй модуль:</i>\n<code>.dlmod https://d4n13l3k00.ru/modules/BackupMan.py</code>",
+            caption="<b>[BackupMan]</b> <i>Бэкап модулей</i>\n"
+            f"<i>Модулей:</i> <code>{len(modules)}</code>\n"
+            "<i>Для загрузки бэкапа используй модуль:</i>\n"
+            "<code>.dlmod https://d4n13l3k00.ru/modules/BackupMan.py</code>",
         )
         await m.delete()
 
@@ -91,7 +96,9 @@ class BackupManMod(loader.Module):
                 already_loaded += 1
         self._db.set("friendly-telegram.modules.notes", "notes", notes)
         await m.edit(
-            f"<b>[BackupMan]</b>\n\n<i>Загружено/заменено заметок:</i> <code>{valid}</code>\n<i>Загружены ранее:</i> <code>{already_loaded}</code>"
+            "<b>[BackupMan]</b>\n\n"
+            f"<i>Загружено/заменено заметок:</i> <code>{valid}</code>\n"
+            f"<i>Загружены ранее:</i> <code>{already_loaded}</code>"
         )
 
     @loader.owner
@@ -103,6 +110,9 @@ class BackupManMod(loader.Module):
         await m.client.send_file(
             m.to_id,
             txt,
-            caption=f"<b>[BackupMan]</b> <i>Бэкап заметок</i>\n<i>Заметок:</i> <code>{len(modules)}</code>\n<i>Для загрузки бэкапа используй модуль:</i>\n<code>.dlmod https://d4n13l3k00.ru/modules/BackupMan.py</code>",
+            caption=f"<b>[BackupMan]</b> <i>Бэкап заметок</i>\n"
+            f"<i>Заметок:</i> <code>{len(modules)}</code>\n"
+            "<i>Для загрузки бэкапа используй модуль:</i>\n"
+            "<code>.dlmod https://d4n13l3k00.ru/modules/BackupMan.py</code>",
         )
         await m.delete()
