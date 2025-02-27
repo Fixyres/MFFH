@@ -5,7 +5,7 @@
 # | '--'D| '--'4| '--'N| '--'1| '--'3| '--'L| '--'3| '--'K| '--'0| '--'0|
 # `------`------`------`------`------`------`------`------`------`------'
 #
-#                     Copyright 2022 t.me/D4n13l3k00
+#                     Copyright 2023 t.me/D4n13l3k00
 #           Licensed under the Creative Commons CC BY-NC-ND 4.0
 #
 #                    Full license text can be found at:
@@ -61,7 +61,9 @@ class VSHAKALMod(loader.Module):
 
         m = await utils.answer(m, "[Шакал] Шакалю...")
         os.system(
-            f'ffmpeg -y -i "{vid}" -b:v {lvl} -maxrate:v {lvl} -b:a {lvl} -maxrate:a {lvl} "{out}"'
+            f'ffmpeg -y -i "{vid}" '
+            f"-b:v {lvl} -maxrate:v {lvl} "
+            f'-b:a {lvl} -maxrate:a {lvl} "{out}"'
         )
         m = await utils.answer(m, "[Шакал] Отправляю...")
         await utils.answer(m, out)
