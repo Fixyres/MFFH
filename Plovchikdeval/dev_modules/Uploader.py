@@ -1,4 +1,4 @@
-__version__ = (1, 1, 3)
+__version__ = (2, 0, 0)
 
 """
 888    d8P   .d8888b.  888    888     888b     d888  .d88888b.  8888888b.   .d8888b.  
@@ -17,14 +17,14 @@ Licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 Inter
 # scope: hikka_min 1.3.3
 # meta developer: @kshmods
 # meta banner: https://kappa.lol/--YNb
-# requires: requests
+# requires: aiohttp
 
 import logging
 import io
 import os
 import random
+import aiohttp
 import json
-import requests
 
 from telethon.tl.types import Message
 
@@ -34,29 +34,38 @@ logger = logging.getLogger(__name__)
 
 @loader.tds
 class UploaderMod(loader.Module):
-    """Загрузка на зеркало 0x.at"""
+    """Модуль для загрузки файлов"""
 
     strings = {
         "name": "Uploader",
+        "_cfg_token": "Paste the received API key from @kshteam_uploader_token_bot",
+        "no_token": "<emoji document_id=5872829476143894491>🚫</emoji> <b>Invalid token!</b>\n<emoji document_id=5879785854284599288>ℹ️</emoji> <b>Get token in</b> @kshteam_uploader_token_bot",
+        "ban": "<emoji document_id=5458779239941681169>😔</emoji> <b>You have been banned</b>\n<emoji document_id=5879785854284599288>ℹ️</emoji> <b>If this is a mistake, write to</b> @dev3quest",
         "uploading": "<emoji document_id=5872756762347573066>⏲</emoji> <b>Uploading...</b>",
         "noargs": "<emoji document_id=5208434048753484584>⛔</emoji> <b>No file specified</b>",
         "err": "<emoji document_id=5208434048753484584>⛔</emoji> <b>Upload error</b>",
         "uploaded": "<emoji document_id=5208547229731669225>⚡</emoji> <b>File uploaded!</b>\n\n<code>{link_to_file}</code>",
     }
 
-    strings_ua = {
-        "uploading": "<emoji document_id=5872756762347573066>⏲</emoji><b>Завантаження...</b>",
-        "noargs": "<emoji document_id=5208434048753484584>⛔</emoji> <b>Файл не вказано</b>",
-        "err": "<emoji document_id=5208434048753484584>⛔</emoji> <b>Помилка завантаження</b>",
-        "uploaded": "<emoji document_id=5208547229731669225>⚡</emoji> <b>Файл завантажено!</b>\n\n<code>{link_to_file}</code>",
-    }
-
     strings_ru = {
+        "_cfg_token": "Вставьте полученный ключ API от @kshteam_uploader_token_bot",
+        "no_token": "<emoji document_id=5872829476143894491>🚫</emoji><b> Недействительный токен!</b>\n<emoji document_id=5879785854284599288>ℹ️</emoji> <b>Получите токен в</b> @kshteam_uploader_token_bot",
+        "ban": "<emoji document_id=5458779239941681169>😔</emoji> <b>Вас забанили</b>\n<emoji document_id=5879785854284599288>ℹ️</emoji> <b>Если это ошибка, напишите</b> @dev3quest",
         "uploading": "<emoji document_id=5872756762347573066>⏲</emoji> <b>Загрузка...</b>",
         "noargs": "<emoji document_id=5208434048753484584>⛔</emoji> <b>Файл не указан</b>",
         "err": "<emoji document_id=5208434048753484584>⛔</emoji> <b>Ошибка загрузки</b>",
         "uploaded": "<emoji document_id=5208547229731669225>⚡</emoji> <b>Файл загружен!</b>\n\n<code>{link_to_file}</code>",
     }
+
+    def __init__(self):
+      self.config = loader.ModuleConfig(
+          loader.ConfigValue(
+              "token",
+              "None",
+              lambda: self.strings("_cfg_token"),
+              validator=loader.validators.Hidden(),
+              ),
+          )
 
     async def client_ready(self, client, _):
         self._client = client
@@ -92,10 +101,12 @@ class UploaderMod(loader.Module):
 
         return file
 
-    @loader.sudo
     @loader.command(en_doc="Upload file", ru_doc="Загрузить файл", ua_doc="Завантажити файл")
     async def oxload(self, message: Message):
-        """Upload file"""
+        if not self.config["token"] or self.config["token"] == "None":
+            await utils.answer(message, self.strings("no_token"))
+            return
+
         file = await self.get_media(message)
         if not file:
             return
@@ -103,12 +114,33 @@ class UploaderMod(loader.Module):
         await utils.answer(message, self.strings("uploading"))
         
         try:
-            devup = requests.post("http://ndpropave5.temp.swtest.ru", files={"file": file})
-        except ConnectionError as e:
+            headers = {
+                "x-api-key": self.config["token"]
+            }
+
+            async with aiohttp.ClientSession() as session:
+                form_data = aiohttp.FormData() 
+                form_data.add_field("file", file)
+                async with session.post("https://upload.kshteam.top/upload", headers=headers, data=form_data) as response:
+                    response.raise_for_status()
+
+                    data = await response.text()
+                    try:
+                        data = json.loads(data)
+                        file_url = data.get("url")
+                    except son.JSONDecodeError:
+                        file_url = data.strip()
+
+        except aiohttp.ClientResponseError as e:
+            if response.status == 403:
+                await utils.answer(message, self.strings("ban"))
+            else:
+              logger.error(f"File uploading error: {e}", exc_info=True)
+              await utils.answer(message, self.strings("err"))
+            return
+        except Exception as e:
             logger.error(f"File uploading error: {e}", exc_info=True)
             await utils.answer(message, self.strings("err"))
             return
         
-        link = devup.text
- 
-        await utils.answer(message, self.strings("uploaded").format(link_to_file=link))
+        await utils.answer(message, self.strings("uploaded").format(link_to_file=file_url))
