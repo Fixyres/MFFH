@@ -123,10 +123,10 @@ class WarPigsMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="- Включить/отключить автобой"
+        ru_doc="👉 Включить/отключить автобой"
     )
     async def afightcmd(self, message: types.Message):
-        """- Enable/disable autofight"""
+        """👉 Enable/disable autofight"""
         if message.is_private:
             await utils.answer(message, self.strings("dforpm"))
             return
@@ -147,10 +147,10 @@ class WarPigsMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="- Включить/отключить автокормёжку"
+        ru_doc="👉 Включить/отключить автокормёжку"
     )
     async def agrowcmd(self, message: types.Message):
-        """- Enable/disable autogrow"""
+        """👉 Enable/disable autogrow"""
         if message.is_private:
             await utils.answer(message, self.strings("dforpm"))
             return
@@ -171,10 +171,10 @@ class WarPigsMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="<имя> - Меняет имя вашего хряка"
+        ru_doc="<имя> 👉 Меняет имя вашего хряка"
     )
     async def setnamecmd(self, message: types.Message):
-        """<name> - Changes your pig's name"""
+        """<name> 👉 Changes your pig's name"""
         args = utils.get_args_raw(message)
         if not args:
             return await utils.answer(message, self.strings("no_name"))
