@@ -327,11 +327,11 @@ class YaMusicMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="- Включить/выключить автобио",
+        ru_doc="👉 Включить/выключить автобио",
         alias="yb"
     )
     async def ybiocmd(self, message: types.Message):
-        """- Enable/disable autobio"""
+        """👉 Enable/disable autobio"""
 
         if not self.config['token']:
             return await utils.answer(message, self.strings("no_token"))
@@ -357,11 +357,11 @@ class YaMusicMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="- Гайд по получению токена Яндекс.Музыки",
+        ru_doc="👉 Гайд по получению токена Яндекс.Музыки",
         alias="yg"
     )
     async def yguidecmd(self, message: types.Message):
-        """- Guide for obtaining a Yandex.Music token"""
+        """👉 Guide for obtaining a Yandex.Music token"""
 
         await utils.answer(
             message,
@@ -370,11 +370,11 @@ class YaMusicMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="- Получить трек, который играет сейчас",
+        ru_doc="👉 Получить трек, который играет сейчас",
         alias="yn"
     )
     async def ynowcmd(self, message: types.Message):
-        """- Get now playing track"""
+        """👉 Get now playing track"""
 
         if not self.config['token']:
             return await utils.answer(message, self.strings("no_token"))
@@ -455,11 +455,11 @@ class YaMusicMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="<запрос> - Поиск трека в Яндекс.Музыке",
+        ru_doc="<запрос> 👉 Поиск трека в Яндекс.Музыке",
         alias="yq"
     )
     async def ysearchcmd(self, message: types.Message):
-        """<query> - Search track in Yandex.Music"""
+        """<query> 👉 Search track in Yandex.Music"""
 
         if not self.config['token']:
             return await utils.answer(message, self.strings("no_token"))
@@ -504,11 +504,11 @@ class YaMusicMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="- Включить все виджеты",
+        ru_doc="👉 Включить все виджеты",
         alias="yam"
     )
     async def yautomsgcmd(self, message: types.Message):
-        """- Enable all widgets"""
+        """👉 Enable all widgets"""
 
         if self.get("automsg", False):
             self.automsg.stop()
@@ -527,11 +527,11 @@ class YaMusicMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="<ссылка на сообщение/пост> - Сделать сообщение/пост виджетом",
+        ru_doc="<ссылка на сообщение/пост> 👉 Сделать сообщение/пост виджетом",
         alias="yw"
     )
     async def ywidgetcmd(self, message: types.Message):
-        """<link to message/post> - Make a message/post a widget"""
+        """<link to message/post> 👉 Make a message/post a widget"""
 
         args = utils.get_args_raw(message)
         if not args:
