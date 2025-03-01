@@ -27,6 +27,7 @@ class QuickTools(loader.Module):
             "<b>·</b> <emoji document_id=5974187156686507310>💬</emoji> <b>Replied Message id:</b> <code>{}</code>\n"
         ),
         "reply_markup_cmd_text": "<emoji document_id=5397782960512444700>📌</emoji> <b>Buttons:</b>\n{}",
+        "entity_link_cmd_text": "<emoji document_id=5253577054137362120>🔗</emoji> <b>Your link:</b> {}",
         "empty": "Empty",
         "no_reply": "<emoji document_id=5210952531676504517>❌</emoji> <b>No reply!</b>",
         "no_args": "<emoji document_id=5210952531676504517>❌</emoji> <b>No args!</b>",
@@ -42,6 +43,7 @@ class QuickTools(loader.Module):
             "<b>·</b> <emoji document_id=5974187156686507310>💬</emoji> <b>Айди ответного сообщения:</b> <code>{}</code>\n"
         ),
         "reply_markup_cmd_text": "<emoji document_id=5397782960512444700>📌</emoji> <b>Кнопки:</b>\n{}",
+        "entity_link_cmd_text": "<emoji document_id=5253577054137362120>🔗</emoji> <b>Ваша ссылка:</b> {}",
         "empty": "Отсутствует",
         "no_reply": "<emoji document_id=5210952531676504517>❌</emoji> <b>Вы не ответили на сообщение!</b>",
         "no_args": "<emoji document_id=5210952531676504517>❌</emoji> <b>Вы не передали аргументы!</b>",
@@ -107,3 +109,22 @@ class QuickTools(loader.Module):
             text += f"  - <i>{button.text}</i> - {value_type}: <code>{value}</code>\n"
 
         await utils.answer(message, self.strings("reply_markup_cmd_text").format(text))
+
+    @loader.command()
+    async def entity_link(self, message: Message) -> None:
+        """<bot api entity id> <use open message (optional)> - creates link to entity (chat/user)"""
+
+        args = utils.get_args(message)
+        if len(args) == 0 or not args[0].isdigit() and not args[0].startswith("@"):
+            await utils.answer(message, self.strings("no_args"))
+            return
+        openmessage = bool(args[1]) if len(args) > 1 else False
+
+        if args[0].startswith("@"):
+            entity = await self.client.get_entity(args[0])
+        else:
+            entity = await self.client.get_entity(int(args[0]))
+
+        link = utils.get_entity_url(entity, openmessage)
+
+        await utils.answer(message, self.strings("entity_link_cmd_text").format(link))
