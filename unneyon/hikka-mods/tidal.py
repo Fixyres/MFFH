@@ -58,11 +58,11 @@ class TidalMod(loader.Module):
         "args": "<emoji document_id=5312526098750252863>❌</emoji> <b>Specify search query</b>",
         "404": "<emoji document_id=5312526098750252863>❌</emoji> <b>No results found</b>",
         "oauth": (
-            "🔑 <b>Login to TIDAL</b>\n\n<i>This link will expire in 5 minutes</i>"
+            "<emoji document_id=5773798959206108871>🔑</emoji> <b>Login to TIDAL</b>\n\n<i>This link will expire in 5 minutes</i>"
         ),
         "oauth_btn": "🔑 Login",
-        "success": "✅ <b>Successfully logged in!</b>",
-        "error": "❌ <b>Error logging in</b>",
+        "success": "<emoji document_id=5314250708508220914>✅</emoji> <b>Successfully logged in!</b>",
+        "error": "<emoji document_id=5312526098750252863>❌</emoji> <b>Error logging in</b>",
         "search": "<emoji document_id=5438616889632761336>🎧</emoji> <b>{artist} — {title}</b>\n<emoji document_id=5359582743992737342>🎵</emoji> <b><a href=\"https://tidal.com/track/{track_id}\">TIDAL</a> | <a href=\"https://song.link/t/{track_id}\">song.link</a></b>",
         "downloading_file": "\n\n<emoji document_id=5325617665874600234>🕔</emoji> <i>Downloading audio…</i>",
         "searching": "<emoji document_id=5309965701241379366>🔍</emoji> <b>Searching…</b>",
@@ -74,12 +74,12 @@ class TidalMod(loader.Module):
         "args": "<emoji document_id=5312526098750252863>❌</emoji> <b>Укажите поисковый запрос</b>",
         "404": "<emoji document_id=5312526098750252863>❌</emoji> <b>Ничего не найдено</b>",
         "oauth": (
-            "🔑 <b>Авторизуйтесь в TIDAL</b>\n\n<i>Эта ссылка будет действительна в"
+            "<emoji document_id=5773798959206108871>🔑</emoji> <b>Авторизуйтесь в TIDAL</b>\n\n<i>Эта ссылка будет действительна в"
             " течение 5 минут</i>"
         ),
         "oauth_btn": "🔑 Авторизоваться",
-        "success": "✅ <b>Успешно авторизованы!</b>",
-        "error": "❌ <b>Ошибка авторизации</b>",
+        "success": "<emoji document_id=5314250708508220914>✅</emoji> <b>Успешно авторизованы!</b>",
+        "error": "<emoji document_id=5312526098750252863>❌</emoji> <b>Ошибка авторизации</b>",
         "search": "<emoji document_id=5438616889632761336>🎧</emoji> <b>{artist} — {title}</b>\n<emoji document_id=5359582743992737342>🎵</emoji> <b><a href=\"https://tidal.com/track/{track_id}\">TIDAL</a> | <a href=\"https://song.link/t/{track_id}\">song.link</a></b>",
         "downloading_file": "\n\n<emoji document_id=5325617665874600234>🕔</emoji> <i>Загрузка аудио…</i>",
         "searching": "<emoji document_id=5309965701241379366>🔍</emoji> <b>Ищем…</b>",
@@ -137,11 +137,11 @@ class TidalMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="Авторизация в TIDAL",
+        ru_doc="👉 Авторизация в TIDAL",
         alias="tauth"
     )
     async def tlogincmd(self, message: types.Message):
-        """Open OAuth window to login into TIDAL"""
+        """👉 Open OAuth window to login into TIDAL"""
 
         tidal_session = self.tidalLogin()
         result, future = tidal_session.login_oauth()
@@ -184,11 +184,11 @@ class TidalMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="<запрос> - Поиск трека в TIDAL",
+        ru_doc="<запрос> 👉 Поиск трека в TIDAL",
         alias="tq"
     )
     async def tidalcmd(self, message: types.Message):
-        """<query> - Search track in TIDAL"""
+        """<query> 👉 Search track in TIDAL"""
 
         tidal_session = self.tidalLogin()
         if not await utils.run_sync(tidal_session.check_login):
@@ -277,11 +277,11 @@ class TidalMod(loader.Module):
 
 
     @loader.command(
-        ru_doc="<ID/ссылка> - Поиск трека в TIDAL по ID или ссылке",
+        ru_doc="<ID/ссылка> 👉 Поиск трека в TIDAL по ID или ссылке",
         alias="tid"
     )
     async def turlcmd(self, message: types.Message):
-        """<ID/url> - Search track in TIDAL by ID or url"""
+        """<ID/url> 👉 Search track in TIDAL by ID or url"""
 
         tidal_session = self.tidalLogin()
         if not await utils.run_sync(tidal_session.check_login):
@@ -367,4 +367,4 @@ class TidalMod(loader.Module):
                     performer=', '.join(track_res['artists'])
                 )
             ])
-    )
+        )
