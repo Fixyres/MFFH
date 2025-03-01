@@ -69,11 +69,12 @@ class ChatModule(loader.Module):
         "no_ownerships": "Владений нет.",
         "no_user": "Пользователь не найден.",
         "unknown_user": "Неизвестный пользователь.",
-        "unmuted": "Пользователь {first_name}(<code>{user_id}</code>) был размучен.",
-        "muted": "Пользователь {first_name} (<code>{user_id}</code>) был замучен на {mute_time} {unit}.",
+        "unmuted": "🔈 {first_name} [<code>{user_id}</code>] был размучен.",
+        "muted": "🔇 {first_name} [<code>{user_id}</code>] был замучен на {mute_time} {unit}.\n<i><b>Причина:</b> {reason}</i>",
         "users_too_much": "Лимит приглашения пользователей достигнут.",
         "kick_all": "{user_count} участников будут кикнуты.",
-        "kicked": "Пользователь {name}(<code>{id}</code>) был кикнут.",
+        "kicked": "🚷 {name} [<code>{id}</code>] был кикнут.\n<i><b>Причина:</b> {reason}</i>",
+        "banned": "🚷 {name} [<code>{id}</code>] был забанен.\n<i><b>Причина:</b> {reason}</i>",
         "chat_type_error": "Не удалось определить тип чата.",
         "invite_success": "<b>Пользователь приглашён успешно!</b>",
         "privacy_settings_error": "<b>Настройки приватности пользователя не позволяют пригласить его.</b>",
@@ -143,6 +144,7 @@ class ChatModule(loader.Module):
         "restricts": "\n🔹 <u>Ограничения:</u>\n",
         "no_restricts": "\n🔹 <u>Ограничения:</u> ✅ Нет ограничений\n",
         "invalid_number": "❗ Укажите корректное количество сообщений для удаления.",
+        "no_reason": "Без причины",
         "deleted_messages": "✅ Удалено {count} сообщений.",
         "failed_get_rights": "<b>Ваши права не могут быть определены в этом чате.</b>",
     }
@@ -152,6 +154,7 @@ class ChatModule(loader.Module):
         "deleted_messages": "✅ {count} messages deleted.",
         "loading": "🕐 <b>Processing data...</b>",
         "invalid_number": "❗ Specify the correct number of messages to delete.",
+        "no_reason": "No reason",
         "restricts": "\n🔹 <u>Restrictions:</u>\n",
         "no_restricts": "\n🔹 <u>Restrictions:</u> ✅ No restrictions\n",
         "admin_rights": "🔹 <u>Admin rights:</u>\n",
@@ -195,11 +198,12 @@ class ChatModule(loader.Module):
         "no_ownerships": "No possessions.",
         "no_user": "User not found.",
         "unknown_user": "Unknown user.",
-        "unmuted": "User {first_name}(<code>{user_id}</code>) was unmuted.",
-        "muted": "User {first_name} (<code>{user_id}</code>) was muted for {mute_time} {unit}.",
+        "unmuted": "🔈 {first_name} [<code>{user_id}</code>] was unmuted.",
+        "muted": "🔇 {first_name} [<code>{user_id}</code>] was muted for {mute_time} {unit}.\n<i><b>Reason:</b> {reason}</i>",
+        "banned": "🚷 {name} [<code>{id}</code>] was banned.\n<i><b>Reason:</b> {reason}</i>",
         "users_too_much": "The user invitation limit has been reached.",
         "kick_all": "{user_count} participants will be kicked.",
-        "kicked": "User {name}(<code>{id}</code>) was kicked.",
+        "kicked": "🚷 {name} [<code>{id}</code>] was kicked.\n<i><b>Reason:</b> {reason}</i>",
         "chat_type_error": "Failed to determine chat type.",
         "invite_success": "<b>User successfully invited!</b>",
         "privacy_settings_error": "<b>The user's privacy settings do not allow inviting them.</b>",
@@ -1301,15 +1305,25 @@ class ChatModule(loader.Module):
     )
     async def mute(self, message):
         """<reply/ID/username> <time> | Mutes the user for a certain time."""
-        args = message.raw_text.split(maxsplit=2)
+        args = utils.get_args_raw(message).split()
         reply = await message.get_reply_message()
 
-        if len(args) < 3 and not reply:
+        if len(args) == 0:
             await utils.answer(message, self.strings("invalid_args", message))
             return
+
+        if len(args) < 2 and not reply:
+            await utils.answer(message, self.strings("invalid_args", message))
+            return
+        if not reply and len(args) > 2:
+            reason = " ".join(args[2:])
+        elif reply and len(args) > 1:
+            reason = " ".join(args[1:])
+        else:
+            reason = self.strings("no_reason", message)
         try:
-            unit = args[-1][-1]
-            mute_time = int(args[-1][:-1])
+            unit = args[1][-1] if not reply else args[0][-1]
+            mute_time = int(args[1][:-1]) if not reply else int(args[0][:-1])
             duration = timedelta(minutes=mute_time)
             if unit == "m":
                 duration = timedelta(minutes=mute_time)
@@ -1334,8 +1348,8 @@ class ChatModule(loader.Module):
             reply_message = await message.get_reply_message()
             user_id = reply_message.sender_id
             first_name = reply_message.sender.first_name
-        elif len(args) == 3:
-            user_identifier = int(args[1]) if args[1].isdigit() else args[1]
+        else:
+            user_identifier = int(args[0]) if args[0].isdigit() else args[0]
             try:
                 user = await message.client.get_entity(user_identifier)
                 user_id = user.id
@@ -1343,9 +1357,6 @@ class ChatModule(loader.Module):
             except Exception:
                 await utils.answer(message, self.strings("no_user", message))
                 return
-        else:
-            await utils.answer(message, self.strings("no_user", message))
-            return
 
         try:
             self.muted.append(user_id)
@@ -1367,7 +1378,8 @@ class ChatModule(loader.Module):
                     user_id=user_id,
                     first_name=first_name,
                     mute_time=mute_time,
-                    unit=unit
+                    unit=unit,
+                    reason=reason
                 ),
                 parse_mode="html"
             )
@@ -1637,20 +1649,25 @@ class ChatModule(loader.Module):
             return await utils.answer(message, self.strings("not_a_chat", message))
         if message.is_reply:
             user = await utils.get_user(await message.get_reply_message())
+            reason = utils.get_args_raw(message)
         else:
             args = utils.get_args(message)
             if len(args) == 0:
                 return await utils.answer(message, self.strings("no_one_banned"))
             if args[0].isdigit():
                 who = int(args[0])
+                reason = " ".join(args[1:])
             else:
                 who = args[0]
+                reason = " ".join(args[1:])
             user = await self.client.get_entity(who)
         if not user:
             return await utils.answer(message, self.strings("no_user", message))
         try:
             await self.client(EditBannedRequest(message.chat_id, user.id, ChatBannedRights(until_date=None, view_messages=True)))
-            await message.delete()
+            if not reason:
+                reason = self.strings("no_reason", message)
+            await utils.answer(message, self.strings("banned", message).format(name=user.first_name, id=user.id), reason=reason)
             return
         except BadRequestError:
             await utils.answer(message, self.strings("no_rights", message))
@@ -1665,14 +1682,17 @@ class ChatModule(loader.Module):
             return await utils.answer(message, self.strings("not_a_chat", message))
         if message.is_reply:
             user = await utils.get_user(await message.get_reply_message())
+            reason = utils.get_args_raw(message)
         else:
             args = utils.get_args(message)
             if len(args) == 0:
-                return await utils.answer(message, self.strings("no_user", message))
+                return await utils.answer(message, self.strings("invalid_args", message))
             if args[0].isdigit():
                 who = int(args[0])
+                reason = " ".join(args[1:])
             else:
                 who = args[0]
+                reason = " ".join(args[1:])
             user = await self.client.get_entity(who)
         if not user:
             return await utils.answer(message, self.strings("no_user", message))
@@ -1682,7 +1702,9 @@ class ChatModule(loader.Module):
                 return
         try:
             await self.client.kick_participant(message.chat_id, user.id)
-            await utils.answer(message, self.strings("kicked", message).format(name=user.first_name, id=user.id))
+            if not reason:
+                reason = self.strings("no_reason", message)
+            await utils.answer(message, self.strings("kicked", message).format(name=user.first_name, id=user.id, reason=reason))
             return
         except BadRequestError:
             await utils.answer(message, self.strings("no_rights", message))
