@@ -68,10 +68,10 @@ class DeleterMod(loader.Module):
 
 
 	@loader.command(
-		ru_doc="[число] — Удалить сообщения (можно использовать значение из конфига: «{значение}{число}», без пробела!)"
+		ru_doc="[число] 👉 Удалить сообщения (можно использовать значение из конфига: «{значение}{число}», без пробела!)"
 	)
 	async def delmsgcmd(self, message: types.Message):
-		"""[count] — Delete messages (you can use your trigger from config: «{value}{count}» and write them only together!)"""
+		"""[count] 👉 Delete messages (you can use your trigger from config: «{value}{count}» and write them only together!)"""
 
 		args = utils.get_args(message)
 		count = 1
