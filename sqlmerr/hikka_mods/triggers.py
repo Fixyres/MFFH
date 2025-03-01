@@ -592,7 +592,6 @@ class Triggers(loader.Module):
             filters=Filters(),
         )
         triggers.append(trigger)
-        logger.info(triggers)
         self.set("triggers", triggers)
 
         text = self.strings("text_add").format(id=trigger["id"])
@@ -866,8 +865,6 @@ class Triggers(loader.Module):
 
             if trigger["filters"].get("contains") and trigger["m"] in message.text:
                 t.append(trigger)
-
-            logger.info(trigger)
 
         for trigger in t:
             if trigger["id"] in self.cache:
