@@ -1,3 +1,4 @@
+__version__ = (1, 1, 0)
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -58,13 +59,13 @@ Give the answers only in Russian Language.",
             ),
             loader.ConfigValue(
                 "api_key",
-                "",
+                "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",
                 self.strings["api_key"],
                 validator=loader.validators.Hidden(),
             ),
             loader.ConfigValue(
                 "model",
-                "llama3-8b-8192",
+                "llama3-70b-8192",
                 self.strings["models"],
                 validator=loader.validators.Choice(
                     [
@@ -76,8 +77,6 @@ Give the answers only in Russian Language.",
                         "llama3-70b-8192",
                         "llama3-8b-8192",
                         "llama-guard-3-8b",
-                        "llama3-groq-70b-8192-tool-use-preview",
-                        "llama3-groq-8b-8192-tool-use-preview",
                     ]
                 ),
             ),
