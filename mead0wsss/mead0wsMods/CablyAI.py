@@ -35,7 +35,7 @@ class GPTMod(loader.Module):
         )
 
     async def gptcmd(self, event):
-        """Модуль для работы с ChatGPT прямо в Telegram. \nАвтор: @maximtrous"""
+        """Модуль для работы с ChatGPT прямо в Telegram. \nАвтор: @mead0ws_modules"""
         args = utils.get_args_raw(event)
         if not args:
             await event.reply("Нет вопроса")
