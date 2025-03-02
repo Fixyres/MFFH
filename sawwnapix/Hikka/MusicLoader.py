@@ -1,4 +1,27 @@
+#--------------------------------------------------------------------
+#                         _ _                     _       _           
+#   __ _ _ __   __ _  ___| | |_ __ ___   ___   __| |_   _| | ___  ___ 
+# / _` | '_ \ / _` |/ _ \ | | '_ ` _ \ / _ \ / _` | | | | |/ _ \/ __|
+# | (_| | | | | (_| |  __/ | | | | | | | (_) | (_| | |_| | |  __/\__ \
+# \__,_|_| |_|\__, |\___|_|_|_| |_| |_|\___/ \__,_|\__,_|_|\___||___/
+#              |___/                                                  
+#---------------------------------------------------------------------
+# 🌐 Repository of Modules:https://github.com/sawwnapix/Hikka
+# 👤 Developer: @zerixgod
+# 🪧 Channel with modules: @angellmodules
+#---------------------------------------------------------------------
+# 🔒 Licensed under GNU GPLv3
+# 🧾 https://www.gnu.org/licenses/gpl-3.0.html#license-text
+#---------------------------------------------------------------------
+# Developer: @zerixgod
+# Name: MusicLoader
+# Description: Module for download songs from diverse service
 # meta developer: @angellmodules
+# meta banner: https://0x0.st/s/tytHFF50yN6sgTxnxeD4mg/8B0j.jpg
+# meta pic: https://0x0.st/s/tytHFF50yN6sgTxnxeD4mg/8B0j.jpg
+#---------------------------------------------------------------------
+
+__version__ = (1, 0, 1)
 
 import os
 import yt_dlp
@@ -105,19 +128,3 @@ class MusicLoader(loader.Module):
             if event.media and isinstance(event.media, MessageMediaDocument):
                 await self._client.send_file(chat_id, event.media, caption="")
                 self._client.remove_event_handler(handler, events.NewMessage(from_users="@scload_bot"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-#тока не воруйте и не вырезайте дева, я на разрабу модулч дохуя время потратил если будете как-то изменять то ставьте 
-
-#made by @zerixgod
