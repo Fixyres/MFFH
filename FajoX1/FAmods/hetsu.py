@@ -42,7 +42,7 @@ class Hetsu(loader.Module):
         
 <i><emoji document_id=6028117381690167734>🛡</emoji> Searching above 900+ modules. All modules are safety and clearly moderated.</i>""",
 
-        "module": """<b><emoji document_id=5843843420468024653>⭐️</emoji> Module <code>{module_name}</code> {developer}
+        "module": """<b><emoji document_id=5843843420468024653>⭐️</emoji> Module <code>{module_name}</code></b> {developer}
 
 <emoji document_id=5843862283964390528>🔖</emoji> <b>Ratio:</b> <code>{ratio}</code>
 <emoji document_id=5874960879434338403>🔎</emoji> <b>Query:</b> {query}
@@ -101,7 +101,7 @@ class Hetsu(loader.Module):
 
         module_text = self.strings['module'].format(
             module_name=module['name'],
-            developer=f"by <code>{module['developer']}</code></b>" if module['developer'] else "",
+            developer=f"<b>by <code>{module['developer']}</code></b>" if module['developer'] else "",
             ratio=module['ratio'],
             query=q_default,
             description=module['description'] if module['description'] else "No description.",
@@ -168,7 +168,7 @@ class Hetsu(loader.Module):
                 "thumb": "https://img.icons8.com/m_outlined/512/FFFFFF/info.png",
                 "message": self.strings['module'].format(
                     module_name=module['name'],
-                    developer=f"by <code>{module['developer']}</code></b>" if module['developer'] else "",
+                    developer=f"<b>by <code>{module['developer']}</code></b>" if module['developer'] else "",
                     ratio=module['ratio'],
                     query=q_default,
                     description=module['description'] if module['description'] else "No description.",
