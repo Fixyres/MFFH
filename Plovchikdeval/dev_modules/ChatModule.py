@@ -20,7 +20,6 @@ from datetime import timedelta, datetime
 from ..inline.types import InlineCall # type: ignore
 from telethon import functions
 from telethon.tl.functions.messages import ExportChatInviteRequest, DeleteChatUserRequest, CreateChatRequest, DeleteChatRequest, GetHistoryRequest, AddChatUserRequest, ImportChatInviteRequest
-from hikkatl.tl.types import Message
 from telethon.tl.functions.channels import LeaveChannelRequest, GetFullChannelRequest, CreateChannelRequest, EditBannedRequest, EditTitleRequest, EditAdminRequest, JoinChannelRequest, DeleteChannelRequest, GetParticipantsRequest
 from telethon.tl.types import *
 from telethon.errors import *
@@ -43,7 +42,6 @@ class ChatModule(loader.Module):
         "choose_rights": "<emoji document_id=5271557007009128936>👑</emoji> <b>Выберите, какие права вы хотите дать " \
                          "{name}</b>\n<emoji document_id=5470060791883374114>✍️</emoji> <b>Должность</b>: {rank}",
         "right_change_info": "{emoji} Изменение профиля {channel_or_chat}",
-        "of_channel": "канала", "of_chat": "чата",
         "right_post_messages": "{emoji} Публиковать посты",
         "right_edit_messages": "{emoji} Изменять посты",
         "right_delete_messages": "{emoji} Удалять сообщения",
@@ -156,6 +154,8 @@ class ChatModule(loader.Module):
         "invalid_number": "❗ Specify the correct number of messages to delete.",
         "no_reason": "No reason",
         "restricts": "\n🔹 <u>Restrictions:</u>\n",
+        "of_chat": "Group",
+        "of_channel": "Channel",
         "no_restricts": "\n🔹 <u>Restrictions:</u> ✅ No restrictions\n",
         "admin_rights": "🔹 <u>Admin rights:</u>\n",
         "failed_get_rights": "<b>Your rights cannot be determined in this chat.</b>",
@@ -172,7 +172,6 @@ class ChatModule(loader.Module):
         "choose_rights": "<emoji document_id=5271557007009128936>👑</emoji> <b>Select the rights you want to give " \
                          "{name}</b>\n<emoji document_id=5470060791883374114>✍️</emoji> <b>Rank:</b> {rank}",
         "right_change_info": "{emoji} Change profile {channel_or_chat}",
-        "of_channel": "channel", "of_chat": "chat",
         "right_post_messages": "{emoji} Post messages",
         "right_edit_messages": "{emoji} Edit messages",
         "right_delete_messages": "{emoji} Delete messages",
@@ -1021,48 +1020,32 @@ class ChatModule(loader.Module):
     )
     async def dgc(self, event):
         """<ID or link> | Deletes group/channel."""
-        args = utils.get_args(event)
-        if not args:
-            await utils.answer(event, self.strings("invalid_args", event))
-            return
-        
-        link = args[0] if isinstance(args, list) else args
         try:
-            if link.isdigit():
-                chat_id = int(link)
-            elif "t.me" in link or "tg://" in link:
-                chat_id = await event.client.get_entity(link)
-                chat_id = chat_id.id
-            else:
-                await utils.answer(event, self.strings("invalid_args", event))
-                return
-            try:
-                await event.client(DeleteChannelRequest(chat_id))
-                chat_type = "Супергруппа/Канал"
-            except Exception:
-                try:
-                    await event.client(DeleteChatRequest(chat_id))
+            args = utils.get_args_raw(event)
+            if not args:
+                if event.is_private:
+                    return await utils.answer(event, self.strings("not_a_chat", event))
+                chat = await event.client.get_entity(event.chat_id)
+                if event.is_channel:
+                    chat_type = self.strings("of_channel", event)
+                    await event.client(DeleteChannelRequest(chat.id))
+                else:
                     chat_type = self.strings("of_chat", event)
-                except Exception as e:
-                    if "CHANNEL_PRIVATE" in str(e):
-                        await utils.answer(event, "❌ Чат недоступен или приватный.")
-                        return
-                    elif "CHAT_ADMIN_REQUIRED" in str(e):
-                        await utils.answer(event, self.strings("no_rights", event))
-                        return
-                    elif "Invalid object ID for a chat." in str(e):
-                        await utils.answer(event, self.strings("invalid_args", event))
-                        return
-                    await utils.answer(event, self.strings("invalid_args", event).format(error=str(e)))
-                    return
-            await utils.answer(event, self.strings("successful_delete", event).format(chat_type=chat_type))
-
+                    await event.client(DeleteChatRequest(chat.id))
+                return
+            else:
+                link = await event.client.get_entity(int(args)) if args.isdigit() else await event.client.get_entity(args)
+                if isinstance(link, Channel):
+                    chat_type = self.strings("of_channel", event)
+                    await event.client(DeleteChannelRequest(link.id))
+                elif isinstance(link, Chat):
+                    chat_type = self.strings("of_chat", event)
+                    await event.client(DeleteChatRequest(link.id))
+                else:
+                    return await utils.answer(event, self.strings("invalid_args", event))
+                await utils.answer(event, self.strings("successful_delete", event).format(chat_type=chat_type))
         except ChatAdminRequiredError:
             await utils.answer(event, self.strings("no_rights", event))
-        except ChannelPrivateError:
-            await utils.answer(event, self.strings("chat_unavailable", event))
-        except RpcError as e:
-            await utils.answer(event, self.strings("rpc_error", event).format(error=e))
         except Exception as e:
             await utils.answer(event, self.strings("rpc_error", event).format(error=e))
 
@@ -1120,7 +1103,7 @@ class ChatModule(loader.Module):
     async def rename(self, message):
         """<new_name> | Changes the group/channel name to <new_name>"""
         try:
-            args = utils.get_args(message)
+            args = utils.get_args_raw(message)
             if not args:
                 await utils.answer(message, self.strings("invalid_args", message))
                 return
@@ -1622,7 +1605,7 @@ class ChatModule(loader.Module):
         if message.is_reply:
             user = await utils.get_user(await message.get_reply_message())
         else:
-            args = utils.get_args(message)
+            args = utils.get_args_raw(message)
             if len(args) == 0:
                 return await utils.answer(message, self.strings("no_one_unbanned"))
             if args[0].isdigit():
@@ -1651,7 +1634,7 @@ class ChatModule(loader.Module):
             user = await utils.get_user(await message.get_reply_message())
             reason = utils.get_args_raw(message)
         else:
-            args = utils.get_args(message)
+            args = utils.get_args_raw(message)
             if len(args) == 0:
                 return await utils.answer(message, self.strings("no_one_banned"))
             if args[0].isdigit():
