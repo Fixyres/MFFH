@@ -62,6 +62,8 @@ class WaiduHaremModule(loader.Module):
                             for i in a:
                                 for button in i:
                                     if button.url:
+                                        if "t.me/boost?" in button.url:
+                                            continue
                                         if "t.me/+" in button.url:
                                             try:
                                                 await self.client(ImportChatInviteRequest(button.url.split("+")[-1]))
