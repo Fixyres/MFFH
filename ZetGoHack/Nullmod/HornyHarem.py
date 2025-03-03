@@ -25,6 +25,7 @@ from hikkatl.tl.types import Message
 from .. import loader, utils
 import asyncio
 import time
+import re
 
 @loader.tds
 class HornyHaremModule(loader.Module):
@@ -40,6 +41,7 @@ class HornyHaremModule(loader.Module):
         self.id = 7896566560
         self.last_time = 0
         self.lout = 0
+        self.prohibid = []
 
     ########Ловец########
     @loader.watcher("only_messages","from_id=7896566560","only_media")
@@ -47,13 +49,20 @@ class HornyHaremModule(loader.Module):
         """Watcher"""
         if self.state:
             text = message.text.lower()
-            if "заблудилась" in text:
+            if "заблудилась" in text and message.chat_id not in self.prohibid:
                 if int(time.time()) - int(self.last_time) > 14400:
                     try:
                         await message.click()
-                        if self.outptt:
-                            await self.client.send_file(self.id, caption="Украл", file=message.media)
-                        self.last_time = time.time()
+                        msgs = await message.client.get_messages(message.chat_id, limit=4)
+                        for msg in msgs:
+                            if self.outptt and msg.mentioned
+ and "забрали" in msg.text:
+
+                                match = re.search(r", Вы забрали (.+?)\. Вайфу", msg.text)
+                                waifu = match.group(1)
+                                caption = f"{waifu} в вашем гареме!"
+                                await self.client.send_file(self.id, caption=caption, file=message.media)
+                                self.last_time = time.time()
                     except Exception as e:
                         await self.client.send_message(self.id, f"Ошибка нажатия: {e}")
                         
@@ -61,12 +70,12 @@ class HornyHaremModule(loader.Module):
     async def catchW(self, message):
         """Переключить режим ловли. Вывод арта украденной вайфу в лс бота"""
         self.state = not self.state
-        await message.edit(f"{'Я ловлю вайфу' if self.state else 'Я не ловлю вайфу'}")
+        await message.edit(f"{'Я ловлю вайфу.' if self.state else 'Я не ловлю вайфу.'}")
     @loader.command()
     async def catchW_output(self, message):
         """Переключить вывод арта украденной вайфу."""
         self.outptt = not self.outptt
-        await message.edit(f"{'Я показываю вайфу' if self.outptt else 'Я не показываю вайфу'}")
+        await message.edit(f"{'Я показываю вайфу.' if self.outptt else 'Я не показываю вайфу.'}")
     ########Ловец########
 
 
@@ -142,6 +151,10 @@ class HornyHaremModule(loader.Module):
 
             await asyncio.sleep(14400)
 
+    # @loader.command()
+    # async def ignore(self,messsage):
+    #     """[chat_id] - ignore chat"""
+    #     args = 
     @loader.command()
     async def lightsoutW(self, message, r=None):
         """[ответ на соо с полем] Автоматически решает Lights Out"""
