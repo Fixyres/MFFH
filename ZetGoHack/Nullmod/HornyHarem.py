@@ -55,8 +55,7 @@ class HornyHaremModule(loader.Module):
                         await message.click()
                         msgs = await message.client.get_messages(message.chat_id, limit=4)
                         for msg in msgs:
-                            if self.outptt and msg.mentioned
- and "забрали" in msg.text:
+                            if self.outptt and msg.mentioned and "забрали" in msg.text:
 
                                 match = re.search(r", Вы забрали (.+?)\. Вайфу", msg.text)
                                 waifu = match.group(1)
