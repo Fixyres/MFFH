@@ -42,6 +42,7 @@ class HornyHaremModule(loader.Module):
         self.last_time = 0
         self.lout = 0
         self.prohibid = []
+        self.wait_boost = False
 
     ########Ловец########
     @loader.watcher("only_messages","from_id=7896566560","only_media")
@@ -104,6 +105,7 @@ class HornyHaremModule(loader.Module):
                                 for button in i:
                                     if button.url:
                                         if "t.me/boost?" in button.url:
+                                            self.wait_boost = True
                                             continue
                                         if "t.me/+" in button.url:
                                             try:
@@ -132,6 +134,8 @@ class HornyHaremModule(loader.Module):
                             for bot in to_block:
                                 await self.client(BlockRequest(bot))
                                 await self.client.delete_dialog(bot)
+                            if self.wait_boost:
+                                await asyncio.sleep(120)
                             for channel in to_leave:
                                 await self.client(LeaveChannelRequest(channel))
                 count = 0
