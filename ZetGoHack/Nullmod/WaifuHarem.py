@@ -1,3 +1,5 @@
+__version__ = (1,2,1)
+
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -18,6 +20,7 @@
 
 
 # meta developer: @nullmod
+
 from telethon.tl.functions.channels import JoinChannelRequest, LeaveChannelRequest
 from telethon.tl.functions.contacts import BlockRequest, UnblockRequest
 from hikkatl.tl.functions.messages import ImportChatInviteRequest
@@ -27,7 +30,7 @@ import asyncio
 import time
 
 @loader.tds
-class WaiduHaremModule(loader.Module):
+class WaifuHarem(loader.Module):
     """Automatization module for @garem_chatbot"""
 
     strings = {
@@ -37,16 +40,17 @@ class WaiduHaremModule(loader.Module):
         self.bonus = False
         self.id = 6704842953
         self.lout = 0
+        self.wait_boost = False
     ########Заработок########
     @loader.command()
     async def autobonusWH(self, message):
         """Автоматически собирает бонус(а также бонус за подписку и отыгрывает 3 игры в /lout) каждые 4 часа"""
         if self.bonus:
             self.bonus = False
-            await message.edit("Автобонус выключен.")
+            await message.edit(" Автобонус выключен.")
             return
         self.bonus = True
-        await message.edit("Автобонус включён.")
+        await message.edit("<emoji document_id=5389003252790480195>✅</emoji>  Автобонус включён.")
         while self.bonus:
             async with self._client.conversation(self.id) as conv:
                 await conv.send_message("/bonus")
@@ -63,6 +67,7 @@ class WaiduHaremModule(loader.Module):
                                 for button in i:
                                     if button.url:
                                         if "t.me/boost?" in button.url:
+                                            self.wait_boost = True
                                             continue
                                         if "t.me/+" in button.url:
                                             try:
@@ -85,6 +90,8 @@ class WaiduHaremModule(loader.Module):
                                             await self.client.send_message(entity,"/start")
                                             to_block.append(entity.username)
                             flyer_messages = await message.client.get_messages(self.id, limit=1)
+                            if self.wait_boost:
+                                await asyncio.sleep(120)
                             for m in flyer_messages:
                                 await asyncio.sleep(5)
                                 await m.click()
@@ -130,11 +137,11 @@ class WaiduHaremModule(loader.Module):
                         else:
                             None
             else:
-                await message.edit("Не вижу поля игры. Это точно то сообщение?")
+                await message.edit("<emoji document_id=5299030091735525430>❗️</emoji> Не вижу поля игры. Это точно то сообщение?")
                 return
              
         else:
-            await message.edit("Пропиши команду в ответ на игру.")
+            await message.edit("<emoji document_id=5299030091735525430>❗️</emoji> Пропиши команду в ответ на игру.")
             return
         if pattern:
             await message.edit("<emoji document_id=5472146462362048818>💡</emoji>")
@@ -147,9 +154,9 @@ class WaiduHaremModule(loader.Module):
                 if clicks[i] == 1:
                     r = await self.client.get_messages(r.chat_id,ids=r.id)
                     await r.click(i)
-            await message.edit("Готово.")
+            await message.edit("<emoji document_id=5395592707580127159>😎</emoji> Готово.")
         else:
-            await message.edit("Ты ответил не на поле игры.")
+            await message.edit("<emoji document_id=5299030091735525430>❗️</emoji> Ты ответил не на поле игры.")
             return
     #///|
     #///|
