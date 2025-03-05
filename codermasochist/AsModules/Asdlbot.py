@@ -9,10 +9,9 @@ class Asdlbot(loader.Module):
     strings = {"name": "Asdlbot"}
 
     async def is_conversation_active(self, bot):
-        """Проверка, есть ли активная беседа с ботом"""
         conversations = await self.client.get_dialogs()
         for dialog in conversations:
-            if dialog.name == bot:  # Проверка, если диалог с нужным ботом открыт
+            if dialog.name == bot:
                 return True
         return False
 
