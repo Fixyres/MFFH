@@ -1,3 +1,5 @@
+__version__ = (1,3,1)
+
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -18,6 +20,7 @@
 
 
 # meta developer: @nullmod
+
 from telethon.tl.functions.channels import JoinChannelRequest, LeaveChannelRequest
 from telethon.tl.functions.contacts import BlockRequest, UnblockRequest
 from hikkatl.tl.functions.messages import ImportChatInviteRequest
@@ -28,7 +31,7 @@ import time
 import re
 
 @loader.tds
-class HornyHaremModule(loader.Module):
+class HornyHarem(loader.Module):
     """Automatization module for @Horny_GaremBot"""
 
     strings = {
@@ -60,17 +63,17 @@ class HornyHaremModule(loader.Module):
 
                                 match = re.search(r", Вы забрали (.+?)\. Вайфу", msg.text)
                                 waifu = match.group(1)
-                                caption = f"{waifu} в вашем гареме!"
+                                caption = f"{waifu} в вашем гареме! <emoji document_id=5395592707580127159>😎</emoji>"
                                 await self.client.send_file(self.id, caption=caption, file=message.media)
                                 self.last_time = time.time()
                     except Exception as e:
-                        await self.client.send_message(self.id, f"Ошибка нажатия: {e}")
+                        pass #соо изменилось раньше нажатия
                         
     @loader.command()
     async def catchW(self, message):
         """Переключить режим ловли. Вывод арта украденной вайфу в лс бота"""
         self.state = not self.state
-        await message.edit(f"{'Я ловлю вайфу.' if self.state else 'Я не ловлю вайфу.'}")
+        await message.edit(f"{'<emoji document_id=5269315712685448697>👍</emoji> Я ловлю вайфу.' if self.state else '<emoji document_id=5269428966678077523>👎</emoji> Я не ловлю вайфу.'}")
     @loader.command()
     async def catchW_output(self, message):
         """Переключить вывод арта украденной вайфу."""
@@ -85,10 +88,10 @@ class HornyHaremModule(loader.Module):
         """Автоматически собирает бонус(а также бонус за подписку и отыгрывает 3 игры в /lout) каждые 4 часа"""
         if self.bonus:
             self.bonus = False
-            await message.edit("Автобонус выключен.")
+            await message.edit("<emoji document_id=5388915455069015167>❎</emoji> Автобонус выключен.")
             return
         self.bonus = True
-        await message.edit("Автобонус включён.")
+        await message.edit("<emoji document_id=5389003252790480195>✅</emoji> Автобонус включён.")
         while self.bonus:
             async with self._client.conversation(self.id) as conv:
                 await conv.send_message("/bonus")
@@ -128,14 +131,14 @@ class HornyHaremModule(loader.Module):
                                             await self.client.send_message(entity,"/start")
                                             to_block.append(entity.username)
                             flyer_messages = await message.client.get_messages(self.id, limit=1)
+                            if self.wait_boost:
+                                await asyncio.sleep(120)
                             for m in flyer_messages:
                                 await asyncio.sleep(5)
                                 await m.click()
                             for bot in to_block:
                                 await self.client(BlockRequest(bot))
                                 await self.client.delete_dialog(bot)
-                            if self.wait_boost:
-                                await asyncio.sleep(120)
                             for channel in to_leave:
                                 await self.client(LeaveChannelRequest(channel))
                 count = 0
@@ -179,11 +182,11 @@ class HornyHaremModule(loader.Module):
                         else:
                             None
             else:
-                await message.edit("Не вижу поля игры. Это точно то сообщение?")
+                await message.edit("<emoji document_id=5299030091735525430>❗️</emoji> Не вижу поля игры. Это точно то сообщение?")
                 return
              
         else:
-            await message.edit("Пропиши команду в ответ на игру.")
+            await message.edit("<emoji document_id=5299030091735525430>❗️</emoji> Пропиши команду в ответ на игру.")
             return
         if pattern:
             await message.edit("<emoji document_id=5472146462362048818>💡</emoji>")
@@ -196,9 +199,9 @@ class HornyHaremModule(loader.Module):
                 if clicks[i] == 1:
                     r = await self.client.get_messages(r.chat_id,ids=r.id)
                     await r.click(i)
-            await message.edit("Готово.")
+            await message.edit("<emoji document_id=5395592707580127159>😎</emoji> Готово.")
         else:
-            await message.edit("Ты ответил не на поле игры.")
+            await message.edit("<emoji document_id=5299030091735525430>❗️</emoji> Ты ответил не на поле игры.")
             return
     #///|
     #///|
