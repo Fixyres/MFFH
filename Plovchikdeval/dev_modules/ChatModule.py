@@ -1407,80 +1407,60 @@ class ChatModule(loader.Module):
                         asyncio.sleep(1)
                 except:
                     pass
-            except FloodWaitError as e:
-                await utils.answer(event, self.strings("flood_wait", event).format(seconds=e.seconds))
+            except Exception as e:
+                await utils.answer(event, self.strings("rpc_error", event).format(error=e))
+                return
 
     @loader.command(
-        ru_doc="<nobot: OPTIONAL> | Добавляет людей и ботов с чата в чат."
+        ru_doc="<id> <nobot: OPTIONAL> | Добавляет людей и ботов с чата в чат."
     )
     async def steal(self, event):
-        """<nobot: OPTIONAL> | Adds people from the chat to the chat."""
-        if len(event.text.split()) >= 2:
-            idschannelgroup = int(event.text.split(" ", maxsplit=2)[1])
-            arg = event.text.split(" ", maxsplit=2)[2] if len(event.text.split()) > 2 else None
-            entity = await event.client.get_entity(idschannelgroup)
-            participants = await event.client(GetParticipantsRequest(
-                                        channel=idschannelgroup,
-                                        filter=ChannelParticipantsSearch(''),
-                                        offset=0,
-                                        limit=0,
-                                        hash=0
-                                    ))
-            existing_users = {p.id for p in participants.users}
-            if arg and arg == "nobot":
-                user = [
-                    i async for i in event.client.iter_participants(event.to_id.channel_id)
-                    if not i.bot
-                ]
-            else:
-                user = [
-                    i async for i in event.client.iter_participants(event.to_id.channel_id)
-                ]
-            await utils.answer(event, 
-                self.strings("steal_complete", event).format(count=len(user))
-            )
-            await event.delete()
-            try:
-                if entity.broadcast or entity.megagroup:
-                    for u in user:
-                        try:
-                            if isinstance(u, PeerUser):
-                                u = await event.client.get_entity(u.user_id)
-                            if u.id not in existing_users:
-                                await event.client(functions.channels.InviteToChannelRequest(
-                                    channel=idschannelgroup,
-                                    users=[u.id]
-                                ))
-                        except FloodWaitError as e:
-                            await asyncio.sleep(e.seconds)
-                        except Exception as e:
-                            if "Too many requests" in str(e):
-                                return
-                            print(f"{str(e)}")
-                        await asyncio.sleep(2)
+        """<id> <nobot: OPTIONAL> | Adds people from the chat to the chat."""
+        args = utils.get_args_raw(event).split(maxsplit=1)
+        if not args:
+            return await utils.answer(event, self.strings("invalid_args", event))
+        idschannelgroup = int(args[0])
+        nobot = "nobot" in args[1] if len(args) > 1 else False
+        entity = await event.client.get_entity(idschannelgroup)
+        participants = await event.client.get_participants(event.chat_id)
+        if isinstance(entity, Channel):
+            for user in participants:
+                if nobot and user.bot:
+                    continue
                 else:
-                    for u in user:
-                        try:
-                            if isinstance(u, PeerUser):
-                                u = await event.client.get_entity(u.user_id)
-                            if u.id not in existing_users:
-                                await event.client(functions.channels.AddChatUserRequest(
-                                    chat_id=idschannelgroup, 
-                                    users=[u.id],
-                                    fwd_limit=0
-                                ))
-                        except FloodWaitError as e:
-                            await asyncio.sleep(e.seconds)
-                        except Exception as e:
-                            if "Too many requests" in str(e):
-                                return
-                            print(f"{str(e)}")
-                        await asyncio.sleep(2)
-            except UsersTooMuchError:
-                await utils.answer(event, self.strings("users_too_much", event))
-                return
+                    try:
+                        await event.client(functions.channels.InviteToChannelRequest(
+                                channel=idschannelgroup,
+                                users=[user.id]
+                            ))
+                    except FloodWaitError as e:
+                        await asyncio.sleep(e.seconds)
+                    except Exception as e:
+                        await utils.answer(event, self.strings("rpc_error", event).format(error=e))
+                        return
+        elif isinstance(entity, Chat):
+            for user in participants:
+                if nobot and user.bot:
+                    continue
+                else:
+                    try:
+                        await event.client(functions.channels.AddChatUserRequest(
+                                chat_id=idschannelgroup, 
+                                users=[user.id],
+                                fwd_limit=0
+                            ))
+                    except FloodWaitError as e:
+                        await asyncio.sleep(e.seconds)
+                    except Exception as e:
+                        await utils.answer(event, self.strings("rpc_error", event).format(error=e))
+                        return
         else:
-            await utils.answer(event, self.strings("invalid_args", event))
+            return await utils.answer(event, self.strings("invalid_args", event))
+        await utils.answer(event,
+            self.strings("steal_complete", event).format(count=len(user))
+        )
+        await event.delete()
+        return
 
     @loader.command(
         ru_doc="| Выводит список участников в чате."
@@ -1628,21 +1608,26 @@ class ChatModule(loader.Module):
     )
     async def ban(self, message):
         """<reply/id/username> | Bans the user."""
-        if not isinstance(message.to_id, PeerChannel):
+        reply = await message.get_reply_message()
+        args = utils.get_args_raw(message)
+        if not args and not reply:
+            await utils.answer(message, self.strings("no_one_banned", message))
+            return
+        if not isinstance(message.chat, Channel):
             return await utils.answer(message, self.strings("not_a_chat", message))
-        if message.is_reply:
-            user = await utils.get_user(await message.get_reply_message())
-            reason = utils.get_args_raw(message)
+        if reply:
+            user = await self.client.get_entity(reply.sender_id)
+            reason = args
         else:
-            args = utils.get_args_raw(message)
+            args = args.split(maxsplit=1)
             if len(args) == 0:
                 return await utils.answer(message, self.strings("no_one_banned"))
             if args[0].isdigit():
                 who = int(args[0])
-                reason = " ".join(args[1:])
+                reason = args[1]
             else:
                 who = args[0]
-                reason = " ".join(args[1:])
+                reason = args[1]
             user = await self.client.get_entity(who)
         if not user:
             return await utils.answer(message, self.strings("no_user", message))
@@ -1650,7 +1635,7 @@ class ChatModule(loader.Module):
             await self.client(EditBannedRequest(message.chat_id, user.id, ChatBannedRights(until_date=None, view_messages=True)))
             if not reason:
                 reason = self.strings("no_reason", message)
-            await utils.answer(message, self.strings("banned", message).format(name=user.first_name, id=user.id), reason=reason)
+            await utils.answer(message, self.strings("banned", message).format(name=user.first_name, id=user.id, reason=reason))
             return
         except BadRequestError:
             await utils.answer(message, self.strings("no_rights", message))
