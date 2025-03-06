@@ -1,5 +1,4 @@
-__version__ = (1,3,1)
-
+__version__ = (1,3,3)
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -45,13 +44,12 @@ class HornyHarem(loader.Module):
         self.last_time = 0
         self.lout = 0
         self.prohibid = []
-        self.wait_boost = False
 
     ########Ловец########
-    @loader.watcher("only_messages","from_id=7896566560","only_media")
+    @loader.watcher("only_messages","only_media")
     async def watcher(self, message: Message):
         """Watcher"""
-        if self.state:
+        if self.state and message.sender_id == self.id:
             text = message.text.lower()
             if "заблудилась" in text and message.chat_id not in self.prohibid:
                 if int(time.time()) - int(self.last_time) > 14400:
@@ -67,7 +65,7 @@ class HornyHarem(loader.Module):
                                 await self.client.send_file(self.id, caption=caption, file=message.media)
                                 self.last_time = time.time()
                     except Exception as e:
-                        pass #соо изменилось раньше нажатия
+                        pass #соо изменилось раньше нажатия / бот заблокирован / с чата выкинули
                         
     @loader.command()
     async def catchW(self, message):
@@ -154,15 +152,8 @@ class HornyHarem(loader.Module):
                             count += 1
                         else:
                             break
-
-
-
             await asyncio.sleep(14400)
 
-    # @loader.command()
-    # async def ignore(self,messsage):
-    #     """[chat_id] - ignore chat"""
-    #     args = 
     @loader.command()
     async def lightsoutW(self, message, r=None):
         """[ответ на соо с полем] Автоматически решает Lights Out"""
@@ -193,7 +184,7 @@ class HornyHarem(loader.Module):
             clicks = await self.solution(pattern)
             if not clicks:
                 await message.edit("Иди код трейси гений.")
-                return #*смачный пинок кодеру под зад.*
+                return 1/0 #*смачный пинок кодеру под зад.*
             await message.edit("Решение найдено.")
             for i in range(len(clicks)):
                 if clicks[i] == 1:
