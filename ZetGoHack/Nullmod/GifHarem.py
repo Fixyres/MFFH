@@ -1,4 +1,4 @@
-__version__ = (1,0,0) ###Да, это -- копирка модуля HornyHarem. Я не виноват, что у разраба во всей связке ботов код одинаковый.🥰
+__version__ = (1,0,1) ###Да, это -- копирка модуля HornyHarem. Я не виноват, что у разраба во всей связке ботов код одинаковый.🥰
 
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
@@ -52,7 +52,7 @@ class GifHarem(loader.Module):
         """Watcher"""
         if self.state:
             text = message.text.lower()
-            if "заблудилась" in text and message.chat_id not in self.prohibid:
+            if "заблудилась" in text:
                 if int(time.time()) - int(self.last_time) > 14400:
                     try:
                         await message.click()
@@ -186,7 +186,6 @@ class GifHarem(loader.Module):
             if not clicks:
                 await message.edit("Иди код трейси гений.")
                 return #*смачный пинок кодеру под зад.*
-            await message.edit("Решение найдено.")
             for i in range(len(clicks)):
                 if clicks[i] == 1:
                     r = await self.client.get_messages(r.chat_id,ids=r.id)
