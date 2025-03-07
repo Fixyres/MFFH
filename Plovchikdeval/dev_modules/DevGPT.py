@@ -1,5 +1,5 @@
-__version__ = (13, 0, 0)
-# change-log: Update command dgpt + dimg and add command setmodel
+__version__ = (15, 0, 0)
+# change-log: change api address + fix support for more country
 
 """
 888    d8P   .d8888b.  888    888     888b     d888  .d88888b.  8888888b.   .d8888b.  
@@ -159,9 +159,9 @@ class DevGPT(loader.Module):
 			)
 
 	async def client_ready(self, client, _):
-		# self.server_url = "https://api.vysssotsky.ru"
-		self.server_url = "https://api.vysssotsky.ru/"
-		self.server_url_images = "https://api.vysssotsky.ru/v1/images/generate"
+		# self.server_url = "https://api.kshteam.top"
+		self.server_url = "https://api.kshteam.top"
+		self.server_url_images = "https://api.kshteam.top/v1/images/generate"
 		self.server_url_images_v2 = "https://v2.vysssotsky.ru/v1/generate"
 		self.additional_server_url = "http://146.19.48.160:25701/generate_image"
 
@@ -189,7 +189,7 @@ class DevGPT(loader.Module):
 			}
 
 			async with aiohttp.ClientSession() as session:
-				async with session.post(f"{self.server_url}/v1/chat/completions", headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}, json=payload) as response:
+				async with session.post(f"{self.server_url}/v1/chat/completions", headers={"Authorization": f"Bearer {self.api_key}",  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Content-Type": "application/json"}, json=payload) as response:
 					response.raise_for_status()
 					generation_time = round(time.time() - start_time, 2)
 					if response.status == 200:
@@ -215,7 +215,7 @@ class DevGPT(loader.Module):
 			}
 
 			async with aiohttp.ClientSession() as session:
-				async with session.post(self.server_url_images.format(model_name=self.config["default_image_model"]), headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}, data=json.dumps(payload)) as response:
+				async with session.post(self.server_url_images.format(model_name=self.config["default_image_model"]), headers={"Authorization": f"Bearer {self.api_key}", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Content-Type": "application/json"}, data=json.dumps(payload)) as response:
 					generation_time = round(time.time() - start_time, 2)
 					if response.status == 200:
 						data = await response.json()
@@ -240,7 +240,7 @@ class DevGPT(loader.Module):
 							"model": self.config["default_image_model"],
 							"prompt": prompt
 						}
-						async with session.post(self.server_url_images_v2, headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}, data=json.dumps(payload_v2)) as response_v2:
+						async with session.post(self.server_url_images_v2, headers={"Authorization": f"Bearer {self.api_key}", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Content-Type": "application/json"}, data=json.dumps(payload_v2)) as response_v2:
 							generation_time = round(time.time() - start_time, 2)
 							if response_v2.status == 200:
 								
