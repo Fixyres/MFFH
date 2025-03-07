@@ -87,8 +87,8 @@ class VKMusic(loader.Module):
             ),
             loader.ConfigValue(
                 "telegram_bot",
-                "@mmgetbot",
-                lambda: "Telegram bot username for music search (e.g., @mmgetbot)",
+                "@vkm_bot",
+                lambda: "Telegram bot username for music search (e.g., @vkmusic_bot)",
                 validator=loader.validators.String(),
             ),
         )
