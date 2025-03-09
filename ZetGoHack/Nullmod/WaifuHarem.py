@@ -1,4 +1,4 @@
-__version__ = (1,2,1)
+__version__ = (1,2,2)
 
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
@@ -39,25 +39,43 @@ class WaifuHarem(loader.Module):
     async def client_ready(self):
         self.bonus = False
         self.id = 6704842953
-        self.lout = 0
-        self.wait_boost = False
     ########Заработок########
     @loader.command()
     async def autobonusWH(self, message):
         """Автоматически собирает бонус(а также бонус за подписку и отыгрывает 3 игры в /lout) каждые 4 часа"""
         if self.bonus:
             self.bonus = False
-            await message.edit(" Автобонус выключен.")
+            await message.edit("<emoji document_id=5872829476143894491>🚫</emoji> Автобонус выключен.")
             return
+        if not hasattr(self, "lout"):
+            self.lout = 1226061708
         self.bonus = True
-        await message.edit("<emoji document_id=5389003252790480195>✅</emoji>  Автобонус включён.")
+        await message.edit("<emoji document_id=5825794181183836432>✔️</emoji> Автобонус включён.")
         while self.bonus:
+            self.wait_boost = False
             async with self._client.conversation(self.id) as conv:
                 await conv.send_message("/bonus")
-                r = await conv.get_response()
+                try:
+                    r = await conv.get_response()
+                except:
+                    while True:
+                        try:
+                            r = await conv.get_response()
+                        except:
+                            pass
+                        break
                 if "Доступен бонус за подписки" in r.text:
                     await conv.send_message("/start flyer_bonus")
-                    r = await conv.get_response()
+                    try:
+                        r = await conv.get_response()
+                    except:
+                        no = True
+                        while no:
+                            try:
+                                r = await conv.get_response()
+                                no = False
+                            except:
+                                pass
                     if "проверка пройдена" not in r.text:
                         to_leave = []
                         to_block = []
@@ -66,7 +84,7 @@ class WaifuHarem(loader.Module):
                             for i in a:
                                 for button in i:
                                     if button.url:
-                                        if "t.me/boost?" in button.url:
+                                        if "t.me/boost" in button.url:
                                             self.wait_boost = True
                                             continue
                                         if "t.me/+" in button.url:
@@ -149,7 +167,6 @@ class WaifuHarem(loader.Module):
             if not clicks:
                 await message.edit("Иди код трейси гений.")
                 return #*смачный пинок кодеру под зад.*
-            await message.edit("Решение найдено.")
             for i in range(len(clicks)):
                 if clicks[i] == 1:
                     r = await self.client.get_messages(r.chat_id,ids=r.id)
