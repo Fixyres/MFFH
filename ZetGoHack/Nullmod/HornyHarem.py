@@ -1,4 +1,5 @@
-__version__ = (1,3,3)
+
+__version__ = (1,3,4)
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -41,17 +42,13 @@ class HornyHarem(loader.Module):
         self.outptt = True
         self.bonus = False
         self.id = 7896566560
-        self.last_time = 0
-        self.lout = 0
-        self.prohibid = []
-
     ########Ловец########
     @loader.watcher("only_messages","only_media")
     async def watcher(self, message: Message):
         """Watcher"""
         if self.state and message.sender_id == self.id:
             text = message.text.lower()
-            if "заблудилась" in text and message.chat_id not in self.prohibid:
+            if "заблудилась" in text:
                 if int(time.time()) - int(self.last_time) > 14400:
                     try:
                         await message.click()
@@ -71,12 +68,14 @@ class HornyHarem(loader.Module):
     async def catchW(self, message):
         """Переключить режим ловли. Вывод арта украденной вайфу в лс бота"""
         self.state = not self.state
-        await message.edit(f"{'<emoji document_id=5269315712685448697>👍</emoji> Я ловлю вайфу.' if self.state else '<emoji document_id=5269428966678077523>👎</emoji> Я не ловлю вайфу.'}")
+        if not hasattr(self, "last_time"):
+            self.last_time = 1226061708
+        await message.edit(f"{'<emoji document_id=5954175920506933873>👤</emoji> Я ловлю вайфу.' if self.state else '<emoji document_id=5872829476143894491>🚫</emoji> Я не ловлю вайфу.'}")
     @loader.command()
     async def catchW_output(self, message):
         """Переключить вывод арта украденной вайфу."""
         self.outptt = not self.outptt
-        await message.edit(f"{'Я показываю вайфу.' if self.outptt else 'Я не показываю вайфу.'}")
+        await message.edit(f"{'<emoji document_id=5877530150345641603>👤</emoji> Я показываю вайфу.' if self.outptt else '<emoji document_id=5872829476143894491>🚫</emoji> Я не показываю вайфу.'}")
     ########Ловец########
 
 
@@ -86,14 +85,25 @@ class HornyHarem(loader.Module):
         """Автоматически собирает бонус(а также бонус за подписку и отыгрывает 3 игры в /lout) каждые 4 часа"""
         if self.bonus:
             self.bonus = False
-            await message.edit("<emoji document_id=5388915455069015167>❎</emoji> Автобонус выключен.")
+            await message.edit("<emoji document_id=5872829476143894491>🚫</emoji> Автобонус выключен.")
             return
+        if not hasattr(self, "lout"):
+            self.lout = 1226061708
         self.bonus = True
-        await message.edit("<emoji document_id=5389003252790480195>✅</emoji> Автобонус включён.")
+        await message.edit("<emoji document_id=5825794181183836432>✔️</emoji> Автобонус включён.")
         while self.bonus:
+            self.wait_boost = False
             async with self._client.conversation(self.id) as conv:
                 await conv.send_message("/bonus")
-                r = await conv.get_response()
+                try:
+                    r = await conv.get_response()
+                except:
+                    while True:
+                        try:
+                            r = await conv.get_response()
+                        except:
+                            pass
+                        break
                 if "Доступен бонус за подписки" in r.text:
                     await conv.send_message("/start flyer_bonus")
                     r = await conv.get_response()
@@ -105,7 +115,7 @@ class HornyHarem(loader.Module):
                             for i in a:
                                 for button in i:
                                     if button.url:
-                                        if "t.me/boost?" in button.url:
+                                        if "t.me/boost" in button.url:
                                             self.wait_boost = True
                                             continue
                                         if "t.me/+" in button.url:
@@ -185,7 +195,6 @@ class HornyHarem(loader.Module):
             if not clicks:
                 await message.edit("Иди код трейси гений.")
                 return 1/0 #*смачный пинок кодеру под зад.*
-            await message.edit("Решение найдено.")
             for i in range(len(clicks)):
                 if clicks[i] == 1:
                     r = await self.client.get_messages(r.chat_id,ids=r.id)
