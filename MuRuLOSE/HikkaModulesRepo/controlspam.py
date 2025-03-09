@@ -1,7 +1,8 @@
-from hikkatl.types import Message
 from .. import loader, utils
-from telethon.tl.types import MessageService
+from telethon.types import Message, MessageService
 import asyncio
+
+import logging
 
 """
     ███    ███ ██    ██ ██████  ██    ██ ██       ██████  ███████ ███████
@@ -19,6 +20,8 @@ import asyncio
 # meta developer: @BruhHikkaModules
 
 
+logger = logging.getLogger(__name__)
+
 @loader.tds
 class ControlSpam(loader.Module):
     """Не просто спамь, а контролируй"""
@@ -33,71 +36,140 @@ class ControlSpam(loader.Module):
                 True,
                 lambda: "Просто статус спама",
                 validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "ids",
+                [],
+                lambda: "Список айди сообщений",
+                validator=loader.validators.Series()
             )
         )
+
+
+    async def client_ready(self, client, db):
+        self._common = await self.import_lib(
+            "https://raw.githubusercontent.com/MuRuLOSE/HikkaModulesRepo/main/libaries/common.py",
+            suspend_on_error=True
+        )
+        self.client = client
 
     @loader.command()
     async def spam(self, message: Message):
         """[количество спама] [текст / реплай]  - Начать спам"""
-        self.config["status"] = True
-        args = utils.get_args(message)
-        a = 0
+        args = utils.get_args_raw(message).split(maxsplit=1)  # Разделяем на количество и текст
         reply = await message.get_reply_message()
-        text = "Something get wrong"
-        type_topic = False
+        text = "Something went wrong"
         topic_id = None
-        if reply:
-            if isinstance(reply, MessageService):
-                text = " ".join(args[1:])
-                type_topic = True
-                topic_id = message.reply_to_msg_id
-            else:
-                text = reply.text
-        else:
-            text = " ".join(args[1:])
-        await utils.answer(message, "Я начал спамить")
-        while self.config["status"]:
-            if a == int(args[0]):
-                break
-            a += 1
 
-            if type_topic:
+        spam_id = len(self.config["ids"])
+        new_spam_id = spam_id + 1
+
+        self.config["ids"].append(
+            {
+                "data": {
+                    "id": new_spam_id,
+                    "message": text,
+                    "count": 0,
+                    "status": True
+                }
+            }
+        )
+        
+        logger.info(self.config['ids'])
+
+        try:
+            count = int(args[0]) if args else 0  # Количество сообщений
+            if reply:
+                text = reply.text
+                topic_id = await self._common._topic_resolver(message)
+            elif len(args) > 1:
+                text = args[1]  # Берем текст после количества
+            else:
+                await message.edit("Укажите текст или сделайте реплай")
+                return
+        except (ValueError, IndexError):
+            await message.edit("Укажите корректное количество и текст")
+            return
+        
+        sent = 0
+
+        self.config["ids"][spam_id]["data"]["text"] = text
+
+        await utils.answer(message, f"Я начал спамить с сообщением айди: {new_spam_id}")
+        
+        while sent < count:
+            self.config["ids"][spam_id]["data"]["count"] += 1
+            status = self.config["ids"][spam_id]["data"]["status"]
+            text = self.config["ids"][spam_id]["data"]["text"]
+            if topic_id:
                 await self.client.send_message(message.chat_id, text, reply_to=topic_id)
             else:
                 await self.client.send_message(message.chat_id, text)
+            if status is False:
+                break
+            sent += 1
+
+        
 
     @loader.command()
     async def delayspam(self, message: Message):
         """[количество спама] [Задержка в секундах] [текст / реплай]  - Начать спам"""
-        self.config["status"] = True
-        args = utils.get_args(message)
-        a = 0
+        args = utils.get_args_raw(message).split(maxsplit=2)  # Разделяем на количество и текст
         reply = await message.get_reply_message()
-        text = "Something get wrong"
-        type_topic = False
+        text = "Something went wrong"
         topic_id = None
-        if reply:
-            if isinstance(reply, MessageService):
-                text = " ".join(args[2:])
-                type_topic = True
-                topic_id = message.reply_to_msg_id
-            else:
+
+        spam_id = len(self.config["ids"])
+        new_spam_id = spam_id
+
+        self.config["ids"].append(
+            {
+                "data": {
+                    "id": new_spam_id,
+                    "message": text,
+                    "count": 0,
+                    "status": True
+                }
+            }
+        )
+        
+        logger.info(self.config['ids'])
+
+        try:
+            count = int(args[0]) if args else 0  # Количество сообщений
+            if reply:
                 text = reply.text
-        else:
-            text = " ".join(args[2:])
-        await utils.answer(message, "Я начал спамить")
-        while self.config["status"]:
-            if a == int(args[0]):
-                break
-            a += 1
-            if type_topic:
+                topic_id = await self._common._topic_resolver(message)
+            elif len(args) > 1:
+                text = args[2]  # Берем текст после количества
+            else:
+                await message.edit("Укажите текст или сделайте реплай")
+                return
+        except (ValueError, IndexError):
+            await message.edit("Укажите корректное количество и текст")
+            return
+        
+        sent = 0
+
+        self.config["ids"][spam_id]["data"]["text"] = text
+        
+        while sent < count:
+            self.config["ids"][spam_id]["data"]["count"] += 1
+            status = self.config["ids"][spam_id]["data"]["status"]
+            text = self.config["ids"][spam_id]["data"]["text"]
+            self.config["ids"][spam_id]["data"]["text"]["count"] = sent
+            await asyncio.sleep(args[1])
+            if topic_id:
                 await self.client.send_message(message.chat_id, text, reply_to=topic_id)
             else:
                 await self.client.send_message(message.chat_id, text)
-            await asyncio.sleep(int(args[1]))
+            if status is False:
+                break
+            sent += 1
 
     @loader.command()
     async def spam_stop(self, message: Message):
-        """- Закончить весь спам"""
-        self.config["status"] = False
+        """- [id] Закончить спам"""
+        args = utils.get_args_raw(message)
+        self.config["ids"][int(args)-1]["data"]["status"] = False
         await utils.answer(message, "Я закончил спамить")
