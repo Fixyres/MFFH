@@ -74,8 +74,6 @@ class ControlSpam(loader.Module):
                 }
             }
         )
-        
-        logger.info(self.config['ids'])
 
         try:
             count = int(args[0]) if args else 0  # Количество сообщений
@@ -132,8 +130,6 @@ class ControlSpam(loader.Module):
                 }
             }
         )
-        
-        logger.info(self.config['ids'])
 
         try:
             count = int(args[0]) if args else 0  # Количество сообщений
@@ -157,8 +153,7 @@ class ControlSpam(loader.Module):
             self.config["ids"][spam_id]["data"]["count"] += 1
             status = self.config["ids"][spam_id]["data"]["status"]
             text = self.config["ids"][spam_id]["data"]["text"]
-            self.config["ids"][spam_id]["data"]["text"]["count"] = sent
-            await asyncio.sleep(args[1])
+            await asyncio.sleep(int(args[1]))
             if topic_id:
                 await self.client.send_message(message.chat_id, text, reply_to=topic_id)
             else:
