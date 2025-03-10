@@ -13,7 +13,7 @@ Licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 Inter
 """
 
 # meta developer: @kshmods
-# requires: requests, pyshorteners
+# requires: requests pyshorteners
 
 from .. import loader, utils
 import requests
