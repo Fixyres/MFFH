@@ -134,7 +134,7 @@ class Configuration:
     def _triggers_menu_markup(self, triggers: List[Trigger]) -> HikkaReplyMarkup:
         if len(triggers) > 96:
             triggers = triggers[:95]
-        return [
+        butttons = [
             {
                 "text": f"ID-{t['id']}",
                 "callback": self._open_trigger_config,
@@ -142,6 +142,8 @@ class Configuration:
             }
             for t in triggers
         ]
+
+        return utils.chunks(butttons, 3)
 
     def _main_menu_markup(self) -> HikkaReplyMarkup:
         return [
@@ -433,6 +435,14 @@ class Configuration:
         markup = self._trigger_config_markup(trigger)
         await call.edit(text=self._trigger_config_text(trigger), reply_markup=markup)
 
+    async def render_specified_trigger(self, form: Any, message: Message, trigger: Trigger) -> None:
+        markup = self._trigger_config_markup(trigger)
+        await form(
+            text=self._trigger_config_text(trigger),
+            message=message,
+            reply_markup=markup
+        )
+
     async def render(self, form: Any, message: Message) -> None:
         await form(
             text="⚙️ <b>Triggers Configuration Menu</b>",
@@ -666,11 +676,23 @@ class Triggers(loader.Module):
 
         await utils.answer(message, text)
 
-    @loader.command(ru_doc="Конфиг модуля")
+    @loader.command(ru_doc="[необязятельно: айди триггера] - Конфиг модуля")
     async def tconfig(self, message: Message):
-        """Config for the module."""
-        configurator = Configuration(self.manager)
-        await configurator.render(self.inline.form, message)
+        """[optional: trigger id] - Triggers config."""
+        config = Configuration(self.manager)
+        args = utils.get_args(message)
+        if len(args) < 1 or not args[0].isdigit():
+            await config.render(self.inline.form, message)
+            return
+
+        tid = int(args[0])
+        trigger = self.manager.get_trigger(tid)
+        if not trigger:
+            await config.render(self.inline.form, message)
+            return
+
+        await config.render_specified_trigger(self.inline.form, message, trigger)
+
 
     @loader.command(ru_doc="[айди триггера] - Удалить триггер", alias="tdel")
     async def triggerdel(self, message: Message):
