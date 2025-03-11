@@ -30,6 +30,20 @@ from telethon.errors.rpcerrorlist import YouBlockedUserError, AdminRankInvalidEr
 class ChatModule(loader.Module):
     strings_ru = {
         "name": "ChatModule",
+        "change_info": "Изменение профиля",
+        "delete_messages": "Удаление сообщений",
+        "ban_users": "Блокировка пользователей",
+        "invite_users": "Добавление участников",
+        "pin_messages": "Закрепление сообщений",
+        "post_stories": "Публикация историй",
+        "edit_stories": "Изменение историй",
+        "delete_stories": "Удаление историй",
+        "manage_call": "Управление трансляциями",
+        "anonymous": "Анонимность",
+        "add_admins": "Назначение админов",
+        "manage_topics": "Управление темами",
+        "post_messages": "Публиковать сообщения",
+        "edit_messages": "Изменять сообщения",
         "loading": "🕐 <b>Обработка данных...</b>",
         "not_a_chat": "<emoji document_id=5312526098750252863>❌</emoji> <b>Команда не может быть запущена в личных сообщениях.</b>",
         "no_rights": "<emoji document_id=5318764049121420145>🫤</emoji> <b>У меня недостаточно прав.</b>",
@@ -65,7 +79,6 @@ class ChatModule(loader.Module):
         "of_channel": "Канал",
         "own_list": "<b>Мои владения: {count}</b>\n{msg}",
         "no_ownerships": "Владений нет.",
-        "no_user": "Пользователь не найден.",
         "unknown_user": "Неизвестный пользователь.",
         "unmuted": "🔈 {first_name} [<code>{user_id}</code>] был размучен.",
         "muted": "🔇 {first_name} [<code>{user_id}</code>] был замучен на {mute_time} {unit}.\n<i><b>Причина:</b> {reason}</i>",
@@ -149,6 +162,20 @@ class ChatModule(loader.Module):
 
     strings = {
         "name": "ChatModule",
+        "change_info": "Change info",
+        "delete_messages": "Delete messages",
+        "ban_users": "Ban users",
+        "invite_users": "Add members",
+        "pin_messages": "Pin messages",
+        "post_stories": "Post stories",
+        "edit_stories": "Edit stories",
+        "delete_stories": "Delete stories",
+        "manage_call": "Manage call",
+        "anonymous": "Anonymous",
+        "add_admins": "Add admins",
+        "manage_topics": "Manage topics",
+        "post_messages": "Post messages",
+        "edit_messages": "Edit messages",
         "deleted_messages": "✅ {count} messages deleted.",
         "loading": "🕐 <b>Processing data...</b>",
         "invalid_number": "❗ Specify the correct number of messages to delete.",
@@ -195,7 +222,6 @@ class ChatModule(loader.Module):
         "of_channel": "Channel",
         "own_list": "<b>My possessions: {count}</b>\n{msg}",
         "no_ownerships": "No possessions.",
-        "no_user": "User not found.",
         "unknown_user": "Unknown user.",
         "unmuted": "🔈 {first_name} [<code>{user_id}</code>] was unmuted.",
         "muted": "🔇 {first_name} [<code>{user_id}</code>] was muted for {mute_time} {unit}.\n<i><b>Reason:</b> {reason}</i>",
@@ -356,64 +382,36 @@ class ChatModule(loader.Module):
         reply = await message.get_reply_message()
         chat = await message.get_chat()
         chat_id = message.chat_id
-        admin_rights = [
+        admin_rights_g = [
             "change_info",
             "delete_messages",
             "ban_users",
             "invite_users",
             "pin_messages",
+            "post_stories",
+            "edit_stories",
+            "delete_stories",
             "manage_call",
-            "add_admins",
             "anonymous",
-            "edit_messages",
+            "add_admins",
             "manage_topics",
-            "post_messages",
         ]
-
-        banned_rights = [
-            "send_messages",
-            "send_media",
-            "send_photos",
-            "send_videos",
-            "send_roundvideos",
-            "send_audios",
-            "send_voices",
-            "send_docs",
-            "send_stickers",
-            "send_gifs",
-            "embed_links",
-            "send_polls",
-            "send_games",
-            "send_inline",
+        admin_rights_c = [
+            "change_info",
+            "post_messages",
+            "edit_messages",
+            "delete_messages",
+            "post_stories",
+            "edit_stories",
+            "delete_stories",
+            "invite_users",
+            "ban_users",
+            "add_admins",
+            "manage_call",
         ]
         if not args:
             if not reply:
-                if not chat or not chat_id:
-                    return await utils.answer(message, self.strings("not_a_chat", message))
-
-                if not hasattr(chat, "admin_rights") and not hasattr(chat, "banned_rights"):
-                    return await utils.answer(message, self.strings('failed_get_rights', message))
-
-                admin_rights = getattr(chat, "admin_rights", None)
-                banned_rights = getattr(chat, "banned_rights", None)
-
-                result = self.strings('get_rights_header').format(id=(await self.client.get_me()).id, name=f"{(await self.client.get_me()).first_name or ''} {(await self.client.get_me()).last_name or ''}")
-
-                if admin_rights and isinstance(admin_rights, ChatAdminRights):
-                    result += self.strings('admin_rights')
-                    for right, value in admin_rights.to_dict().items():
-                        result += f"  - {right}: {'✅' if value else '❌'}\n"
-                else:
-                    result += self.strings('not_admin').format(id=(await self.client.get_me()).id, name=f"{(await self.client.get_me()).first_name or ''} {(await self.client.get_me()).last_name or ''}")
-
-                if banned_rights and isinstance(banned_rights, ChatBannedRights):
-                    result += self.strings('restricts')
-                    for right, value in banned_rights.to_dict().items():
-                        result += f"  - {right}: {'❌' if value else '✅'}\n"
-                else:
-                    result += self.strings('no_restricts')
-
-                await utils.answer(message, result)
+                await utils.answer(message, self.strings("no_user"))
             else:
                 user = await reply.get_sender()
                 if not chat or not chat_id:
@@ -426,19 +424,14 @@ class ChatModule(loader.Module):
                     result += self.strings("not_admin").format(id=user.id, name=f"{user.first_name or ''} {user.last_name or ''}")
                 else:
                     result += self.strings('admin_rights')
-                    for right in admin_rights:
-                        has_permission = getattr(permissions, right, False)
-                        result += f"  - {right}: {'✅' if has_permission else '❌'}\n"
-                restricts = ""
-                for right in banned_rights:
-                    has_permission = getattr(permissions, right, False)
-                    if has_permission:
-                        restricts += f"  - {right}: {'❌' if has_permission else '✅'}\n"
-                if restricts == "":
-                    result += self.strings("no_restricts")
-                else:
-                    result += self.strings("restricts")
-                    result += restricts
+                    if message.is_channel and chat.broadcast:
+                        for right in admin_rights_c:
+                            has_permission = getattr(permissions, right, False)
+                            result += f"{'✅' if has_permission else '❌'} {self.strings(right)}\n"
+                    else:
+                        for right in admin_rights_g:
+                            has_permission = getattr(permissions, right, False)
+                            result += f"{'✅' if has_permission else '❌'} {self.strings(right)}\n"
 
                 await utils.answer(message, result)
         else:
@@ -459,19 +452,14 @@ class ChatModule(loader.Module):
                 result += self.strings("not_admin").format(id=user.id, name=f"{user.first_name or ''} {user.last_name or ''}")
             else:
                 result += self.strings('admin_rights')
-                for right in admin_rights:
-                    has_permission = getattr(permissions, right, False)
-                    result += f"  - {right}: {'✅' if has_permission else '❌'}\n"
-            restricts = ""
-            for right in banned_rights:
-                has_permission = getattr(permissions, right, False)
-                if has_permission:
-                    restricts += f"  - {right}: {'❌' if has_permission else '✅'}\n"
-            if restricts == "":
-                result += self.strings("no_restricts")
-            else:
-                result += self.strings("restricts")
-                result += restricts
+                if message.is_channel and chat.broadcast:
+                    for right in admin_rights_c:
+                        has_permission = getattr(permissions, right, False)
+                        result += f"{'✅' if has_permission else '❌'} {self.strings(right)}\n"
+                else:
+                    for right in admin_rights_g:
+                            has_permission = getattr(permissions, right, False)
+                            result += f"{'✅' if has_permission else '❌'} {self.strings(right)}\n"
 
             await utils.answer(message, result)
 
