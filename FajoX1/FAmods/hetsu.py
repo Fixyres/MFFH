@@ -11,7 +11,7 @@
 # Description: Search and install modules easily.
 # meta developer: @FAmods
 # meta banner: https://github.com/FajoX1/FAmods/blob/main/assets/banners/hetsu.png?raw=true
-# requires: aiohttp googletrans==4.0.0-rc1
+# requires: aiohttp
 # ---------------------------------------------------------------------------------
 
 import re
@@ -20,8 +20,7 @@ import aiohttp
 
 import logging
 
-from googletrans import Translator
-
+from telethon import types, functions
 from .. import loader, utils
 
 logger = logging.getLogger(__name__)
@@ -81,8 +80,23 @@ class Hetsu(loader.Module):
         q_default = q
 
         if not bool(re.fullmatch(r"[A-Za-z\s\d\W]+", q)):
-            translator = Translator()
-            q = translator.translate(q, dest="en").text
+            q = await self._client(
+                functions.messages.TranslateTextRequest(
+                    peer=False,
+                    id=False,
+                    text=[
+                        types.TextWithEntities(
+                            q_default,
+                            [],
+                        )
+                    ],
+                    to_lang="en",
+                )
+            )
+
+            q = q.result[0].text        
+
+        logger.info(q)
 
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -138,8 +152,21 @@ class Hetsu(loader.Module):
         q_default = q
 
         if not bool(re.fullmatch(r"[A-Za-z\s\d\W]+", q)):
-            translator = Translator()
-            q = translator.translate(q, dest="en").text
+            q = await self._client(
+                functions.messages.TranslateTextRequest(
+                    peer=False,
+                    id=False,
+                    text=[
+                        types.TextWithEntities(
+                            q,
+                            [],
+                        )
+                    ],
+                    to_lang="en",
+                )
+            )
+
+        q = str(q)
 
         async with aiohttp.ClientSession() as session:
             async with session.get(
