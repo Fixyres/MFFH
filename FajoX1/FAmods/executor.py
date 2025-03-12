@@ -17,7 +17,8 @@ import sys
 import traceback
 import html
 import time
-import hikkatl
+import html
+import telethon
 import asyncio
 import logging
 
@@ -68,11 +69,11 @@ class Executor(loader.Module):
             "event": message,
             "chat": message.to_id,
             "me": me,
-            "hikkatl": hikkatl,
-            "telethon": hikkatl,
+            "hikkatl": telethon,
+            "telethon": telethon,
             "utils": utils,
             "loader": loader,
-            "f": hikkatl.tl.functions,
+            "f": telethon.tl.functions,
             "c": self._client,
             "m": message,
             "lookup": self.lookup,
@@ -121,7 +122,7 @@ class Executor(loader.Module):
 
         if result:
             result = f"""{'<emoji document_id=6334758581832779720>✅</emoji> Результат' if not cerr else '<emoji document_id=5440381017384822513>🚫</emoji> Ошибка'}:
-<pre><code class="language-python">{result}</code></pre>
+<pre><code class="language-python">{html.escape(result)}</code></pre>
 """
         if res or res == 0 or res == False and res is not None:
             result += f"""<emoji document_id=6334778871258286021>💾</emoji> Код вернул:
@@ -130,6 +131,6 @@ class Executor(loader.Module):
 
         return await utils.answer(message, f"""<b>
 <emoji document_id=5431376038628171216>💻</emoji> Код:
-<pre><code class="language-python">{code}</code></pre>
+<pre><code class="language-python">{html.escape(code)}</code></pre>
 {result}
 <emoji document_id=5451732530048802485>⏳</emoji> Выполнен за {round(stop_time - start_time, 5)} секунд</b>""")
