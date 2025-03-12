@@ -117,12 +117,23 @@ class Spotify4ik(loader.Module):
                     " user-library-read"
                 ),
                 lambda: "Список разрешений",
-            )
+            ),
+            loader.ConfigValue(
+                "use_ytdl",
+                False,
+                lambda: "Для загрузки файла песни использовать yt-dl",
+                validator=loader.validators.Boolean(),
+            ),
         )
 
     async def client_ready(self, client, db):
         self.db = db
         self._client = client
+
+        self.musicdl = await self.import_lib(
+            "https://libs.hikariatama.ru/musicdl.py",
+            suspend_on_error=True,
+        )
 
         if self.config['bio_change']:
             asyncio.create_task(self._update_bio())
@@ -437,16 +448,22 @@ class Spotify4ik(loader.Module):
                     f"<b><emoji document_id=5944809881029578897>📑</emoji> From Playlist:</b> <a href='{playlist_url}'>View</a>\n") if playlist else "")
                 + f"\n<b><emoji document_id=5902449142575141204>🔗</emoji> Track URL:</b> <a href='{track_url}'>Open in Spotify</a>"
             )
-            with tempfile.TemporaryDirectory() as temp_dir:
-                audio_path = os.path.join(temp_dir, f"{artist_name} - {track_name}.mp3")
-                ydl_opts = {
-                    "format": "bestaudio/best[ext=mp3]",
-                    "outtmpl": audio_path,
-                    "noplaylist": True,
-                }
 
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([f"ytsearch1:{track_name} - {artist_name}"])
+            with tempfile.TemporaryDirectory() as temp_dir:
+                if self.config['use_ytdl']:
+                    audio_path = os.path.join(temp_dir, f"{artist_name} - {track_name}.mp3")
+
+                    ydl_opts = {
+                        "format": "bestaudio/best[ext=mp3]",
+                        "outtmpl": audio_path,
+                        "noplaylist": True,
+                    }
+
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        ydl.download([f"ytsearch1:{track_name} - {artist_name}"])
+
+                else:
+                    audio_path = await self.musicdl.dl(f"{artist_name} - {track_name}", only_document=True)
 
                 album_art_url = track['album']['images'][0]['url']
                 async with aiohttp.ClientSession() as session:
@@ -455,20 +472,20 @@ class Spotify4ik(loader.Module):
                         with open(art_path, "wb") as f:
                             f.write(await response.read())
 
-                await self._client.send_file(
-                    message.chat_id,
-                    audio_path,
-                    caption=track_info,
-                    attributes=[
-                        types.DocumentAttributeAudio(
-                            duration=duration_ms//1000,
-                            title=track_name,
-                            performer=artist_name
-                        )
-                    ],
-                    thumb=art_path,
-                    reply_to=message.reply_to_msg_id if message.is_reply else getattr(message, "top_id", None)
-                )
+            await self._client.send_file(
+                message.chat_id,
+                audio_path,
+                caption=track_info,
+                attributes=[
+                    types.DocumentAttributeAudio(
+                        duration=duration_ms//1000,
+                        title=track_name,
+                        performer=artist_name
+                    )
+                ],
+                thumb=art_path,
+                reply_to=message.reply_to_msg_id if message.is_reply else getattr(message, "top_id", None)
+            )
 
             await message.delete()
 
