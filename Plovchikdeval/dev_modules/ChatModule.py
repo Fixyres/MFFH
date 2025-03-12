@@ -86,6 +86,7 @@ class ChatModule(loader.Module):
         "kick_all": "{user_count} участников будут кикнуты.",
         "kicked": "🚷 {name} [<code>{id}</code>] был кикнут.\n<i><b>Причина:</b> {reason}</i>",
         "banned": "🚷 {name} [<code>{id}</code>] был забанен.\n<i><b>Причина:</b> {reason}</i>",
+        "unbanned": "🚷 {name} [<code>{id}</code>] был разбанен.",
         "chat_type_error": "Не удалось определить тип чата.",
         "invite_success": "<b>Пользователь приглашён успешно!</b>",
         "privacy_settings_error": "<b>Настройки приватности пользователя не позволяют пригласить его.</b>",
@@ -226,6 +227,7 @@ class ChatModule(loader.Module):
         "unmuted": "🔈 {first_name} [<code>{user_id}</code>] was unmuted.",
         "muted": "🔇 {first_name} [<code>{user_id}</code>] was muted for {mute_time} {unit}.\n<i><b>Reason:</b> {reason}</i>",
         "banned": "🚷 {name} [<code>{id}</code>] was banned.\n<i><b>Reason:</b> {reason}</i>",
+        "unbanned": "✅ {name} [<code>{id}</code>] was unbanned.",
         "users_too_much": "The user invitation limit has been reached.",
         "kick_all": "{user_count} participants will be kicked.",
         "kicked": "🚷 {name} [<code>{id}</code>] was kicked.\n<i><b>Reason:</b> {reason}</i>",
@@ -1574,19 +1576,17 @@ class ChatModule(loader.Module):
             user = await utils.get_user(await message.get_reply_message())
         else:
             args = utils.get_args_raw(message)
-            if len(args) == 0:
-                return await utils.answer(message, self.strings("no_one_unbanned"))
-            if args[0].isdigit():
-                who = int(args[0])
+            if args.isdigit():
+                who = int(args)
             else:
-                who = args[0]
+                who = args
             user = await self.client.get_entity(who)
         if not user:
-            return await utils.answer(message, self.strings("no_user", message))
+            return await utils.answer(message, self.strings("no_one_unbanned"))
         try:
             await self.client(EditBannedRequest(message.chat_id, user.id, ChatBannedRights(until_date=None, view_messages=False)))
-            await message.delete()
-            return
+            full_name = user.first_name + " " + user.last_name if user.last_name else user.first_name
+            return await utils.answer(message, self.strings("unbanned").format(id=user.id, name=full_name))
         except BadRequestError:
             await utils.answer(message, self.strings("no_rights", message))
             return
