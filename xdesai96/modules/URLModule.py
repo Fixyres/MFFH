@@ -1,5 +1,5 @@
 # meta developer: @xdesai
-# requires: requests, pyshorteners
+# requires: requests pyshorteners
 
 from .. import loader, utils
 import requests
