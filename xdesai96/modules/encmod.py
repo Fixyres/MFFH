@@ -1,4 +1,4 @@
-# meta developer: @xdesai & @devjmodules
+# meta developer: @xdesai
 
 import random
 import base64
