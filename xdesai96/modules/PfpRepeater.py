@@ -1,15 +1,5 @@
 #meta developer: @xdesai
 
-# This module is for setting a profile photo and repeating it.
-
-# Commands:
-# .pfp <photo> - Start repeating profile photo.
-# .pfpstop - Stop repeating profile photo.
-
-# You can also reply to a photo with .pfp to set it as the profile photo.
-
-# Disclaimer: We are not responsible for any issues that may arise with your account.
-
 import asyncio
 from telethon import functions
 from .. import loader
