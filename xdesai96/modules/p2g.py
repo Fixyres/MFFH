@@ -1,9 +1,7 @@
 # meta developer: @xdesai
 
 from telethon.tl.types import Message
-from PIL import Image
-import os
-import subprocess
+import os, subprocess
 from .. import loader, utils
 
 @loader.tds
