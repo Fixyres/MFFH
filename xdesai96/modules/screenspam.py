@@ -1,35 +1,36 @@
 # meta developer: @xdesai
 
 from .. import loader, utils
-from telethon import events, errors, functions, types
-
-def register(cb):
-	cb(ScrSpamMod())
-
+from telethon import functions, types
 
 class ScrSpamMod(loader.Module):
-	"""Screenshot Spammer"""
+    """Screenshot Spammer"""
+    strings = {'name': 'ScrSpam',
+               'invalid_number': '❌ <b>Invalid number.</b>'}
 
-	strings = {'name': 'ScrSpam'}
+    strings = {
+        'invalid_number': '❌ <b>Неверное кол-во.</b>'
+    }
 
-	def __init__(self):
-		self.name = self.strings['name']
-		self._me = None
-		self._ratelimit = []
+    async def client_ready(self, client, db):
+        self._db = db
+        self._client = client
+	
+    @loader.command(ru_doc="<кол-во> | Спам скриншотами")
+    async def scrs(self, message):
+        """<amount> | Screenshot spam"""
+        args = utils.get_args(message)
+        if args and args.isdigit():
+            amount = int(amount)
+        else:
+            return await utils.answer(message, self.strings('invalid_number', message))
 
-	async def client_ready(self, client, db):
-		self._db = db
-		self._client = client
-		self.me = await client.get_me()
+        await utils.answer(message, ".")
 
-	async def scrscmd(self, message):
-		""".scrs <amount>"""
-		a = 1
-		r = utils.get_args(message)
-		if r and r[0].isdigit():
-			a = int(r[0])
-		await message.edit("Screenshoting...")
-		for _ in range(a):
-			await message.client(functions.messages.SendScreenshotNotificationRequest(peer=await self.client.get_entity(message.chat_id), reply_to=types.InputReplyToMessage(reply_to_msg_id=message.id)))
-		await message.delete()
-		
+        for _ in range(amount):
+            await message.client(functions.messages.SendScreenshotNotificationRequest(
+                peer=await self.client.get_entity(message.chat_id),
+                reply_to=types.InputReplyToMessage(reply_to_msg_id=message.id)
+            ))
+
+        await message.delete()
