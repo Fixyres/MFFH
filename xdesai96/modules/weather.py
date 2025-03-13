@@ -1,4 +1,5 @@
 # meta developer: @xdesai
+# requires: requests
 
 from .. import loader, utils
 import requests
