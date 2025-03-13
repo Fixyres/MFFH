@@ -148,6 +148,8 @@ class ControlSpam(loader.Module):
         sent = 0
 
         self.config["ids"][spam_id]["data"]["text"] = text
+
+        await utils.answer(message, f"Я начал спамить с сообщением айди: {new_spam_id}")
         
         while sent < count:
             self.config["ids"][spam_id]["data"]["count"] += 1
