@@ -20,7 +20,9 @@ class Stats(loader.Module):
 </b><emoji document_id=6032609071373226027>👥</emoji><b> Groups: </b><code>{groups}</code><b>
 </b><emoji document_id=5870886806601338791>👥</emoji><b> Channels: </b><code>{channels}</code><b>
 </b><emoji document_id=5870563425628721113>📨</emoji><b> Archived chats: </b><code>{archived}</code><b>
-</b><emoji document_id=5870948572526022116>✋</emoji><b> Blocked: </b><code>{blocked}</code>""",
+</b><emoji document_id=5870948572526022116>✋</emoji><b> Total blocked: </b><code>{blocked}</code>
+  <b>Ͱ</b><emoji document_id=6035084557378654059>👤</emoji><b> Users: </b><code>{blocked_users}</code>
+  <b>Ͱ</b><emoji document_id=6030400221232501136>🤖</emoji><b> Bots: </b><code>{blocked_bots}</code>""",
 
 "loading_stats": "<b><emoji document_id=5309893756244206277>🫥</emoji> Loading statistics...</b>",
     }
@@ -38,7 +40,9 @@ class Stats(loader.Module):
 </b><emoji document_id=6032609071373226027>👥</emoji><b> Групп: </b><code>{groups}</code><b>
 </b><emoji document_id=5870886806601338791>👥</emoji><b> Каналов: </b><code>{channels}</code><b>
 </b><emoji document_id=5870563425628721113>📨</emoji><b> Архивированных чатов: </b><code>{archived}</code><b>
-</b><emoji document_id=5870948572526022116>✋</emoji><b> Заблокированных: </b><code>{blocked}</code>""",
+</b><emoji document_id=5870948572526022116>✋</emoji><b> Всего заблокированных: </b><code>{blocked}</code>
+  <b>Ͱ</b><emoji document_id=6035084557378654059>👤</emoji><b> Пользователи: </b><code>{blocked_users}</code>
+  <b>Ͱ</b><emoji document_id=6030400221232501136>🤖</emoji><b> Боты: </b><code>{blocked_bots}</code>""",
 
 "loading_stats": "<b><emoji document_id=5309893756244206277>🫥</emoji> Загрузка статистики...</b>",
     }
@@ -57,13 +61,20 @@ class Stats(loader.Module):
         channels = 0
         all_chats = 0
         archived = 0
+        blocked_bots = 0
+        blocked_users = 0
 
         limit = 100
         offset = 0
         total_blocked = 0
         while True:
             blocked_chats = await self._client(GetBlockedRequest(offset=offset, limit=limit))
-            blocked = len(blocked_chats.blocked)
+            for user in blocked_chats.users:
+                if user.bot:
+                    blocked_bots += 1
+                else:
+                    blocked_users += 1
+            blocked = len(blocked_chats.users)
             total_blocked += blocked
 
             if blocked < limit:
@@ -94,4 +105,5 @@ class Stats(loader.Module):
 
         await utils.answer(message, self.strings("stats", message).format(users=users, bots=bots, channels=channels,
                                                                           groups=groups, all_chats=all_chats,
-                                                                          blocked=total_blocked, archived=archived))
+                                                                          blocked=total_blocked, archived=archived, blocked_users=blocked_users,
+                                                                          blocked_bots=blocked_bots))
