@@ -2,8 +2,7 @@
 
 from .. import loader, utils
 from telethon import functions
-import time
-import asyncio
+import asyncio, time
 
 class IrisFarm:
     async def autofarm(self):
