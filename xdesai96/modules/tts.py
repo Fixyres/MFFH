@@ -1,4 +1,5 @@
 # meta developer: @xdesai
+# requires: edge_tts langdetect
 
 import os
 from langdetect import detect
