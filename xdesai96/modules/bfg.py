@@ -7,7 +7,6 @@ from telethon import functions
 from .. import loader, utils
 
 class Farm:
-
     async def automining(self, conv):
         check_mine = "моя шахта"
         await conv.send_message(check_mine)
@@ -39,6 +38,8 @@ class Farm:
         for _ in range(energy_count):
             await conv.send_message("копать {mine_ore}".format(mine_ore=mine_ore))
             await asyncio.sleep(1)
+        if self.config["SaleOres"]:
+            await conv.send_message("продать {mine_ore}".format(mine_ore=mine_ore))
 
     async def everyday_bonus(self, conv):
         commands = [
@@ -74,13 +75,18 @@ class Farm:
                     await r.click(click)
                 except Exception:
                     pass
+        if self.config["SaleBTC"]:
+            await conv.send_message("продать биткоины")
 
 class BfgMod(loader.Module, Farm):
-    """
-    Автоматическая фарма в боте BFG.
-    """
-
-    strings = {"name": "BFG"}
+    strings = {"name": "BFG",
+               "bfgstart": "<blockquote><b>Autofarm is turned on</b></blockquote>",
+               "bfgstop": "<blockquote><b>Autofarm is turned off</b></blockquote>"
+               }
+    
+    strings_ru = {"bfgstart": "<blockquote><b>Автоматическая фарма включена</b></blockquote>",
+               "bfgstop": "<blockquote><b>Автоматическая фарма остановлена</b></blockquote>"
+               }
 
     _bot = "@bforgame_bot"
 
@@ -89,24 +95,36 @@ class BfgMod(loader.Module, Farm):
             loader.ConfigValue(
                 "AutoFarm",
                 True,
-                "Автоматически собирать и оплачивать налоги.",
+                "Автоматически собирать и оплачивать налоги",
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "SaleBTC",
+                False,
+                "Автоматически продавать биткоины",
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "AutoMining",
                 True,
-                "Автоматически копать.",
+                "Автоматически копать руды",
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "SaleOres",
+                False,
+                "Автоматически продавать руды",
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "EveryDayBonus",
                 True,
-                "Автоматически собирать бонус.",
+                "Автоматически собирать бонус",
                 validator=loader.validators.Boolean(),
             )
         )
 
-    @loader.loop(interval=60, autostart=True)
+    @loader.loop(interval=30, autostart=True)
     async def main_loop(self):
         try:
             now = time.time()
@@ -131,28 +149,20 @@ class BfgMod(loader.Module, Farm):
         except Exception as e:
             logging.exception(f"[BFG] Ошибка в main_loop: {e}")
 
-    @loader.command()
+    @loader.command(
+        ru_doc="Начать автоматическую фарму."
+    )
     async def bfg(self, message):
-        """Начать автоматическую фарму."""
+        """Start autofarming."""
         self.config["AutoFarm"] = True
         self.main_loop.start()
-        await utils.answer(message, "Автоматическая фарма включена.")
-
-    @loader.command()
-    async def rstbfg(self, message):
-        """Перезапустить автоматическую фарму."""
-        self.config["AutoFarm"] = False
-        self.main_loop.stop()
-        await asyncio.sleep(1)
-        await utils.answer(message, "Автоматическая фарма перезапущена.")
-        await self.autofarm()
-        self.set("Tree_time", time.time() + 3600)
-        self.config["AutoFarm"] = True
-        self.main_loop.start()
+        await utils.answer(message, self.strings("bfgstart"))
         
-    @loader.command()
+    @loader.command(
+        ru_doc="Остановить автоматическую фарму."
+    )
     async def bfgstop(self, message):
-        """Остановить автоматическую фарму."""
+        """Stop autofarming."""
         self.config["AutoFarm"] = False
         self.main_loop.stop()
-        await utils.answer(message, "Автоматическая фарма остановлена.")
+        await utils.answer(message, self.strings("bfgstop"))
