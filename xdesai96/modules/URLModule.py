@@ -82,6 +82,6 @@ class URLMod(loader.Module):
         try:
             hostname = url.split("//")[-1].split("/")[0]
             ip_address = socket.gethostbyname(hostname)
-            await utils.answer(message, f"<b>IP address of {url}:</b> {ip_address}")
+            await utils.answer(message, f"<b>IP address of {url}:</b> <code>{ip_address}</code>")
         except socket.gaierror as e:
             await utils.answer(message, f"<b>An error occurred:</b> {e}")
