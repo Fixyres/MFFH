@@ -147,7 +147,7 @@ class BfgMod(loader.Module, Farm):
                     self.set("Bonus_time", int(now))
             await self._client(functions.messages.ReadMentionsRequest(self._bot))
         except Exception as e:
-            logging.exception(f"[BFG] Ошибка в main_loop: {e}")
+            logging.exception(f"[B  FG] Ошибка в main_loop: {e}")
 
     @loader.command(
         ru_doc="Начать автоматическую фарму."
