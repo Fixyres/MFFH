@@ -6,7 +6,9 @@ from .. import loader, utils
 
 class MembersListMod(loader.Module):
     """Module to create a list of users."""
-    strings = {"name": "MembersList"}
+    strings = {"name": "MembersList",
+               "processing": "<blockquote><b>Processing ...</b></blockquote>",
+               "cap": "Here is the members list. Total users: {amount}"}
 
     async def client_ready(self, client, db):
         self.client = client
@@ -14,10 +16,10 @@ class MembersListMod(loader.Module):
     async def mlistcmd(self, message):
         """Get the members list of multiple chats and send it as a txt file."""
         args = utils.get_args_raw(message)
-        await message.delete()
+        await utils.answer(message, self.strings("processing"))
         if not args:
             return await utils.answer(message, "Please specify chat IDs separated by spaces.")
-        
+
         chat_ids = args.split()
         all_members_list = []
 
@@ -37,10 +39,10 @@ class MembersListMod(loader.Module):
                 temp_file.write(member + '\n')
             temp_file_path = temp_file.name
 
-        await self.client.send_file(
+        await utils.answer_file(
             message.chat_id,
             temp_file_path,
-            caption=f"Here is the members list. Total users: {len(all_members_list)}",
+            caption=self.strings("cap").format(amount=len(all_members_list)),
             reply_to=message.reply_to_msg_id,
         )
 
