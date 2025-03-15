@@ -37,6 +37,7 @@ from .. import loader, utils
 logger = logging.getLogger(__name__)
 
 
+@loader.tds
 class YaMusicMod(loader.Module):
     """The module for Yandex.Music streaming service"""
 
