@@ -1,7 +1,7 @@
 # meta developer: @xdesai
 
 import logging
-from ..inline.types import InlineCall, InlineQuery
+from ..inline.types import InlineCall, InlineQuery # type: ignore
 from .. import loader
 
 @loader.tds
