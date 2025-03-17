@@ -1,4 +1,5 @@
 # meta developer: @xdesai
+# requires: requests
 
 import requests
 from .. import loader, utils
@@ -66,5 +67,5 @@ class InfoIPMod(loader.Module):
                     timezone=data.get('timezone', 'no timezone available'),
                     city=data.get('city', 'no city available'),
                     region=data.get('regionName', 'no region available'),
-                    coordinates=f'{data.get('lat', 'no latitude available')}, {data.get('lon', 'no longitude available')}'
+                    coordinates=f"{data.get('lat', 'no latitude available')}, {data.get('lon', 'no longitude available')}"
                 ))
