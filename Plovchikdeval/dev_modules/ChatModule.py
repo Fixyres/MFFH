@@ -13,6 +13,7 @@ Licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 Inter
 """
 
 # meta developer: @kshmods
+# promote, fullrights funcs: @idiotcoders
 
 import asyncio, os
 from .. import loader, security, utils
