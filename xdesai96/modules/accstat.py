@@ -2,7 +2,7 @@
 
 import asyncio
 from .. import loader, utils
-
+from telethon import errors
 
 @loader.tds
 class AccstatMod(loader.Module):
@@ -42,23 +42,41 @@ class AccstatMod(loader.Module):
                     user_id = int(args[0])
                     async with self._client.conversation(self._bot) as conv:
                         await conv.send_message(f"{user_id}")
-                        asyncio.sleep(2)
-                        r = await conv.get_edit()
-                        return await utils.answer(message, r.message)
+                        try:
+                            r = await conv.get_edit(timeout=2)
+                            return await utils.answer(message, r.message)
+                        except asyncio.exceptions.TimeoutError:
+                            r = await conv.get_reply()
+                            try:
+                                return await utils.answer(message, r.message)
+                            except errors.rpcerrorlist.MessageEmptyError:
+                                return await utils.answer(message, self.strings("timeout"))
                 else:
                     try:
                         user_id = (await self.client.get_entity(args[0])).id
                         async with self._client.conversation(self._bot) as conv:
                             await conv.send_message(f"{user_id}")
-                            asyncio.sleep(2)
-                            r = await conv.get_edit()
-                            return await utils.answer(message, r.message)
+                            try:
+                                r = await conv.get_edit(timeout=2)
+                                return await utils.answer(message, r.message)
+                            except asyncio.exceptions.TimeoutError:
+                                r = await conv.get_reply()
+                                try:
+                                    return await utils.answer(message, r.message)
+                                except errors.rpcerrorlist.MessageEmptyError:
+                                    return await utils.answer(message, self.strings("timeout"))
                     except Exception as e:
                         return utils.answer(message, self.strings('error').format(err=e))
         else:
             user_id = reply.sender_id
             async with self._client.conversation(self._bot) as conv:
                 await conv.send_message(f"{user_id}")
-                asyncio.sleep(2)
-                r2 = await conv.get_edit()
-                return await utils.answer(message, r2.message)
+                try:
+                    r = await conv.get_edit(timeout=2)
+                    return await utils.answer(message, r.message)
+                except asyncio.exceptions.TimeoutError:
+                    r = await conv.get_reply()
+                    try:
+                        return await utils.answer(message, r.message)
+                    except errors.rpcerrorlist.MessageEmptyError:
+                        return await utils.answer(message, self.strings("timeout"))
