@@ -17,6 +17,7 @@ Licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 Inter
 import requests
 from .. import loader, utils
 
+
 @loader.tds
 class InfoIPMod(loader.Module):
 
