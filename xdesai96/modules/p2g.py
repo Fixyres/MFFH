@@ -3,6 +3,7 @@
 from telethon.tl.types import Message
 import os, subprocess
 from .. import loader, utils
+from PIL import Image
 
 @loader.tds
 class P2G(loader.Module):
@@ -22,10 +23,10 @@ class P2G(loader.Module):
     }
 
     @loader.command(
-        doc_ru = "Создает GIF из изображения. Использование: .gif (ответ на изображение)"
+        doc_ru = "Создает GIF из изображения."
     )
     async def p2g(self, message: Message):
-        """Creates a GIF from an image. Usage: .gif (response to the image)"""
+        """Creates a GIF from an image."""
         reply = await message.get_reply_message()
         if not reply or not reply.media:
             await utils.answer(message, self.strings("no_image", message))
