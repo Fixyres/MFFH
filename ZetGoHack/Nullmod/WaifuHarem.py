@@ -1,4 +1,4 @@
-__version__ = (1,2,2)
+__version__ = (1,2,3)
 
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
@@ -61,19 +61,18 @@ class WaifuHarem(loader.Module):
                     while True:
                         try:
                             r = await conv.get_response()
+                            break
                         except:
                             pass
-                        break
                 if "Доступен бонус за подписки" in r.text:
                     await conv.send_message("/start flyer_bonus")
                     try:
                         r = await conv.get_response()
                     except:
-                        no = True
-                        while no:
+                        while True:
                             try:
                                 r = await conv.get_response()
-                                no = False
+                                break
                             except:
                                 pass
                     if "проверка пройдена" not in r.text:
@@ -84,6 +83,8 @@ class WaifuHarem(loader.Module):
                             for i in a:
                                 for button in i:
                                     if button.url:
+                                        if "/start?" in button.url:
+                                            continue
                                         if "t.me/boost" in button.url:
                                             self.wait_boost = True
                                             continue
