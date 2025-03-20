@@ -1,4 +1,4 @@
-__version__ = (1,0,4) ###Да, это -- копирка модуля HornyHarem. Я не виноват, что у разраба во всей связке ботов код одинаковый.🥰
+__version__ = (1,0,5) ###Да, это -- копирка модуля HornyHarem. Я не виноват, что у разраба во всей связке ботов код одинаковый.🥰
 
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
@@ -20,7 +20,7 @@ __version__ = (1,0,4) ###Да, это -- копирка модуля HornyHarem.
 
 
 # meta developer: @nullmod
-
+ 
 from telethon.tl.functions.channels import JoinChannelRequest, LeaveChannelRequest
 from telethon.tl.functions.contacts import BlockRequest, UnblockRequest
 from hikkatl.tl.functions.messages import ImportChatInviteRequest
@@ -102,12 +102,20 @@ class GifHarem(loader.Module):
                     while True:
                         try:
                             r = await conv.get_response()
+                            break
                         except:
                             pass
-                        break
                 if "Доступен бонус за подписки" in r.text:
                     await conv.send_message("/start flyer_bonus")
-                    r = await conv.get_response()
+                    try:
+                        r = await conv.get_response()
+                    except:
+                        while True:
+                            try:
+                                r = await conv.get_response()
+                                break
+                            except:
+                                pass
                     if "проверка пройдена" not in r.text:
                         to_leave = []
                         to_block = []
@@ -116,6 +124,8 @@ class GifHarem(loader.Module):
                             for i in a:
                                 for button in i:
                                     if button.url:
+                                        if "/start?" in button.url:
+                                            continue
                                         if "t.me/boost" in button.url:
                                             self.wait_boost = True
                                             continue
@@ -154,7 +164,15 @@ class GifHarem(loader.Module):
                 if time.time()-self.lout > 86400:
                     while count <= 3:
                         await conv.send_message("/lout")
-                        r = await conv.get_response()
+                        try:
+                            r = await conv.get_response()
+                        except:
+                            while True:
+                                try:
+                                    r = await conv.get_response()
+                                    break
+                                except:
+                                    pass
                         if r.reply_markup:
                             m = await r.respond(".")
                             await self.lightsoutW(m,r)
