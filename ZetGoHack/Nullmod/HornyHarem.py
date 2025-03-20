@@ -1,5 +1,5 @@
 
-__version__ = (1,3,4)
+__version__ = (1,3,5)
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -101,12 +101,20 @@ class HornyHarem(loader.Module):
                     while True:
                         try:
                             r = await conv.get_response()
+                            break
                         except:
                             pass
-                        break
                 if "Доступен бонус за подписки" in r.text:
                     await conv.send_message("/start flyer_bonus")
-                    r = await conv.get_response()
+                    try:
+                        r = await conv.get_response()
+                    except:
+                        while True:
+                            try:
+                                r = await conv.get_response()
+                                break
+                            except:
+                                pass
                     if "проверка пройдена" not in r.text:
                         to_leave = []
                         to_block = []
@@ -115,6 +123,8 @@ class HornyHarem(loader.Module):
                             for i in a:
                                 for button in i:
                                     if button.url:
+                                        if "/start?" in button.url:
+                                            continue
                                         if "t.me/boost" in button.url:
                                             self.wait_boost = True
                                             continue
@@ -140,7 +150,7 @@ class HornyHarem(loader.Module):
                                             to_block.append(entity.username)
                             flyer_messages = await message.client.get_messages(self.id, limit=1)
                             if self.wait_boost:
-                                await asyncio.sleep(120)
+                                await asyncio.sleep(180)
                             for m in flyer_messages:
                                 await asyncio.sleep(5)
                                 await m.click()
@@ -153,7 +163,15 @@ class HornyHarem(loader.Module):
                 if time.time()-self.lout > 86400:
                     while count <= 3:
                         await conv.send_message("/lout")
-                        r = await conv.get_response()
+                        try:
+                            r = await conv.get_response()
+                        except:
+                            while True:
+                                try:
+                                    r = await conv.get_response()
+                                    break
+                                except:
+                                    pass
                         if r.reply_markup:
                             m = await r.respond(".")
                             await self.lightsoutW(m,r)
