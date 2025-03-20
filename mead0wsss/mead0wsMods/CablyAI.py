@@ -7,11 +7,11 @@ __version__ = (1, 0, 0)
 # ██║░╚═╝░██║███████╗██║░░██║██████╔╝╚█████╔╝░░╚██╔╝░╚██╔╝░██████╔╝
 # ╚═╝░░░░░╚═╝╚══════╝╚═╝░░╚═╝╚═════╝░░╚════╝░░░░╚═╝░░░╚═╝░░╚═════╝░
 #                © Copyright 2025
-#            ✈ https://t.me/mead0ws_modules
+#            ✈ https://t.me/mead0wssMods
 
 # scope: hikka_only
 # scope: hikka_min 1.3.3
-# meta developer: @mead0ws_modules
+# meta developer: @mead0wssMods
 # meta banner: https://x0.at/eoIh.jpg
 
 
