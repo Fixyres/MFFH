@@ -1,3 +1,4 @@
+__version__ = (1,0,1)
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -15,6 +16,7 @@
 #░░░█░░░█░░░░█░░█░█░█░█
 #░░░███░███░░█░░███░███
 
+# Team: 'H:Mods'
 # meta developer: @nullmod
 
 
@@ -50,7 +52,7 @@ class ScheduledMessagesPlusMod(loader.Module):
         variables = {}
 
         for i in range(count):
-            send_time = datetime.now() + timedelta(seconds=interval * i) - timedelta(seconds=7200)
+            send_time = datetime.utcnow() + timedelta(seconds=interval * i)
             formatted_text = self.process_text(text, variables)
             await self.client.send_message(chat_id, formatted_text, schedule=send_time, reply_to=forum_topic_id)
 
@@ -65,14 +67,19 @@ class ScheduledMessagesPlusMod(loader.Module):
         """eval()"""
         parts = expr.split(";")
         last_value = None
-
+        var_name = None
         for part in parts:
             part = part.strip()
             if "=" in part and part.count("=") == 1:
                 var, value = part.split("=")
-                variables[var.strip()] = eval(value, {"__builtins__": {}}, variables)
-                last_value = variables[var.strip()]
+                var = var.strip()
+                if var not in variables:
+                    variables[var] = eval(value, {"__builtins__": {}}, variables)
+                last_value = variables[var]
+                var_name = var
             else:
                 last_value = eval(part, {"__builtins__": {}}, variables)
 
+                if var_name is not None:
+                    variables[var_name] = last_value
         return str(last_value)
