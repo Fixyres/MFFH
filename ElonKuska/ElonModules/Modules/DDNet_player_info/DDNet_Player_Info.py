@@ -4,7 +4,7 @@
 # ---------------------------------------------------------------------------------
 # Name: DDNet player info
 # Description: Модуль для получения информации о профиле игрока DDraceNetwork и KOG
-# meta developer: @ElonKuska
+# meta developer: @ElonModules
 # ---------------------------------------------------------------------------------
 
 from .. import loader, utils
