@@ -112,7 +112,8 @@ class ChatModule(loader.Module):
         "no_title": "Нет названия",
         "join_success": "Успешно вступили в приватный чат по ссылке: {link}.",
         "successful_delete": "✅ ({chat_type}) успешно удалена.",
-        "owner_info": "Владелец:\n<a href='tg://user?id={owner_id}'>{owner_name}</a>",
+        "owner_info": "⭐️ <b>Владелец:\n<a href='tg://user?id={owner_id}'>{owner_name}</a></b>",
+        "no_owner": "⭐️ <b>Владелец:\nНе найден</b>",
         "members_count": "Количество участников (без ботов) в чате: {count}",
         "bots_in_chat": "<b>Ботов в \"{title}\": {count}</b>\n",
         "deleted_bot": "\n• Удалённый бот <b>|</b> <code>{user_id}</code>",
@@ -226,13 +227,13 @@ class ChatModule(loader.Module):
         "search_deleted_accounts": "<emoji document_id=5188311512791393083>🔎</emoji> <b>Searching for deleted accounts</b>",
         "no_deleted_accounts": "<emoji document_id=5341509066344637610>😎</emoji> <b>No deleted accounts found here</b>",
         "kicked_deleted_accounts": "<emoji document_id=5328302454226298081>🫥</emoji> <b>Removed {count} deleted accounts</b>",
-        "chat_info_header": "Chat information:\n",
+        "chat_info_header": "<b>Chat information:\n</b>",
         "group_title": "<b>Group title:</b> {title}\n",
         "previous_title": "<b>Previous title:</b> {title}\n",
         "group_type_public": "<b>Group type:</b> Public\n",
         "group_link": "<b>Link:</b> {link}\n",
         "group_type_private": "<b>Group type:</b> Private\n",
-        "group_creator_username": "<b>Creator:</b> @{username}\n",
+        "group_creator_username": "<b>Creator:</b> {username}\n",
         "group_creator_link": "<b>Creator:</b> <a href=\"tg://user?id={id}\">{firstname}</a>\n",
         "group_created": "<b>Created:</b> {date} - {time}\n",
         "messages_viewable": "<b>Viewable messages:</b> {count}\n",
@@ -256,7 +257,8 @@ class ChatModule(loader.Module):
         "no_title": "No title",
         "join_success": "Successfully joined the private chat via the link: {link}.",
         "successful_delete": "✅ ({chat_type}) successfully deleted.",
-        "owner_info": "Owner:\n<a href='tg://user?id={owner_id}'>{owner_name}</a>",
+        "owner_info": "⭐️ <b>Owner:\n<a href='tg://user?id={owner_id}'>{owner_name}</a></b>",
+        "no_owner": "⭐️ <b>Owner:\nNot found</b>",
         "members_count": "Number of members (excluding bots) in the chat: {count}",
         "bots_in_chat": "<b>Bots in \"{title}\": {count}</b>\n",
         "deleted_bot": "\n• Deleted bot <b>|</b> <code>{user_id}</code>",
@@ -1066,7 +1068,7 @@ class ChatModule(loader.Module):
             participants = await self.client.get_participants(chat, filter=ChannelParticipantsAdmins, aggressive=True)
             for admin in participants:
                 if isinstance(admin.participant, ChannelParticipantCreator):
-                    owner_name = f"{admin.first_name} {admin.last_name or ''}".strip()
+                    owner_name = f"{admin.first_name} {admin.last_name or ''}"
                     owner_id = admin.id
                     await utils.answer(event, self.strings("owner_info").format(owner_id=owner_id, owner_name=owner_name))
                     return
@@ -1142,28 +1144,26 @@ class ChatModule(loader.Module):
     @loader.command(
         ru_doc="| Показывает информацию о чате."
     )
-    async def chatinfo(self, chatinfo):
+    async def chatinfo(self, message):
         """| Shows information about the chat."""
-        if chatinfo.chat:
-            await utils.answer(chatinfo, self.strings("loading", chatinfo))
-            await chatinfo.delete()
-            chat = await self.get_chatinfo(chatinfo)
-            caption = await self.fetch_info(chat, chatinfo)
+        if message.chat:
+            await utils.answer(message, self.strings("loading", message))
+            chat = await self.get_chatinfo(message)
+            caption = await self.fetch_info(chat, message)
+            await message.delete()
             try:
-                await chatinfo.client.send_message(
-                    chatinfo.to_id,
+                await message.client.send_message(
+                    message.to_id,
                     str(caption),
-                    file=await chatinfo.client.download_profile_photo(
+                    file=await message.client.download_profile_photo(
                         chat.full_chat.id, "chatphoto.jpg"
                     ),
                 )
                 os.remove("chatphoto.jpg")
-            except Exception:
-                await utils.answer(chatinfo, self.strings("rpc_error", chatinfo))
-                await chatinfo.delete()
+            except Exception as e:
+                await utils.answer(message, self.strings("rpc_error", message).format(error=e))
         else:
-            await utils.answer(chatinfo, self.strings("not_a_chat", chatinfo))
-            await chatinfo.delete()
+            await utils.answer(message, self.strings("not_a_chat", message))
 
     @loader.command(
         ru_doc="| Показывает список чатов, каналов и групп где вы админ/владелец."
@@ -1938,7 +1938,14 @@ class ChatModule(loader.Module):
             self.strings("Yes", event) if hasattr(chat_obj_info, "verified") and chat_obj_info.verified else self.strings("no", event)
         )
         username = "@{}".format(username) if username else None
-        creator_username = "@{}".format(creator_username) if creator_username else None
+        chat_info = await event.get_input_chat()
+        participants = await self.client.get_participants(chat_info, filter=ChannelParticipantsAdmins, aggressive=True)
+        for admin in participants:
+            if isinstance(admin.participant, ChannelParticipantCreator):
+                owner_name = f"{admin.first_name} {admin.last_name or ''}"
+                owner_id = admin.id
+                owner = f'<a href="tg://user?id={owner_id}">{owner_name}</a>'
+                creator_username = "{}".format(owner) if owner else None
 
         if admins is None:
             try:
@@ -1959,7 +1966,7 @@ class ChatModule(loader.Module):
                 bots += 1
 
         caption = self.strings("chat_info_header", event)
-        caption += f"<b>ID:</b> {chat_obj_info.id}\n"
+        caption += f"<b>ID:</b> <code>{chat_obj_info.id}</code>\n"
         if chat_title is not None:
             caption += self.strings("group_title", event).format(title=chat_title)
         if former_title is not None:
