@@ -19,7 +19,7 @@ from .. import loader, utils
 
 @loader.tds
 class AutoFormatting(loader.Module):
-     """Модуль для автоматического форматирования вашего текста в чате."""
+    """Модуль для автоматического форматирования вашего текста в чате."""
     strings = {"name": "AutoFormatting"}
 
     def __init__(self):
