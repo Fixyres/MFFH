@@ -10,7 +10,7 @@ class Weather(loader.Module):
                'url': 'http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ru',
                'weather_info': """
 <emoji document_id=5884330496619450755>☁️</emoji> Погода в городе {city}, {country}:
-<emoji document_id=5199707727475007907>🌡️</emoji> Температура:{temperature}°C (ощущается как {feels_like}°C)
+<emoji document_id=5199707727475007907>🌡️</emoji> Температура: {temperature}°C (ощущается как {feels_like}°C)
 <emoji document_id=6050944866580435869>💧</emoji> Влажность: {humidity}%
 <emoji document_id=5415843564280107382>🌀</emoji> Скорость ветра: {wind_speed} м/с
 <emoji document_id=5417937876232983047>⛅️</emoji> Небо: {description}
@@ -23,7 +23,7 @@ class Weather(loader.Module):
                'url': 'http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=en',
                'weather_info': """
 <emoji document_id=5884330496619450755>☁️</emoji> Weather in {city}, {country}:
-<emoji document_id=5199707727475007907>🌡️</emoji> Temperature:{temperature}°C (feels like {feels_like}°C)
+<emoji document_id=5199707727475007907>🌡️</emoji> Temperature: {temperature}°C (feels like {feels_like}°C)
 <emoji document_id=6050944866580435869>💧</emoji> Humidity: {humidity}%
 <emoji document_id=5415843564280107382>🌀</emoji> Wind speed: {wind_speed} m/s
 <emoji document_id=5417937876232983047>⛅️</emoji> Sky: {description}
