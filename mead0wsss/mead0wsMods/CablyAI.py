@@ -21,7 +21,7 @@ from .. import loader, utils
 
 @loader.tds
 class GPTMod(loader.Module):
-    """Модуль для работы с GPT"""
+    """Модуль для работы с нейросетями (ChatGPT)"""
     strings = {"name": "CablyAI"}
 
     def __init__(self):
@@ -35,7 +35,7 @@ class GPTMod(loader.Module):
         )
 
     async def gptcmd(self, event):
-        """Модуль для работы с ChatGPT прямо в Telegram. \nАвтор: @mead0ws_modules"""
+        """Модуль для работы с ChatGPT прямо в Telegram."""
         args = utils.get_args_raw(event)
         if not args:
             await event.reply("Нет вопроса")
@@ -44,7 +44,7 @@ class GPTMod(loader.Module):
         model = self.config.get("model")
 
         if not model:
-            await event.reply("Модель GPT не указана в конфиге")
+            await event.reply("Модель ИИ не указана в конфиге")
             return
 
         data = {
