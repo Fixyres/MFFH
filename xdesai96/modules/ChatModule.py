@@ -130,7 +130,6 @@ class ChatModule(loader.Module):
         "data_fetch_error": "Ошибка получения данных",
         "this_chat": "этом чате",
         "members_in_chat": "Участников в {title}:\n",
-        "steal_complete": "({count}) Просто прикол)",
         "my_id": "<emoji document_id=5208454037531280484>💜</emoji> <b>Мой ID</b>: <code>{id}</code>",
         "users_id": "<emoji document_id=6035084557378654059>👤</emoji> <b>ID пользователя</b>: <code>{id}</code>",
         "chat_id": "<emoji document_id=5886436057091673541>💬</emoji> <b>ID чата</b>: <code>{id}</code>",
@@ -275,7 +274,6 @@ class ChatModule(loader.Module):
         "data_fetch_error": "Error fetching data",
         "this_chat": "this chat",
         "members_in_chat": "Members in {title}:\n",
-        "steal_complete": "({count}) just for fun)",
         "my_id": "<emoji document_id=5208454037531280484>💜</emoji> <b>My ID</b>: <code>{id}</code>",
         "users_id": "<emoji document_id=6035084557378654059>👤</emoji> <b>User's ID</b>: <code>{id}</code>",
         "chat_id": "<emoji document_id=5886436057091673541>💬</emoji> <b>Chat ID</b>: <code>{id}</code>",
@@ -1387,57 +1385,6 @@ class ChatModule(loader.Module):
             except Exception as e:
                 await utils.answer(event, self.strings("rpc_error", event).format(error=e))
                 return
-
-    @loader.command(
-        ru_doc="<id> <nobot: OPTIONAL> | Добавляет людей и ботов с чата в чат."
-    )
-    async def steal(self, event):
-        """<id> <nobot: OPTIONAL> | Adds people from the chat to the chat."""
-        args = utils.get_args_raw(event).split(maxsplit=1)
-        if not args:
-            return await utils.answer(event, self.strings("invalid_args", event))
-        idschannelgroup = int(args[0])
-        nobot = "nobot" in args[1] if len(args) > 1 else False
-        entity = await event.client.get_entity(idschannelgroup)
-        participants = await event.client.get_participants(event.chat_id)
-        if isinstance(entity, Channel):
-            for user in participants:
-                if nobot and user.bot:
-                    continue
-                else:
-                    try:
-                        await event.client(functions.channels.InviteToChannelRequest(
-                                channel=idschannelgroup,
-                                users=[user.id]
-                            ))
-                    except FloodWaitError as e:
-                        await asyncio.sleep(e.seconds)
-                    except Exception as e:
-                        await utils.answer(event, self.strings("rpc_error", event).format(error=e))
-                        return
-        elif isinstance(entity, Chat):
-            for user in participants:
-                if nobot and user.bot:
-                    continue
-                else:
-                    try:
-                        await event.client(functions.channels.AddChatUserRequest(
-                                chat_id=idschannelgroup, 
-                                users=[user.id],
-                                fwd_limit=0
-                            ))
-                    except FloodWaitError as e:
-                        await asyncio.sleep(e.seconds)
-                    except Exception as e:
-                        await utils.answer(event, self.strings("rpc_error", event).format(error=e))
-                        return
-        else:
-            return await utils.answer(event, self.strings("invalid_args", event))
-        await utils.answer(event,
-            self.strings("steal_complete", event).format(count=len(user))
-        )
-        await event.delete()
-        return
 
     @loader.command(
         ru_doc="| Выводит список участников в чате."
