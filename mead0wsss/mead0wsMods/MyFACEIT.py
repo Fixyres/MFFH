@@ -23,7 +23,7 @@ import json
 
 @loader.tds
 class MyFACEIT(loader.Module):
-    """Модуль для получения информации о своем профиле FACEIT\nАвтор: @mead0ws_modules"""
+    """Модуль для получения информации о своем профиле FACEIT"""
     strings = {"name": "MyFACEIT"}
 
     def __init__(self):
