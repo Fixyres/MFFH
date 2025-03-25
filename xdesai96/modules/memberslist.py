@@ -3,7 +3,6 @@
 import tempfile
 from .. import loader, utils
 
-
 class MembersListMod(loader.Module):
     """Module to create a list of users."""
     strings = {"name": "MembersList",
