@@ -2,7 +2,7 @@
 
 import asyncio
 from telethon import functions
-from .. import loaders # test
+from .. import loaders
 
 @loader.tds
 class PfpRepeaterMod(loader.Module):
