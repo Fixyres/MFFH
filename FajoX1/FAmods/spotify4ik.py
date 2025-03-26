@@ -24,6 +24,7 @@ import yt_dlp
 import spotipy
 
 from telethon import types
+from telethon.tl.functions.channels import EditTitleRequest
 from telethon.tl.functions.account import UpdateProfileRequest
 
 from .. import loader, utils
@@ -75,7 +76,17 @@ class Spotify4ik(loader.Module):
         "track_norepeat": "<b><emoji document_id=6334550748365325938>🔁</emoji> Трек не будет повторяться.</b>",
 
         "track_liked": f"<b><emoji document_id=5287454910059654880>❤️</emoji> Трек добавлен в избранное!</b>",
+
+        "channel_music_bio_disabled": "<b><emoji document_id=5188621441926438751>🎵</emoji> Стрим музыки в био канале выключен!</b>",
+
+        "channel_music_bio_enabled": """<b><emoji document_id=5188621441926438751>🎵</emoji> Стрим музыки в био канале включен!</b>
         
+<b><emoji document_id=5787544344906959608>ℹ️</emoji> Инструкция:</b>
+1. Создай публичный канал (название любое)
+2. Поставь каналу красивую аватарку с логом спотифая (пример: https://github.com/fajox1/famods/blob/main/assets/photo_2025-03-26_17-03-56.jpg)
+3. Добавь канал в профиль
+4. Добавь <code>@username</code> канала в config (<code>.cfg Spotify4ik</code> → <code>channel</code>)
+5. Готово"""        
     }
 
     def __init__(self):
@@ -124,6 +135,11 @@ class Spotify4ik(loader.Module):
                 lambda: "Для загрузки файла песни использовать yt-dl",
                 validator=loader.validators.Boolean(),
             ),
+            loader.ConfigValue(
+                "channel",
+                None,
+                lambda: "Канал для показа текущей музыки в био"
+            )
         )
 
     async def client_ready(self, client, db):
@@ -329,6 +345,20 @@ class Spotify4ik(loader.Module):
         await utils.answer(message, self.strings['music_bio_enabled'])
 
     @loader.command()
+    async def spbiochannel(self, message):
+        """Включить/выключить стрим текущего трека в канале в био"""
+        if not self.config['auth_token']:
+            return await utils.answer(message, self.strings['no_auth_token'].format(self.get_prefix()))
+
+        if self.db.get(self.name, "channel_bio_change", False):
+            self.db.set(self.name, 'channel_bio_change', False)
+            return await utils.answer(message, self.strings['channel_music_bio_disabled'])
+
+        self.db.set(self.name, 'channel_bio_change', True)
+        self._bio_task = asyncio.create_task(self._update_bio())
+        await utils.answer(message, self.strings['channel_music_bio_enabled'])
+
+    @loader.command()
     async def splike(self, message):
         """Лайкнуть текущий трек"""
         if not self.config['auth_token']:
@@ -499,7 +529,7 @@ class Spotify4ik(loader.Module):
             return await utils.answer(message, self.strings['unexpected_error'].format(str(e)))
 
     @loader.loop(interval=60*40, autostart=True)
-    async def loop(self):
+    async def loop_token(self):
         if not self.config['auth_token']:
             return
 
@@ -517,3 +547,43 @@ class Spotify4ik(loader.Module):
         except Exception as e:
             pass
         #    logger.error(f"Failed to refresh Spotify token: {str(e)}", exc_info=True)
+
+    @loader.loop(interval=90, autostart=True)
+    async def loop(self):
+        if not self.config['auth_token']:
+            return
+        
+        if not self.db.get(self.name, "channel_bio_change", False):
+            return
+        if not self.config['channel']:
+            return
+                    
+        sp = spotipy.Spotify(auth=self.config['auth_token'])
+        current_playback = sp.current_playback()
+
+        if not current_playback or not current_playback.get('item'):
+            return
+
+        track = current_playback['item']
+        track_name = track.get('name', 'Unknown Track')
+        artist_name = track['artists'][0].get('name', 'Unknown Artist')
+
+        new_title = f"{track_name} - {artist_name}"
+
+        channel = await self.client.get_entity(self.config['channel'])
+        
+        try:
+            await self.client(
+                EditTitleRequest(
+                    channel=channel,
+                    title=new_title
+                )
+            )
+        except:
+            return
+
+        message = (await self.client.get_messages(
+            entity=channel,
+            limit=1
+        ))[0]
+        await message.delete()
