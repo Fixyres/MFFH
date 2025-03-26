@@ -40,7 +40,7 @@ class TranslationManager(loader.Module):
 
     strings_ru = {
         "no_args": "<emoji document_id=5210952531676504517>❌</emoji> Вы не передали аргументы!",
-        "get_txt": "<code>`{}`</code> <b>Перевод модуля</b><code>{}</code> <b>в языке </b><code>{}</code><b>:</b>\n<blockquote>{}</blockquote>\n{}",
+        "get_txt": "<code>`{}`</code> <b>Перевод модуля </b><code>{}</code> <b>в языке </b><code>{}</code><b>:</b>\n<blockquote>{}</blockquote>\n{}",
         "custom": "<emoji document_id=5962952497197748583>🔧</emoji> <b>Перевод изменен</b>",
         "default": "<emoji document_id=5962952497197748583>🔧</emoji> <b>Перевод стандартный</b>",
         "404": "<emoji document_id=5210952531676504517>❌</emoji> <b>Модуль не найден!</b>",
@@ -74,7 +74,7 @@ class TranslationManager(loader.Module):
         log.info("Custom translations loaded")
 
     def get_one(self, mod: str, lang: str, name: str):
-        if not (strings := self.get("mods", {}).get(mod)):
+        if not (strings := self.get("mods", {}).get(mod)) or not strings.get(lang):
             module = self.lookup(mod)
             if not module:
                 raise ValueError("404")
@@ -107,6 +107,20 @@ class TranslationManager(loader.Module):
         mods[mod] = db_strings
         self.set("mods", mods)
 
+    def del_one(self, mod: str, lang: str, name: str):
+        mods = self.get("mods", {})
+        if not ((strings := mods.get(mod)) and strings.get(lang)):
+            return
+
+        lang_strings = strings.get(lang)
+        if not lang_strings.get(name):
+            return
+
+        del lang_strings[name]
+        strings[lang] = lang_strings
+        mods[mod] = strings
+        self.set("mods", mods)
+
     @loader.command(ru_doc="[модуль] [язык] [ключ] - Получить перевод")
     async def trget(self, message: Message):
         """[mod] [lang] [key] - Get current translation"""
@@ -121,9 +135,6 @@ class TranslationManager(loader.Module):
             await utils.answer(message, self.strings(e.args[0]))
             return
 
-        if not tr:
-            await utils.answer(message, self.strings("404"))
-            return
         await utils.answer(message, self.strings("get_txt").format(key, mod, lang, utils.escape_html(tr), self.strings("custom") if is_custom else self.strings("default")))
 
     @loader.command(ru_doc="[модуль] [язык] [ключ] [значение] - Изменить перевод")
@@ -135,6 +146,21 @@ class TranslationManager(loader.Module):
         mod, lang, key, val = args
         try:
             self.set_one(mod, lang, key, val)
+        except ValueError as e:
+            await utils.answer(message, self.strings(e.args[0]))
+            return
+        await utils.answer(message, self.strings("success"))
+
+    @loader.command(ru_doc="[модуль] [язык] [ключ] - Удалить кастомный перевод")
+    async def trdel(self, message: Message):
+        """[mod] [lang] [key] - Delete custom translation"""
+        if not (args := utils.get_args_raw(message).split()) or len(args) < 3:
+            await utils.answer(message, self.strings("no_args"))
+            return
+
+        mod, lang, key = args
+        try:
+            self.del_one(mod, lang, key)
         except ValueError as e:
             await utils.answer(message, self.strings(e.args[0]))
             return
