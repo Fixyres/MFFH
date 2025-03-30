@@ -568,7 +568,7 @@ class Spotify4ik(loader.Module):
         track_name = track.get('name', 'Unknown Track')
         artist_name = track['artists'][0].get('name', 'Unknown Artist')
 
-        new_title = f"{track_name} - {artist_name}"
+        new_title = f"🎧 {track_name} - {artist_name}"
 
         channel = await self.client.get_entity(self.config['channel'])
         
