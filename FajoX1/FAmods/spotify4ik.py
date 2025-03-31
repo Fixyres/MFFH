@@ -24,8 +24,12 @@ import yt_dlp
 import spotipy
 
 from telethon import types
-from telethon.tl.functions.channels import EditTitleRequest
+from telethon.tl.types import ChatAdminRights
+from telethon.tl.functions.channels import EditTitleRequest, EditAdminRequest
 from telethon.tl.functions.account import UpdateProfileRequest
+
+from aiogram.types import InputFile
+from aiogram.types.inline_keyboard import InlineKeyboardMarkup, InlineKeyboardButton
 
 from .. import loader, utils
 
@@ -83,10 +87,9 @@ class Spotify4ik(loader.Module):
         
 <b><emoji document_id=5787544344906959608>ℹ️</emoji> Инструкция:</b>
 1. Создай публичный канал (название любое)
-2. Поставь каналу красивую аватарку с логом спотифая (пример: https://github.com/fajox1/famods/blob/main/assets/photo_2025-03-26_17-03-56.jpg)
-3. Добавь канал в профиль
-4. Добавь <code>@username</code> канала в config (<code>.cfg Spotify4ik</code> → <code>channel</code>)
-5. Готово"""        
+2. Добавь канал в профиль
+3. Добавь <code>@username</code> канала в config (<code>.cfg Spotify4ik</code> → <code>channel</code>)
+4. Готово"""        
     }
 
     def __init__(self):
@@ -145,6 +148,7 @@ class Spotify4ik(loader.Module):
     async def client_ready(self, client, db):
         self.db = db
         self._client = client
+        self.current_track = ""
 
         self.musicdl = await self.import_lib(
             "https://libs.hikariatama.ru/musicdl.py",
@@ -153,6 +157,55 @@ class Spotify4ik(loader.Module):
 
         if self.config['bio_change']:
             asyncio.create_task(self._update_bio())
+
+    async def _create_stream_messages(self, channel):
+        await self.client(
+            EditAdminRequest(
+                channel=channel,
+                user_id=self.inline.bot_username,
+                admin_rights=ChatAdminRights(
+                    change_info=True,
+                    post_messages=True,
+                    edit_messages=True,
+                    delete_messages=True
+                ),
+                rank="spot"
+            )
+        )
+        
+        audio_path = await self.musicdl.dl("The Lost Soul Down - NBSPLV", only_document=True)
+
+        first_message = await self._client.send_file(
+            channel,
+            audio_path,
+            caption="first_message",
+            attributes=[
+                types.DocumentAttributeAudio(
+                    duration=0,
+                    title="famods",
+                    performer=""
+                )
+            ],
+            thumb="https://github.com/fajox1/famods/raw/main/assets/photo_2025-03-26_17-03-56.jpg"
+        )
+        display_message = await self.inline.bot.send_message(int("-100"+str(channel.id)), "display_message")
+
+        me = await self.client.get_me()
+        me_mention = f"@{me.username}" if me.username else (f"@{me.usernames[0].username}" if me.usernames else me.first_name)
+        
+        try:
+            await self.inline.bot.set_chat_description(
+                chat_id=int("-100"+str(channel.id)),
+                description=f"Current track playing for the {me_mention}"
+            )
+        except:
+            pass
+
+        self.db.set(self.name, 'stream_channel_data', {
+            "first_message": first_message.id,
+            "display_message": display_message.message_id,
+            "channel": self.config['channel']
+        })
 
     async def _update_bio(self):
         while True:
@@ -548,7 +601,7 @@ class Spotify4ik(loader.Module):
             pass
         #    logger.error(f"Failed to refresh Spotify token: {str(e)}", exc_info=True)
 
-    @loader.loop(interval=90, autostart=True)
+    @loader.loop(interval=70, autostart=True)
     async def loop(self):
         if not self.config['auth_token']:
             return
@@ -563,27 +616,121 @@ class Spotify4ik(loader.Module):
 
         if not current_playback or not current_playback.get('item'):
             return
-
+        
         track = current_playback['item']
         track_name = track.get('name', 'Unknown Track')
         artist_name = track['artists'][0].get('name', 'Unknown Artist')
 
-        new_title = f"🎧 {track_name} - {artist_name}"
-
-        channel = await self.client.get_entity(self.config['channel'])
-        
-        try:
-            await self.client(
-                EditTitleRequest(
-                    channel=channel,
-                    title=new_title
-                )
-            )
-        except:
+        current_track = f"{track_name} - {artist_name}"
+        last_track = self.db.get(self.name, "last_track", False)
+        if last_track == current_track:
             return
 
-        message = (await self.client.get_messages(
+        self.db.set(self.name, 'last_track', f"{track_name} - {artist_name}")
+
+        channel = await self.client.get_entity(self.config['channel'])
+
+        stream_channel_data = self.db.get(self.name, "stream_channel_data", False)
+
+        if not stream_channel_data or self.config['channel'] != stream_channel_data['channel']:
+            await self._create_stream_messages(channel)
+            await asyncio.sleep(3)
+
+        stream_channel_data = self.db.get(self.name, "stream_channel_data", False)
+
+        artist_link = track['artists'][0]['external_urls']['spotify']
+        album_name = track['album'].get('name', 'Unknown Album')
+        track_url = track['external_urls']['spotify']
+        duration_ms = track.get('duration_ms', 0)
+        playlist = current_playback.get('context', {}).get('uri', '').split(':')[-1] if current_playback.get('context') else None
+        device_name = current_playback.get('device', {}).get('name', 'Unknown Device')+" "+current_playback.get('device', {}).get('type', '')
+        playlist_url = f"https://open.spotify.com/playlist/{playlist}" if playlist else None
+
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                text="Open in Spotify", 
+                url=track_url
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            if self.config['use_ytdl']:
+                audio_path = os.path.join(temp_dir, f"{artist_name} - {track_name}.mp3")
+
+                ydl_opts = {
+                   "format": "bestaudio/best[ext=mp3]",
+                    "outtmpl": audio_path,
+                    "noplaylist": True,
+                }
+
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([f"ytsearch1:{track_name} - {artist_name}"])
+
+            else:
+                audio_path = await self.musicdl.dl(f"{artist_name} - {track_name}", only_document=True)
+
+            album_art_url = track['album']['images'][0]['url']
+            async with aiohttp.ClientSession() as session:
+                async with session.get(album_art_url) as response:
+                    art_path = os.path.join(temp_dir, "cover.jpg")
+                    with open(art_path, "wb") as f:
+                        f.write(await response.read())
+
+            await self.inline.bot.set_chat_photo(
+                chat_id=int("-100"+str(channel.id)),
+                photo=InputFile(art_path)
+            )
+
+        await self.client.edit_message(
+            entity=channel.username,
+            message=stream_channel_data['first_message'],
+            file=audio_path,
+            attributes=[
+                types.DocumentAttributeAudio(
+                    duration=duration_ms//1000,
+                    title=track_name,
+                    performer=artist_name
+                )
+            ],
+            thumb=art_path,
+            text=f"""
+<b><emoji document_id=5188705588925702510>🎶</emoji> {track_name} - <code>{artist_name}</code>
+<b><emoji document_id=5870794890006237381>💿</emoji> Album:</b> <code>{album_name}</code>
+
+<b><emoji document_id=6007938409857815902>🎧</emoji> Device:</b> <code>{device_name}</code>
+"""+ (("<b><emoji document_id=5872863028428410654>❤️</emoji> From favorite tracks</b>\n" if "playlist/collection" in playlist_url else
+                    f"<b><emoji document_id=5944809881029578897>📑</emoji> From Playlist:</b> <a href='{playlist_url}'>View</a>\n") if playlist else "")
+        )
+        try:
+            await self.inline.bot.edit_message_reply_markup(
+                chat_id=int("-100"+str(channel.id)),
+                message_id=stream_channel_data['first_message'],
+                reply_markup=keyboard
+            )
+        except:
+            await self._create_stream_messages(channel)
+        await asyncio.sleep(2.3342)
+        await self.client.edit_message(
             entity=channel,
-            limit=1
-        ))[0]
-        await message.delete()
+            message=stream_channel_data['display_message'],
+            text=f"<emoji document_id=5346074681004801565>📱</emoji> <a href='{artist_link}'>{artist_name}</a>",
+            link_preview=False
+        )
+            
+        await asyncio.sleep(1.3342)
+        
+        try:
+            await self.inline.bot.set_chat_title(
+                chat_id=int("-100"+str(channel.id)),
+                title=f"🎧 {track_name}"
+            )
+
+            messages = await self.client.get_messages(
+                entity=channel,
+                limit=2
+            )
+            for message in messages:
+                await message.delete()
+        except:
+            return
