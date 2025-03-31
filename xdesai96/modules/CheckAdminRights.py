@@ -55,6 +55,8 @@ class CheckAdminRightsMod(loader.Module):
     )
     async def rights(self, message):
         """<reply/username/id> | Check rights in the current chat."""
+        if message.is_private:
+            return await utils.answer(message, self.strings('not_a_chat'))
         await utils.answer(message, self.strings("loading"))
         args = utils.get_args_raw(message)
         reply = await message.get_reply_message()
