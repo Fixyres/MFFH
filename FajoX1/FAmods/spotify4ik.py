@@ -142,6 +142,12 @@ class Spotify4ik(loader.Module):
                 "channel",
                 None,
                 lambda: "Канал для показа текущей музыки в био"
+            ),
+            loader.ConfigValue(
+                "stream_upload_track",
+                False,
+                lambda: "Загрузка трека в био канал для стриминга",
+                validator=loader.validators.Boolean(),
             )
         )
 
@@ -175,20 +181,28 @@ class Spotify4ik(loader.Module):
         
         audio_path = await self.musicdl.dl("The Lost Soul Down - NBSPLV", only_document=True)
 
-        first_message = await self._client.send_file(
-            channel,
-            audio_path,
-            caption="first_message",
-            attributes=[
-                types.DocumentAttributeAudio(
-                    duration=0,
-                    title="famods",
-                    performer=""
-                )
-            ],
-            thumb="https://github.com/fajox1/famods/raw/main/assets/photo_2025-03-26_17-03-56.jpg"
-        )
+        if self.config['stream_upload_track']:
+            first_message = await self.client.send_file(
+                channel,
+                audio_path,
+                caption="first_message",
+                attributes=[
+                    types.DocumentAttributeAudio(
+                        duration=0,
+                        title="famods",
+                        performer=""
+                    )
+                ],
+                thumb="https://github.com/fajox1/famods/raw/main/assets/photo_2025-03-26_17-03-56.jpg"
+            )
+        else:
+            first_message = await self.client.send_message(
+                channel,
+                "first_message",
+            )
         display_message = await self.inline.bot.send_message(int("-100"+str(channel.id)), "display_message")
+
+        self.db.set(self.name, 'stream_upload_message', self.config['stream_upload_track'])
 
         me = await self.client.get_me()
         me_mention = f"@{me.username}" if me.username else (f"@{me.usernames[0].username}" if me.usernames else me.first_name)
@@ -631,8 +645,9 @@ class Spotify4ik(loader.Module):
         channel = await self.client.get_entity(self.config['channel'])
 
         stream_channel_data = self.db.get(self.name, "stream_channel_data", False)
+        stream_upload_message = self.db.get(self.name, "stream_upload_message", True)
 
-        if not stream_channel_data or self.config['channel'] != stream_channel_data['channel']:
+        if not stream_channel_data or self.config['channel'] != stream_channel_data['channel'] or self.config['stream_upload_track'] != stream_upload_message:
             await self._create_stream_messages(channel)
             await asyncio.sleep(3)
 
@@ -654,54 +669,77 @@ class Spotify4ik(loader.Module):
             )
         )
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            if self.config['use_ytdl']:
-                audio_path = os.path.join(temp_dir, f"{artist_name} - {track_name}.mp3")
-
-                ydl_opts = {
-                   "format": "bestaudio/best[ext=mp3]",
-                    "outtmpl": audio_path,
-                    "noplaylist": True,
-                }
-
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([f"ytsearch1:{track_name} - {artist_name}"])
-
-            else:
-                audio_path = await self.musicdl.dl(f"{artist_name} - {track_name}", only_document=True)
-
-            album_art_url = track['album']['images'][0]['url']
-            async with aiohttp.ClientSession() as session:
-                async with session.get(album_art_url) as response:
-                    art_path = os.path.join(temp_dir, "cover.jpg")
-                    with open(art_path, "wb") as f:
-                        f.write(await response.read())
-
-            await self.inline.bot.set_chat_photo(
-                chat_id=int("-100"+str(channel.id)),
-                photo=InputFile(art_path)
-            )
-
-        await self.client.edit_message(
-            entity=channel.username,
-            message=stream_channel_data['first_message'],
-            file=audio_path,
-            attributes=[
-                types.DocumentAttributeAudio(
-                    duration=duration_ms//1000,
-                    title=track_name,
-                    performer=artist_name
-                )
-            ],
-            thumb=art_path,
-            text=f"""
+        now_play_text = f"""
 <b><emoji document_id=5188705588925702510>🎶</emoji> {track_name} - <code>{artist_name}</code>
 <b><emoji document_id=5870794890006237381>💿</emoji> Album:</b> <code>{album_name}</code>
 
 <b><emoji document_id=6007938409857815902>🎧</emoji> Device:</b> <code>{device_name}</code>
 """+ (("<b><emoji document_id=5872863028428410654>❤️</emoji> From favorite tracks</b>\n" if "playlist/collection" in playlist_url else
                     f"<b><emoji document_id=5944809881029578897>📑</emoji> From Playlist:</b> <a href='{playlist_url}'>View</a>\n") if playlist else "")
-        )
+
+        if self.config['stream_upload_track']:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                if self.config['use_ytdl']:
+                    audio_path = os.path.join(temp_dir, f"{artist_name} - {track_name}.mp3")
+
+                    ydl_opts = {
+                        "format": "bestaudio/best[ext=mp3]",
+                        "outtmpl": audio_path,
+                        "noplaylist": True,
+                    }
+
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        ydl.download([f"ytsearch1:{track_name} - {artist_name}"])
+
+                else:
+                    audio_path = await self.musicdl.dl(f"{artist_name} - {track_name}", only_document=True)
+
+                album_art_url = track['album']['images'][0]['url']
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(album_art_url) as response:
+                        art_path = os.path.join(temp_dir, "cover.jpg")
+                        with open(art_path, "wb") as f:
+                            f.write(await response.read())
+
+                await self.inline.bot.set_chat_photo(
+                    chat_id=int("-100"+str(channel.id)),
+                    photo=InputFile(art_path)
+                )
+        
+                await self.client.edit_message(
+                    entity=channel.username,
+                    message=stream_channel_data['first_message'],
+                    file=audio_path,
+                    attributes=[
+                        types.DocumentAttributeAudio(
+                            duration=duration_ms//1000,
+                            title=track_name,
+                            performer=artist_name
+                        )
+                    ],
+                    thumb=art_path,
+                    text=now_play_text
+                )
+
+        else:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                album_art_url = track['album']['images'][0]['url']
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(album_art_url) as response:
+                        art_path = os.path.join(temp_dir, "cover.jpg")
+                        with open(art_path, "wb") as f:
+                            f.write(await response.read())
+
+                await self.inline.bot.set_chat_photo(
+                    chat_id=int("-100"+str(channel.id)),
+                    photo=InputFile(art_path)
+                )
+            await self.client.edit_message(
+                entity=channel.username,
+                message=stream_channel_data['first_message'],
+                text="<b>🎧 Now Playing</b>\n"+now_play_text
+            )
+
         try:
             await self.inline.bot.edit_message_reply_markup(
                 chat_id=int("-100"+str(channel.id)),
