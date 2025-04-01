@@ -91,13 +91,12 @@ class CheckAdminRightsMod(loader.Module):
         ]
         if not args:
             if not reply:
-                await utils.answer(message, self.strings("no_user"))
+                return await utils.answer(message, self.strings("no_user"))
             else:
                 user = await reply.get_sender()
-                if not chat or not chat_id:
-                    return await utils.answer(message, self.strings("not_a_chat", message))
                 permissions = await self.client.get_permissions(chat, user)
-
+                if user is None:
+                    return await utils.answer(message, self.strings("no_user"))
                 header = self.strings('get_rights_header').format(id=user.id, name=f"{user.first_name or ''} {user.last_name or ''}")
                 result = ""
 
@@ -118,8 +117,6 @@ class CheckAdminRightsMod(loader.Module):
         else:
             args = utils.get_args_raw(message).split()
             user = await self.client.get_entity(int(args[0]) if args[0].isdigit() else args[0])
-            if not chat or not chat_id:
-                return await utils.answer(message, self.strings("not_a_chat", message))
             try:
                 permissions = await self.client.get_permissions(chat, user)
             except UserNotParticipantError:
