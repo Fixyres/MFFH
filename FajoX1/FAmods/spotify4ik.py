@@ -749,12 +749,15 @@ class Spotify4ik(loader.Module):
         except:
             await self._create_stream_messages(channel)
         await asyncio.sleep(2.3342)
-        await self.client.edit_message(
-            entity=channel,
-            message=stream_channel_data['display_message'],
-            text=f"<emoji document_id=5346074681004801565>📱</emoji> <a href='{artist_link}'>{artist_name}</a>",
-            link_preview=False
-        )
+        try:
+            await self.client.edit_message(
+                entity=channel,
+                message=stream_channel_data['display_message'],
+                text=f"<emoji document_id=5346074681004801565>📱</emoji> <a href='{artist_link}'>{artist_name}</a>",
+                link_preview=False
+            )
+        except:
+            pass
             
         await asyncio.sleep(1.3342)
         
