@@ -42,14 +42,20 @@ class AccstatMod(loader.Module):
                     user_id = int(args[0])
                     await utils.answer(message, f"⏳ Вычисляю...[id{user_id}]")
                     async with self._client.conversation(self._bot) as conv:
-                        await conv.send_message(f"{user_id}")
+                        sent_msg = await conv.send_message(f"{user_id}")
                         try:
                             r = await conv.get_edit(timeout=4)
-                            return await utils.answer(message, r.message)
+                            await utils.answer(message, r.message)
+                            await r.delete()
+                            await sent_msg.delete()
+                            return
                         except asyncio.exceptions.TimeoutError:
                             r = await conv.get_reply()
                             try:
-                                return await utils.answer(message, r.message)
+                                await utils.answer(message, r.message)
+                                await r.delete()
+                                await sent_msg.delete()
+                                return
                             except errors.rpcerrorlist.MessageEmptyError:
                                 return await utils.answer(message, self.strings("timeout"))
                 else:
@@ -57,14 +63,20 @@ class AccstatMod(loader.Module):
                         user_id = (await self.client.get_entity(args[0])).id
                         await utils.answer(message, f"⏳ Вычисляю...[id{user_id}]")
                         async with self._client.conversation(self._bot) as conv:
-                            await conv.send_message(f"{user_id}")
+                            sent_msg = await conv.send_message(f"{user_id}")
                             try:
                                 r = await conv.get_edit(timeout=4)
-                                return await utils.answer(message, r.message)
+                                await utils.answer(message, r.message)
+                                await r.delete()
+                                await sent_msg.delete()
+                                return
                             except asyncio.exceptions.TimeoutError:
                                 r = await conv.get_reply()
                                 try:
-                                    return await utils.answer(message, r.message)
+                                    await utils.answer(message, r.message)
+                                    await sent_msg.delete()
+                                    await r.delete()
+                                    return
                                 except errors.rpcerrorlist.MessageEmptyError:
                                     return await utils.answer(message, self.strings("timeout"))
                     except Exception as e:
@@ -73,13 +85,19 @@ class AccstatMod(loader.Module):
             user_id = reply.sender_id
             await utils.answer(message, f"⏳ Вычисляю...[id{user_id}]")
             async with self._client.conversation(self._bot) as conv:
-                await conv.send_message(f"{user_id}")
+                sent_msg = await conv.send_message(f"{user_id}")
                 try:
                     r = await conv.get_edit(timeout=4)
-                    return await utils.answer(message, r.message)
+                    await utils.answer(message, r.message)
+                    await r.delete()
+                    await sent_msg.delete()
+                    return
                 except asyncio.exceptions.TimeoutError:
                     r = await conv.get_reply()
                     try:
-                        return await utils.answer(message, r.message)
+                        await utils.answer(message, r.message)
+                        await r.delete()
+                        await sent_msg.delete()
+                        return
                     except errors.rpcerrorlist.MessageEmptyError:
                         return await utils.answer(message, self.strings("timeout"))
