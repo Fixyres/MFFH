@@ -161,9 +161,6 @@ class Spotify4ik(loader.Module):
             suspend_on_error=True,
         )
 
-        if self.config['bio_change']:
-            asyncio.create_task(self._update_bio())
-
     async def _create_stream_messages(self, channel):
         await self.client(
             EditAdminRequest(
@@ -220,23 +217,6 @@ class Spotify4ik(loader.Module):
             "display_message": display_message.message_id,
             "channel": self.config['channel']
         })
-
-    async def _update_bio(self):
-        while True:
-            if not self.db.get(self.name, "bio_change", False):
-                break
-            sp = spotipy.Spotify(auth=self.config['auth_token'])
-            try:
-                current_playback = sp.current_playback()
-                if current_playback and current_playback.get('item'):
-                    track = current_playback['item']
-                    track_name = track.get('name', 'Unknown Track')
-                    artist_name = track['artists'][0].get('name', 'Unknown Artist')
-                    bio = self.config['bio_text'].format(track_name=track_name, artist_name=artist_name)
-                    await self._client(UpdateProfileRequest(about=bio[:70]))
-            except Exception as e:
-                logger.error(f"Error updating bio: {e}")
-            await asyncio.sleep(90)
 
     @loader.command()
     async def spauth(self, message):
@@ -408,7 +388,6 @@ class Spotify4ik(loader.Module):
             return await utils.answer(message, self.strings['music_bio_disabled'])
 
         self.db.set(self.name, 'bio_change', True)
-        self._bio_task = asyncio.create_task(self._update_bio())
         await utils.answer(message, self.strings['music_bio_enabled'])
 
     @loader.command()
@@ -422,7 +401,6 @@ class Spotify4ik(loader.Module):
             return await utils.answer(message, self.strings['channel_music_bio_disabled'])
 
         self.db.set(self.name, 'channel_bio_change', True)
-        self._bio_task = asyncio.create_task(self._update_bio())
         await utils.answer(message, self.strings['channel_music_bio_enabled'])
 
     @loader.command()
@@ -761,17 +739,18 @@ class Spotify4ik(loader.Module):
             
         await asyncio.sleep(1.3342)
         
-        try:
-            await self.inline.bot.set_chat_title(
-                chat_id=int("-100"+str(channel.id)),
-                title=f"🎧 {track_name}"
-            )
-
-            messages = await self.client.get_messages(
-                entity=channel,
-                limit=2
-            )
-            for message in messages:
-                await message.delete()
-        except:
+    @loader.loop(interval=90, autostart=True)
+    async def loop_bio(self):
+        if self.db.get(self.name, "bio_change", False):
             return
+        sp = spotipy.Spotify(auth=self.config['auth_token'])
+        try:
+            current_playback = sp.current_playback()
+            if current_playback and current_playback.get('item'):
+                track = current_playback['item']
+                track_name = track.get('name', 'Unknown Track')
+                artist_name = track['artists'][0].get('name', 'Unknown Artist')
+                bio = self.config['bio_text'].format(track_name=track_name, artist_name=artist_name)
+                await self._client(UpdateProfileRequest(about=bio[:70]))
+        except Exception as e:
+            logger.error(f"Error updating bio: {e}")
