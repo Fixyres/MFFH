@@ -35,7 +35,7 @@ class ScheduledMessagesPlusMod(loader.Module):
     async def sch(self, message):
         """Используй .sch <периодичность в секундах> <количество отправок> <текст>
 
-Проф. режим: .sch 15 3 test{x=1;x*2}/{x=0;x+1}
+Проф. режим: .sch 15 3 test{x=1;x*2}/{y=0;y+1}
 Запланирует три сообщения: test2/1, test4/2, test8/3"""
         args = utils.get_args_raw(message).split(' ', 2)
         if len(args) < 3 or not args[0].isdigit() or not args[1].isdigit():
