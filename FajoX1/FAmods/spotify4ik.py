@@ -738,6 +738,21 @@ class Spotify4ik(loader.Module):
             pass
             
         await asyncio.sleep(1.3342)
+
+        try:
+            await self.inline.bot.set_chat_title(
+                chat_id=int("-100"+str(channel.id)),
+                title=f"🎧 {track_name}"
+            )
+
+            messages = await self.client.get_messages(
+                entity=channel,
+                limit=2
+            )
+            for message in messages:
+                await message.delete()
+        except:
+            return
         
     @loader.loop(interval=90, autostart=True)
     async def loop_bio(self):
