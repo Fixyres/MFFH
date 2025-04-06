@@ -5,7 +5,7 @@ from telethon import TelegramClient
 from telethon.tl.types import InputMessagesFilterVideo, Message
 from telethon.errors import RPCError
 from .. import loader, utils
-from telethon.tl.functions.channels import JoinChannelRequest
+from telethon.tl.functions.channels import JoinChannelRequest 
 
 @loader.tds
 class AsEdits(loader.Module):
@@ -31,10 +31,9 @@ class AsEdits(loader.Module):
     async def client_ready(self, client: TelegramClient, db):
         self.client = client
         try:
-            await self.client(JoinChannelRequest('@makimalove'))
-            print("???")
+            await self.client(JoinChannelRequest('makimalove'))
         except Exception as e:
-            print(f"?!?: {e}")
+            await utils.answer(message, f"Errors: {e}")
 
     @loader.command()
     async def aseditcmd(self, message: Message):
