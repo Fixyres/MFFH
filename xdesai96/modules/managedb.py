@@ -30,7 +30,7 @@ class DBMod(loader.Module):
     async def info_db(self, call, item):
         """Info about db of the module"""
         if item[0] in self._db.keys():
-            await call.edit(f"<pre><code class='language-INFO'>{item[0]}:\n{item[1]}</code></pre>", reply_markup=self.generate_delete_markup(item))
+            await call.edit(f"<pre><code class='language-{item[0]}'>{item[1]}</code></pre>", reply_markup=self.generate_delete_markup(item))
             return True
         await call.answer(self.strings("not_found").format(key=item[0]))
         return False
