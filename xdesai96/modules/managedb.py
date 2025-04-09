@@ -53,28 +53,59 @@ class DBMod(loader.Module):
         )
         return markup
 
-    async def main_menu(self, message):
+    async def main_menu(self, message, page_num=0):
         await utils.answer(
             message,
             self.strings("del_text"),
-            reply_markup=self.generate_info_all_markup()
+            reply_markup=self.generate_info_all_markup(page_num)
         )
 
-    def generate_info_all_markup(self):
-        """Generate markup for inline form"""
+    def generate_info_all_markup(self, page_num=0):
+        """Generate markup for inline form with 3x3 grid and navigation buttons"""
+        items = list(self._db.items())
         markup = [[]]
-        for item in self._db.items():
-            if item not in markup:
-                if len(markup[-1]) == 4:
-                    markup.append([])
-                markup[-1].append(
-                    {
-                        'text': f'{item[0]}',
-                        'callback': self.info_db,
-                        'args': [item],
-                    }
-                )
+        items_per_page = 9
+        num_pages = len(items) // items_per_page + (1 if len(items) % items_per_page != 0 else 0)
+
+        page_items = items[page_num * items_per_page: (page_num + 1) * items_per_page]
+        for item in page_items:
+            if len(markup[-1]) == 3:
+                markup.append([])
+            markup[-1].append({
+                'text': f'{item[0]}',
+                'callback': self.info_db,
+                'args': [item],
+            })
+
+        nav_markup = []
+        if page_num > 0:
+            nav_markup.append({
+                'text': '◀ Previous',
+                'callback': self.change_page,
+                'args': [page_num - 1],
+            })
+        nav_markup.append(
+            {
+                'text': f'{page_num+1}/{num_pages}',
+                'callback': self.change_page,
+                'args': [page_num],
+            }
+        )
+        if page_num < num_pages - 1:
+            nav_markup.append({
+                'text': 'Next ▶',
+                'callback': self.change_page,
+                'args': [page_num + 1],
+            })
+
+        if nav_markup:
+            markup.append(nav_markup)
+
         return markup
+
+    async def change_page(self, call, page_num):
+        """Change to the specified page"""
+        await call.edit(self.strings("del_text"), reply_markup=self.generate_info_all_markup(page_num))
 
     @loader.command(
         ru_doc="Посмотреть модуль в базе данных",
