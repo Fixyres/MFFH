@@ -5,23 +5,21 @@ from telethon import functions, types
 
 class ScrSpamMod(loader.Module):
     """Screenshot Spammer"""
-    strings = {'name': 'ScrSpam',
-               'invalid_number': '❌ <b>Invalid number.</b>'}
-
     strings = {
-        'invalid_number': '❌ <b>Неверное кол-во.</b>'
+	    'name': 'ScrSpam',
+	    'invalid_number': '❌ <b>Invalid number.</b>'
     }
 
-    async def client_ready(self, client, db):
-        self._db = db
-        self._client = client
-	
+    strings_ru = {
+	    'invalid_number': '❌ <b>Неверное кол-во.</b>'
+	    }
+
     @loader.command(ru_doc="<кол-во> | Спам скриншотами")
     async def scrs(self, message):
         """<amount> | Screenshot spam"""
-        args = utils.get_args(message)
+        args = utils.get_args_raw(message)
         if args and args.isdigit():
-            amount = int(amount)
+            amount = int(args)
         else:
             return await utils.answer(message, self.strings('invalid_number', message))
 
