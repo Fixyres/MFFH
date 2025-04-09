@@ -1,4 +1,5 @@
 # meta developer: @xdesai
+# scope: ffmpeg
 
 from telethon.tl.types import Message
 import os, subprocess
