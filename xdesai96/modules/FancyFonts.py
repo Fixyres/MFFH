@@ -14,21 +14,11 @@
 # scope: inline
 # scope: hikka_only
 
-# edited: @xdesai
-
 from telethon.tl.types import Message
 
 from .. import loader, utils
 
 BASE = "abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-BASE_RU = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя1234567890АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
-
-FONTS_RU = [
-    "ᴀбʙᴦдᴇёжзийᴋᴧʍноᴨᴩᴄᴛуɸхцчɯщъыь϶юя1234567890ᴀбʙᴦдᴇёжзийᴋᴧʍноᴨᴩᴄᴛуɸхцчɯщъыь϶юя",
-    "ልፔፎናሏይይሦንሀህኸበጠዘዐከየርፐነዋጰህሃሠሡፘፊሪጓሬጸ1234567890ልፔፎናሏይይሦንሀህኸበጠዘዐከየርፐነዋጰህሃሠሡፘፊሪጓሬጸ",
-    "ꁲꃥꃃ꒕ꅓꂅꏁꁘ꒱ꈤꈣꂪꀊꂵꍬꏿꊮꉣꊐꉢꌦꂈꉧꈥꃏꅐꁁꀲꎪꀲꎆꂼꋪ1234567890ꁲꃥꃃ꒕ꅓꂅꏁꁘ꒱ꈤꈣꂪꀊꂵꍬꏿꊮꉣꊐꉢꌦꂈꉧꈥꃏꅐꁁꀲꎪꀲꎆꂼꋪ",
-    "ᗣᘜᙖᒋᗪᙓᕧᙧᙐᑌᕫᏦᙁᗰᕼᗝᑎᖘᙅᙢᎽᙨⵋᘈᔦᗯᘺᕹᕠᖚᑓᕡᖆ1234567890ᗣᘜᙖᒋᗪᙓᕧᙧᙐᑌᕫᏦᙁᗰᕼᗝᑎᖘᙅᙢᎽᙨⵋᘈᔦᗯᘺᕹᕠᖚᑓᕡᖆ",
-]
 
 FONTS = [
     "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣𝟷𝟸𝟹𝟺𝟻𝟼𝟽𝟾𝟿𝟶𝙰𝙱𝙲𝙳𝙴𝙵𝙶𝙷𝙸𝙹𝙺𝙻𝙼𝙽𝙾𝙿𝚀𝚁𝚂𝚃𝚄𝚅𝚆𝚇𝚈𝚉",
@@ -67,29 +57,15 @@ class FancyFontsMod(loader.Module):
 
     async def ffontcmd(self, message: Message) -> None:
         """<text> - Create the fancy version of text"""
-        lang = None
         args = utils.get_args_raw(message)
         if not args:
             await utils.answer(message, self.strings("no_args"))
             return
-        
-        for _ in BASE:
-            if _ in args:
-                lang = "en"
 
-        if lang == "en":
-            await self.inline.list(
-                message,
-                [
-                    f"<code>{str.translate(args, str.maketrans(BASE, i))}</code>"
-                    for i in FONTS
-                ],
-            )
-        else:
-            await self.inline.list(
-                message,
-                [
-                    f"<code>{str.translate(args, str.maketrans(BASE_RU, i))}</code>"
-                    for i in FONTS_RU
-                ],
-            )
+        await self.inline.list(
+            message,
+            [
+                f"<code>{str.translate(args, str.maketrans(BASE, i))}</code>"
+                for i in FONTS
+            ],
+        )
