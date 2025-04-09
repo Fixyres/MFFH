@@ -1,4 +1,4 @@
-# meta developer  @YA_ManuI
+# meta developer: @ManulMods
 
 from telethon.tl.types import Message, User
 from .. import loader, utils
@@ -27,13 +27,16 @@ class UserIDFinderMod(loader.Module):
                 return await utils.answer(message, "❌ Укажите @юзернейм или сделайте реплай!")
 
             if isinstance(user, User):
+                # Формируем информацию о фамилии
+                last_name = f"{user.last_name}" if user.last_name else "<emoji document_id=5215273032553078755>❎</emoji>"
+                
                 result = (
                     f"👤 Информация о пользователе:\n\n"
-                    f"🆔 ID: <code>{user.id}</code>\n"
-                    f"📛 Имя: {user.first_name or ''}\n"
-                    f"📚 Фамилия: {user.last_name or ''}\n"
+                    f"🆔 ID: <code>@{user.id}</code>\n"
+                    f"📛 Имя: {user.first_name or '<emoji document_id=5215273032553078755>❎</emoji>'}\n"
+                    f"📚 Фамилия: {last_name}\n"
                     f"🌐 Юзернейм: @{user.username or 'нет'}\n"
-                    f"🤖 Бот: {'Да' if user.bot else 'Нет'}"
+                    f"🤖 Бот: {'✅ Да' if user.bot else '❌ Нет'}"
                 )
                 await utils.answer(message, result)
             else:
