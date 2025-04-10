@@ -23,12 +23,14 @@ class SearchMod(loader.Module):
         "result": "<emoji document_id=5188217332748527444>🔍</emoji> <b>There is link with your query:</b>\n{}",
         "no_args": "<emoji document_id=5467910507916697142>💢</emoji> <b>You should specify query!</b>",
         "error": "<emoji document_id=5465665476971471368>❌</emoji> <b>An error occured:</b>\n{}",
+        "unsupported_search_engine": "<emoji document_id=5467666648263564704>❓</emoji> <b>Unsupported search engine</b>",
     }
 
     strings_ru = {
         "result": "<emoji document_id=5188217332748527444>🔍</emoji> <b>Вот ссылка с твоим запросом:</b>\n{}",
         "no_args": "<emoji document_id=5467910507916697142>💢</emoji> <b>Ты должен указать запрос!</b>",
         "error": "<emoji document_id=5465665476971471368>❌</emoji> <b>Произошла ошибка:</b>\n{}",
+        "unsupported_search_engine": "<emoji document_id=5467666648263564704>❓</emoji> <b>Поисковая система на поддерживается</b>",
     }
 
     def __init__(self):
@@ -47,10 +49,10 @@ class SearchMod(loader.Module):
     async def searchcmd(self, message):
         """[query] - get link to search engine with your query. (You can specify search engine via .cfg Search)"""
 
-        query = utils.get_args_raw(message) or (await message.get_reply_message()).raw_text
+        query = utils.get_args_raw(message)
 
         if not query:
-            await utils.answer(message, self.config("no_args"))
+            await utils.answer(message, self.strings("no_args"))
             return
 
         query_encoded = utils.escape_html(query).replace(' ', '+')
@@ -58,17 +60,19 @@ class SearchMod(loader.Module):
         get_search_engine = self.config["engine"]
 
         try:
-            if str(get_search_engine) == "google":
-                await utils.answer(message, self.strings("result").format(f"https://www.google.com/search?q={query_encoded}"))
-            
-            if str(get_search_engine) == "yandex":
-                await utils.answer(message, self.strings("result").format(f"https://yandex.com/search/?text={query_encoded}"))
+            search_engine = str(get_search_engine)
+            search_urls = {
+                "google": f"https://www.google.com/search?q={query_encoded}",
+                "yandex": f"https://yandex.com/search/?text={query_encoded}",
+                "duckduckgo": f"https://duckduckgo.com/?q={query_encoded}",
+                "microsoft-bing": f"https://www.bing.com/search?q={query_encoded}"
+            }
 
-            if str(get_search_engine) == "duckduckgo":
-                await utils.answer(message, self.strings("result").format(f"https://duckduckgo.com/?q={query_encoded}"))
-
-            if str(get_search_engine) == "microsoft-bing":
-                await utils.answer(message, self.strings("result").format(f"https://www.bing.com/search?q={query_encoded}"))
+            if search_engine in search_urls:
+                url = search_urls[search_engine]
+                await utils.answer(message, self.strings("result").format(f"{url}"))
+            else:
+                await utils.answer(message, self.strings("error").format(self.strings("unsupported_search_engine")))
 
         except Exception:
             await utils.answer(message, self.strings("error").format(tb.format_exc()))
