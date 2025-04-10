@@ -1,4 +1,4 @@
-__version__ = (1,0,0)
+__version__ = (1,1,0)
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -42,7 +42,7 @@ class Timer:#еее мой первый класс
             for color in ("white", "black"):
                 if self.running[color]:
                     self.timers[color] = max(0, self.timers[color] - elapsed)#нам не надо в минус уходить
-    
+
     async def start(self): ##to use
         self.last_time = time.monotonic()
         self.t = asyncio.create_task(self.count())
@@ -51,12 +51,12 @@ class Timer:#еее мой первый класс
         await self.turn("white")
         self.started["white"] = True
         self.started["black"] = False
-    
+
     async def black(self): ##to use
         await self.turn("black")
         self.started["white"] = False
         self.started["black"] = True
-    
+
     async def turn(self, color):#func
         now = time.monotonic()
         e = now - self.last_time
@@ -68,7 +68,7 @@ class Timer:#еее мой первый класс
 
     async def white_time(self): ##to use
         return round(self.timers["white"], 0)
-    
+
     async def black_time(self): ##to use
         return round(self.timers["black"], 0)
 
@@ -185,7 +185,7 @@ class Chess(loader.Module):
                     ]
                 ]
             )    
-    
+
     async def backToInvite(self,call,nT):
         if call.from_user.id not in self.you_n_me:
             await call.answer("Это не для вас!")
@@ -240,7 +240,7 @@ class Chess(loader.Module):
         self.timeName = txt
         self.pTime = minutes*60
         await self.time(call,nT)
-        
+
     async def color(self,call,nT):
         if call.from_user.id not in self.you_n_me:
             await call.answer("Настройки не для вас!")
@@ -269,7 +269,7 @@ class Chess(loader.Module):
         self.you_play = color
         await self.color(call,nT)
         #####Настройки#####
-        
+
 
     @loader.command() 
     async def chess(self, message):
@@ -381,7 +381,7 @@ class Chess(loader.Module):
             t = await self.sttxt()
             if not self.timer and self.Timer:
                 await self.LoadBoard(t,self.brd)
-            
+
     #####Таймер#####
 
     #####Доска#####
@@ -391,7 +391,7 @@ class Chess(loader.Module):
             if not hasattr(self,'time_message'):
                 m = await self.client.send_message(self.message_chat,"Настройка таймера...")
                 await self.inline.form(message=m,text=f"♔ Белые: {await self.Timer.white_time()}\n♚ Чёрные: {await self.Timer.black_time()}\n⏳ Начнём?",reply_markup=[{"text":"Начать партию", "callback":self.start_timer}],disable_security=True)
-            
+
         elif self.Timer:
             self.loopState = False
             await self.time_message.edit(text=f"♔ Белые: {int(await self.Timer.white_time())}\n♚ Чёрные: {int(await self.Timer.black_time())}\n❌ Остановлен по причине: {self.reason}")
@@ -401,9 +401,9 @@ class Chess(loader.Module):
                 coord = f"{col}{row}"
                 piece = self.Board.piece_at(chess.parse_square(coord.lower()))
                 self.board[coord] =  self.symbols[piece.symbol()] if piece else " "
-                
-                
-                
+
+
+
         btns = []
         for row in range(1,9):
             rows = []
@@ -418,17 +418,28 @@ class Chess(loader.Module):
         )
 
     async def UpdBoard(self, call):
+        #log = []
+        #log.append(f"plcs: {self.places}")
         for row in range(1,9):
             rows = []
             for col in "ABCDEFGH":
                 coord = f"{col}{row}"
-                if any(place[-2:] == coord.lower() for place in self.places):
-                    self.board[coord] = "×" if (move := next((chess.Move.from_uci(p) for p in self.places if p[-2:] == coord.lower()), None)) and self.Board.is_capture(move) else "●"
-                else:
-                    piece = self.Board.piece_at(chess.parse_square(coord.lower()))
-                    self.board[coord] =  self.symbols[piece.symbol()] if piece else " "
-                
-                
+                for place in self.places:
+                    #log.append(f"p: {coord}")
+                    if place[2:4] == coord.lower():
+                        #log.append("yes")
+                        if len(place) == 5:
+                            self.board[coord] = "×↻" if (move := next((chess.Move.from_uci(p) for p in self.places if p[2:4] == coord.lower()), None)) and self.Board.is_capture(move) else "↻"
+                        else:
+                            self.board[coord] = "×" if (move := next((chess.Move.from_uci(p) for p in self.places if p[2:4] == coord.lower()), None)) and self.Board.is_capture(move) else "●"
+                        break
+                       
+                    else:
+                        #log.append(f"nothing")
+                        piece = self.Board.piece_at(chess.parse_square(coord.lower()))
+                        self.board[coord] =  self.symbols[piece.symbol()] if piece else " "
+        #await self.client.send_message("me",f"{log}")
+
         text = await self.sttxt()  
         btns = []
         for row in range(1,9):
@@ -445,8 +456,63 @@ class Chess(loader.Module):
 
 
     #####Доска#####
+    
+    #####Функи#####(для будующей оптимизации кода)
+    async def drawBoard(self):
+        for row in range(1,9):
+            rows = []
+            for col in "ABCDEFGH":
+                coord = f"{col}{row}"
+                for place in self.places:
+                    if place[2:4] == coord.lower():
+                        if len(place) == 5:
+                            self.board[coord] = "×↻" if (move := next((chess.Move.from_uci(p) for p in self.places if p[2:4] == coord.lower()), None)) and self.Board.is_capture(move) else "↻"
+                        else:
+                            self.board[coord] = "×" if (move := next((chess.Move.from_uci(p) for p in self.places if p[2:4] == coord.lower()), None)) and self.Board.is_capture(move) else "●"
+                        break
+                       
+                    else:
+                        piece = self.Board.piece_at(chess.parse_square(coord.lower()))
+                        self.board[coord] =  self.symbols[piece.symbol()] if piece else " "
+        return
+       
+         
+    async def moveTo(s,ca,c):
+        s.Board.push(chess.Move.from_uci(c))
+        s.reverse = not s.reverse
+        s.chsn = False
+        t = await s.sttxt()
+        await s.LoadBoard(t,ca)
+            
+    
+    #####Функи#####
 
     #####Ходы#####
+    
+    async def choose_figure(self,p,c):
+        text = await self.sttxt()  
+        btns = []
+        await self.drawBoard()
+        for row in range(1,9):
+            rows = []
+            for col in "ABCDEFGH":
+                coord = f"{col}{row}"
+                rows.append({"text": f"{self.board[f'{col}{row}']}", "action":"answer", "message":"Вы не можете ходить, пока не будет сделан выбор","show_alert":True})
+            btns.append(rows)
+        p = p[0:4]
+        btns = btns[::-1]
+        btns.append([{"text":"⬇️↻⬇️", "action":"answer", "message":"Выберите фигуру для превращения"}])
+        btns.append([{"text":"♛","callback":self.are_u,"args":(p+"q",)},{"text":"♜","callback":self.are_u,"args":(p+"r",)},{"text":"♞","callback":self.are_u,"args":(p+"n",)},{"text":"♝","callback":self.are_u,"args":(p+"b",)},])
+        await c.edit(text = text,
+            reply_markup = btns,
+            disable_security = True
+        )
+    async def are_u(s,c,p):#SCP FOUNDATION
+        current_player = s.message.sender_id if (s.you_play == "w") ^ s.reverse else s.opp_id
+        if c.from_user.id != current_player:
+            await c.answer("Выбор за вашим оппонентом")
+            return
+        await s.moveTo(c,p)
 
     async def clicks_handle(self, call, coord):
         if self.checkmate or self.stalemate or self.fifty or self.reason:
@@ -463,17 +529,25 @@ class Chess(loader.Module):
         if call.from_user.id != current_player:
             await call.answer("Кыш от моих фигур")
             return
-            
+
         if self.chsn == False:
             await self.checkMove(call,coord)
         else:
-            matching_place = next((place for place in self.places if place[-2:] == coord.lower()), None)
+            for place in self.places:
+                if place[2:4] == coord.lower():
+                    if len(place) == 5:
+                        await self.choose_figure(place,call)######
+                        return
+                    matching_place = place
+                    break
+                else:
+                    matching_place = None
             if matching_place:
                 self.Board.push(chess.Move.from_uci(matching_place))
                 self.reverse = not self.reverse
                 self.chsn = False
             else:
-                prev_place = next((place for place in self.places if place[:-2] == coord.lower()), None)
+                prev_place = next((place for place in self.places if place[0:2] == coord.lower()), None)
                 text = await self.sttxt()
                 if prev_place:
                     self.chsn = False
@@ -503,7 +577,7 @@ class Chess(loader.Module):
             self.places = []
             self.chsn = False
             return None
-        
+
         self.chsn = True
         await call.answer(f"Доступные ходы:")
         await self.UpdBoard(call)
@@ -536,7 +610,7 @@ class Chess(loader.Module):
             elif int(await self.Timer.white_time()) == 0:
                 self.timer = False
                 self.reason = "Истекло время у белых"
-            
+
         if not self.checkmate and not check and not self.stalemate and not self.reason:
             if self.reverse:
                 if self.Timer:
@@ -618,4 +692,4 @@ class Chess(loader.Module):
 
     def ranColor(self):
         return "w" if random.randint(1,2) == 1 else "b"
-    ##########
+    #########
