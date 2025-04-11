@@ -8,12 +8,18 @@ class DBMod(loader.Module):
     strings = {"name": "DBMod",
         "del_text": "<b>Choose a module to delete from the database</b>\n\n⚠ Be careful and do not delete the core modules",
         "deleted": "Key {key} deleted from Database",
+        "close_btn": "🔻 Close",
+        "back_btn": "◀ Back",
+        "del_btn": "❌ Delete",
         "not_found": "Key {key} not found in Database"
     }
 
     strings_ru = {
         "del_text": "<b>Выберите модуль для удаления из базы данных</b>\n\n⚠ Будьте осторожны и не удаляйте основные модули",
         "deleted": "Ключ {key} удален из базы данных",
+        "close_btn": "🔻 Закрыть",
+        "back_btn": "◀ Назад",
+        "del_btn": "❌ Очистить",
         "not_found": "Ключ {key} не найден в базе данных"
     }
 
@@ -41,13 +47,13 @@ class DBMod(loader.Module):
         markup = [[]]
         markup[-1].append(
             {
-                'text': f'◀ Back',
+                'text': self.strings("back_btn"),
                 'callback': self.main_menu,
             }
         )
         markup[-1].append(
             {
-                'text': f'❌ Delete',
+                'text': self.strings("del_btn"),
                 'callback': self.delete_db,
                 'args': [item],
             }
@@ -81,7 +87,7 @@ class DBMod(loader.Module):
         nav_markup = []
         if page_num > 0:
             nav_markup.append({
-                'text': '◀ Previous',
+                'text': '◀',
                 'callback': self.change_page,
                 'args': [page_num - 1],
             })
@@ -94,13 +100,21 @@ class DBMod(loader.Module):
         )
         if page_num < num_pages - 1:
             nav_markup.append({
-                'text': 'Next ▶',
+                'text': '▶',
                 'callback': self.change_page,
                 'args': [page_num + 1],
             })
 
         if nav_markup:
             markup.append(nav_markup)
+
+        markup.append([])
+        markup[-1].append(
+            {
+                'text': self.strings("close_btn"),
+                'action': 'close',
+            }
+        )
 
         return markup
 
