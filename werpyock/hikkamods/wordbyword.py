@@ -88,7 +88,7 @@ class WordByWordMod(loader.Module):
             await utils.answer(message, f"❌ Ошибка: {str(e)}")
 
     async def wordbywordstopcmd(self, message: Message):
-        """Остановить все анимации"""
+        """остановить все анимации"""
         stopped = False
         for chat_id, task in list(self.running_tasks.items()):
             task.cancel()
@@ -111,6 +111,6 @@ class WordByWordMod(loader.Module):
                 await asyncio.sleep(delay / 1000)
                 
         except asyncio.CancelledError:
-            await utils.answer(message, "✅ Анимации остановлены")
+            await utils.answer(message, "🛑 Анимация остановлена")
         except Exception as e:
             await utils.answer(message, f"❌ Ошибка анимации: {str(e)}")
