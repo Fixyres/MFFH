@@ -8,13 +8,13 @@ from telethon.tl.types import Message
 
 @loader.tds
 class SSHModule(loader.Module):
-    """SSH клиент для выполнения команд на удалённых серверах"""
+    """SSH клиент """
     
     strings = {
         "name": "SSHClient",
         "need_config": "⚠️ Введите config SSHClient и установите параметры:\n- default_host: IP сервера\n- default_port: Порт SSH\n- default_user: Имя пользователя 🖥️",
         "need_auth": "🔑 Требуется аутентификация. Используйте key или ~passwd 🔐",
-        "auth_success": "✅ Аутентификация успешна! �",
+        "auth_success": "✅ Аутентификация успешна! ✅",
         "conn_closed": "🔌 SSH соединение закрыто 🚪",
         "cmd_result": "📟 Результат выполнения команды:\n```\n{}\n```",
         "no_connection": "❌ Нет активного SSH соединения 🚫",
@@ -105,7 +105,7 @@ class SSHModule(loader.Module):
 
     @loader.command(aliases=["key"])
     async def keycmd(self, message):
-        """ключ(ответ на файл приватный"""
+        """Загрузить SSH ключ (ответ на файл с приватным ключом)"""
         reply = await message.get_reply_message()
         if not reply or not reply.document:
             await utils.answer(message, self.strings["no_reply"])
@@ -149,7 +149,7 @@ class SSHModule(loader.Module):
 
     @loader.command(aliases=["passwd"])
     async def passwdcmd(self, message):
-        """Пароль ответ еа сообщение с паролям"""
+        """Установить пароль (ответ на сообщение с паролем)"""
         reply = await message.get_reply_message()
         if not reply:
             await utils.answer(message, self.strings["no_reply"])
@@ -198,15 +198,29 @@ class SSHModule(loader.Module):
             output = (await asyncio.get_event_loop().run_in_executor(None, stdout.read)).decode().strip()
             error = (await asyncio.get_event_loop().run_in_executor(None, stderr.read)).decode().strip()
             
-            result = f"💻 **$ {cmd}**\n\n" + self.strings["cmd_result"].format(output or "Нет вывода 🌟")
+            message_text = f"""
+💻 <b>Код:</b>
+<pre><code class="language-bash">{cmd}</code></pre>
+
+✅ <b>Результат:</b>
+<pre><code class="language-bash">{output if output else 'Нет вывода'}</code></pre>
+"""
+
             if error:
-                result += f"\n\n❌ **Ошибки**:\n```\n{error}\n```"
-            await utils.answer(status_msg, result[:4000])
-        except asyncio.TimeoutError:
-            await utils.answer(status_msg, self.strings["timeout"])
+                message_text += f"""
+🚫 <b>Ошибки:</b>
+<pre><code class="language-error">{error}</code></pre>
+"""
+            await utils.answer(status_msg, message_text.strip(), parse_mode="HTML")
         except Exception as e:
-            self.logger.error(f"Error executing command: {str(e)}")
-            await utils.answer(status_msg, f"❌ **Ошибка выполнения команды**: {str(e)} 💥")
+            message_text = f"""
+💻 <b>Код:</b>
+<pre><code class="language-bash">{cmd}</code></pre>
+
+🚫 <b>Ошибка:</b>
+<pre><code class="language-error">{str(e)}</code></pre>
+"""
+            await utils.answer(status_msg, message_text.strip(), parse_mode="HTML")
         finally:
             if self.ssh_client:
                 self.ssh_client.close()
