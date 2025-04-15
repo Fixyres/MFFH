@@ -1,15 +1,12 @@
-__version__ = (1, 0, 0)
-# meta developer: @psyho_Kuznetsov
+__version__ = (1, 0, 1)
+# meta developer: @psyhomodules
 
 import aiohttp
-import logging
 from hikkatl.types import Message
 from .. import loader, utils
 
-logger = logging.getLogger(__name__)
-
 @loader.tds
-class ScriptSearchMod(loader.Module):
+class ScriptSearch(loader.Module):
     """Поиск скриптов для Roblox"""
 
     strings = {
@@ -26,18 +23,21 @@ class ScriptSearchMod(loader.Module):
             "MAX_RESULTS", 5,
         )
 
+    async def client_ready(self, client, db):
+        self.client = client
+        self.db = db
+            
+    
     async def format_script_info(self, script: dict) -> str:
         title = script.get("title", "Без названия")
         game = script.get("game", {}).get("name", "Неизвестная игра")
-        script_code = script.get("script", "⚠️ <b>СКРИПТ НЕДОСТУПЕН</b>")[:1000]  
+        script_code = script.get("script", "⚠️ <b>СКРИПТ НЕДОСТУПЕН</b>")[:1000]
 
-        info = (
+        return (
             f"📝 <b>{title}</b>\n"
             f"🎮 <code>{game}</code>\n\n"
             f"<b>📜 СКРИПТ:</b>\n<code>{script_code}</code>\n"
         )
-
-        return info
 
     @loader.command()
     async def search(self, message: Message):
@@ -53,23 +53,22 @@ class ScriptSearchMod(loader.Module):
             async with aiohttp.ClientSession() as session:
                 url = f"https://scriptblox.com/api/script/search?q={query}&page=1"
                 async with session.get(url) as response:
+                    if response.status != 200:
+                        await utils.answer(message, self.strings["error"].format("Ошибка сервера"))
+                        return
                     data = await response.json()
 
                 scripts = data.get("result", {}).get("scripts", [])
-                
                 if not scripts:
                     await utils.answer(message, self.strings["no_results"].format(query))
                     return
 
                 results = []
                 for script in scripts[:self.config["MAX_RESULTS"]]:
-                    formatted_info = await self.format_script_info(script)
-                    results.append(formatted_info)
+                    results.append(await self.format_script_info(script))
 
                 response_text = self.strings["results"].format(query, "\n\n".join(results))
-                
                 await utils.answer(message, response_text)
 
         except Exception as e:
-            logger.exception(e)
             await utils.answer(message, self.strings["error"].format(str(e)))
