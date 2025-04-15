@@ -1,5 +1,5 @@
 __version__ = (2, 0, 1)
-# meta developer: @psyho_Kuznetsov
+# meta developer: @psyhomodules
 
 from .. import loader, utils
 import random
@@ -36,17 +36,16 @@ class Mporn(loader.Module):
             "timeout", 5,
             "delete_command", True,
             "show_progress", True,
-            "max_video_duration", 300,  # Максимальная длительность видео в секундах (5 минут)
+            "max_video_duration", 300, 
         )  
         self.channel_cache = {}
         self.used_media_ids = {}
         self._locks = {}
         self.blacklisted_channels = set()
 
-    async def client_ready(self, client, db):  
-        self._client = client  
-        self._db = db  
-        
+     async def client_ready(self, client, db):
+        self.client = client
+        self.db = db
         all_channels = set()
         for channels in self.CHANNELS.values():
             all_channels.update(channels)
@@ -59,6 +58,7 @@ class Mporn(loader.Module):
         
         asyncio.create_task(self._background_preload())
         logging.info("MPorn модуль загружен")
+
 
     async def _background_preload(self):
         while True:
