@@ -1,5 +1,5 @@
 __version__ = (1, 1, 0)
-# meta developer: @psyho_Kuznetsov
+# meta developer: @psyhomodules
 
 from hikkatl.types import Message
 from .. import loader, utils
@@ -15,6 +15,10 @@ class AdvancedTextModule(loader.Module):
         self.enabled_underline = False
         self.enabled_strikethrough = False
         self.enabled_center = False
+
+    async def client_ready(self, client, db):
+        self.client = client
+        self.db = db
 
     async def edit_text(self, message: Message):
         text = message.text
@@ -99,5 +103,6 @@ class AdvancedTextModule(loader.Module):
 
     @loader.watcher(out=True)
     async def watcher(self, message: Message):
+        """Сразу редактируем сообщение в зависимости от активных опций."""
         if any([self.enabled_bold, self.enabled_italic, self.enabled_mono, self.enabled_underline, self.enabled_strikethrough, self.enabled_center]):
             await self.edit_text(message)
