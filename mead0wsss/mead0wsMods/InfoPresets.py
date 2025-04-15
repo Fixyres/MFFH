@@ -1,4 +1,4 @@
-__version__ = (1, 0, 0)
+__version__ = (1, 1, 0)
 
 # ███╗░░░███╗███████╗░█████╗░██████╗░░█████╗░░██╗░░░░░░░██╗░██████╗░██████╗
 # ████╗░████║██╔════╝██╔══██╗██╔══██╗██╔══██╗░██║░░██╗░░██║██╔════╝██╔════╝
@@ -45,7 +45,8 @@ class InfoPresets(loader.Module):
         "preset_info": "🔹 {}:\n{}",
         "param_info": "  • {}: {}",
         "done": "✅ Готово",
-        "cancel": "❌ Отмена"
+        "cancel": "❌ Отмена",
+        "form_expired": "⏳ Время действия формы истекло, создайте новую"
     }
 
     async def client_ready(self, client, db):
@@ -53,7 +54,7 @@ class InfoPresets(loader.Module):
         self.db = db
         self.presets_file = "InfoPresets.json"
         self.ensure_presets_file()
-        self._waiting_param = None
+        self._waiting_param = {}
         self._active_forms = {}
 
     def ensure_presets_file(self):
@@ -65,7 +66,6 @@ class InfoPresets(loader.Module):
         """Создать новый пресет."""
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, "🚫 Укажите название пресета")
             return
 
         with open(self.presets_file, "r+", encoding="utf-8") as f:
@@ -107,27 +107,46 @@ class InfoPresets(loader.Module):
             reply_markup=buttons,
             silent=True
         )
-        self._active_forms[preset_name] = form
+        
+        self._active_forms[preset_name] = {
+            "form": form,
+            "chat_id": message.chat_id,
+            "user_id": message.sender_id
+        }
 
     async def _param_callback(self, call: InlineCall, preset_name: str, param: str):
         """Обработчик выбора параметра"""
+        if preset_name not in self._active_forms:
+            await call.answer(self.strings["form_expired"])
+            return
+            
+        form_info = self._active_forms[preset_name]
+        
         await call.edit(
             self.strings["enter_value"].format(param),
             reply_markup=[
                 [{"text": self.strings["cancel"], "callback": self._cancel_callback, "args": (preset_name,)}]
             ]
         )
+        
         self._waiting_param = {
             "user_id": call.from_user.id,
+            "chat_id": form_info["chat_id"],
             "preset_name": preset_name,
             "param": param,
-            "call": call
+            "form_info": form_info
         }
 
     async def _cancel_callback(self, call: InlineCall, preset_name: str):
         """Обработчик отмены"""
-        if preset_name in self._active_forms:
-            await self._active_forms[preset_name].edit(
+        if preset_name not in self._active_forms:
+            await call.answer(self.strings["form_expired"])
+            return
+            
+        form_info = self._active_forms[preset_name]
+        
+        try:
+            await form_info["form"].edit(
                 self.strings["config_menu"].format(preset_name),
                 reply_markup=[
                     [
@@ -143,78 +162,100 @@ class InfoPresets(loader.Module):
                     ]
                 ]
             )
-        self._waiting_param = None
+        except Exception as e:
+            logger.error(f"Failed to edit form on cancel: {e}")
+        
+        self._waiting_param = {}
 
     async def _done_callback(self, call: InlineCall, preset_name: str):
         """Обработчик завершения"""
-        await call.delete()
         if preset_name in self._active_forms:
+            try:
+                await call.delete()
+            except:
+                pass
             del self._active_forms[preset_name]
-        self._waiting_param = None
+        self._waiting_param = {}
 
     async def watcher(self, message: Message):
         """Обработчик ввода значений параметров"""
-        if not hasattr(self, "_waiting_param") or not self._waiting_param:
+        if not self._waiting_param or not isinstance(self._waiting_param, dict):
             return
             
-        waiting = self._waiting_param
-        if message.sender_id != waiting["user_id"]:
+        if not isinstance(message, Message) or not message.message or not hasattr(message, "raw_text"):
             return
             
-        value = message.raw_text
-        preset_name = waiting["preset_name"]
-        param = waiting["param"]
+        waiting_chat_id = self._waiting_param.get("chat_id")
+        waiting_user_id = self._waiting_param.get("user_id")
+        
+        if (not waiting_chat_id or not waiting_user_id or 
+            message.chat_id != waiting_chat_id or 
+            message.sender_id != waiting_user_id):
+            return
+            
+        preset_name = self._waiting_param.get("preset_name")
+        param = self._waiting_param.get("param")
+        form_info = self._waiting_param.get("form_info")
+        
+        if not all([preset_name, param, form_info]):
+            self._waiting_param = {}
+            return
+            
+        value = message.raw_text.strip()
         
         if param in ["pp_to_banner", "show_heroku"]:
             if value.lower() not in ["true", "false"]:
-                await utils.answer(message, self.strings["invalid_bool"])
                 return
             value = value.lower() == "true"
 
-        with open(self.presets_file, "r+", encoding="utf-8") as f:
-            presets = json.load(f)
-            if preset_name not in presets:
-                await utils.answer(message, self.strings["preset_not_found"].format(preset_name))
-                return
+        try:
+            with open(self.presets_file, "r+", encoding="utf-8") as f:
+                presets = json.load(f)
+                if preset_name not in presets:
+                    return
 
-            presets[preset_name][param] = value
-            f.seek(0)
-            json.dump(presets, f, indent=4)
-            f.truncate()
+                presets[preset_name][param] = value
+                f.seek(0)
+                json.dump(presets, f, indent=4)
+                f.truncate()
 
-        await utils.answer(message, self.strings["param_set"].format(param, value, preset_name))
-        
-        if preset_name in self._active_forms:
-            await self._active_forms[preset_name].edit(
-                self.strings["config_menu"].format(preset_name),
-                reply_markup=[
-                    [
-                        {"text": "✏️ custom_message", "callback": self._param_callback, "args": (preset_name, "custom_message")},
-                        {"text": "🖼️ pp_to_banner", "callback": self._param_callback, "args": (preset_name, "pp_to_banner")}
-                    ],
-                    [
-                        {"text": "🔗 banner_url", "callback": self._param_callback, "args": (preset_name, "banner_url")},
-                        {"text": "⚙️ show_heroku", "callback": self._param_callback, "args": (preset_name, "show_heroku")}
-                    ],
-                    [
-                        {"text": self.strings["done"], "callback": self._done_callback, "args": (preset_name,)}
+            await utils.answer(message, self.strings["param_set"].format(param, value, preset_name))
+            
+            try:
+                await form_info["form"].edit(
+                    self.strings["config_menu"].format(preset_name),
+                    reply_markup=[
+                        [
+                            {"text": "✏️ custom_message", "callback": self._param_callback, "args": (preset_name, "custom_message")},
+                            {"text": "🖼️ pp_to_banner", "callback": self._param_callback, "args": (preset_name, "pp_to_banner")}
+                        ],
+                        [
+                            {"text": "🔗 banner_url", "callback": self._param_callback, "args": (preset_name, "banner_url")},
+                            {"text": "⚙️ show_heroku", "callback": self._param_callback, "args": (preset_name, "show_heroku")}
+                        ],
+                        [
+                            {"text": self.strings["done"], "callback": self._done_callback, "args": (preset_name,)}
+                        ]
                     ]
-                ]
-            )
-        
-        self._waiting_param = None
-        
+                )
+            except Exception as e:
+                logger.error(f"Failed to edit form: {e}")
+                
+        except Exception as e:
+            logger.exception("Error saving parameter")
+            
+        finally:
+            self._waiting_param = {}
+
     async def delprcmd(self, message: Message):
         """Удалить пресет."""
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, "🚫 Укажите название пресета")
             return
 
         with open(self.presets_file, "r+", encoding="utf-8") as f:
             presets = json.load(f)
             if args not in presets:
-                await utils.answer(message, self.strings["preset_not_found"].format(args))
                 return
 
             del presets[args]
@@ -227,7 +268,6 @@ class InfoPresets(loader.Module):
     async def delfileprcmd(self, message: Message):
         """Удалить файл с пресетами."""
         if not os.path.exists(self.presets_file):
-            await utils.answer(message, self.strings["file_not_found"])
             return
             
         os.remove(self.presets_file)
@@ -237,13 +277,11 @@ class InfoPresets(loader.Module):
     async def uploadprcmd(self, message: Message):
         """Загрузить файл с пресетами."""
         if not os.path.exists(self.presets_file):
-            await utils.answer(message, "🚫 Файл пресетов не найден")
             return
 
         with open(self.presets_file, "r", encoding="utf-8") as f:
             presets = json.load(f)
             if not presets:
-                await utils.answer(message, self.strings["no_presets"])
                 return
 
         await self._client.send_file(
@@ -256,18 +294,15 @@ class InfoPresets(loader.Module):
     async def listprcmd(self, message: Message):
         """Показать список всех пресетов."""
         if not os.path.exists(self.presets_file):
-            await utils.answer(message, self.strings["file_not_found"])
             return
 
         with open(self.presets_file, "r", encoding="utf-8") as f:
             try:
                 presets = json.load(f)
             except json.JSONDecodeError:
-                await utils.answer(message, self.strings["no_presets"])
                 return
 
             if not presets:
-                await utils.answer(message, self.strings["no_presets"])
                 return
 
             result = []
@@ -288,20 +323,17 @@ class InfoPresets(loader.Module):
         """Загрузить пресет."""
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, "🚫 Укажите название пресета")
             return
 
         with open(self.presets_file, "r", encoding="utf-8") as f:
             presets = json.load(f)
             if args not in presets:
-                await utils.answer(message, self.strings["preset_not_found"].format(args))
                 return
 
             preset = presets[args]
             heroku_info = self.lookup("HerokuInfo")
             
             if not heroku_info:
-                await utils.answer(message, "🚫 Модуль HerokuInfo не найден!")
                 return
 
             for param, value in preset.items():
