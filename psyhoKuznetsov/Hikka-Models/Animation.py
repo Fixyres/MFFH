@@ -1,5 +1,5 @@
 __version__ = (1, 0, 1)
-# meta developer: @psyho_Kuznetsov
+# meta developer: @psyhomodules
 
 from .. import loader, utils
 from telethon import types
@@ -25,8 +25,8 @@ class HeartAnimationMod(loader.Module):
         )
 
     async def client_ready(self, client, db):
-        self._db = db
-        self._client = client
+        self.client = client
+        self.db = db
 
     @loader.command(ru_doc="Создает анимированное сердце")
     async def h(self, message: types.Message):
