@@ -1,5 +1,5 @@
-__version__ = (1, 0, 0)
-# meta developer: @psyho_Kuznetsov
+__version__ = (1, 0, 1)
+# meta developer: @psyhomodules
 
 from .. import loader, utils
 from telethon import types
@@ -8,6 +8,10 @@ from telethon import types
 class SimpleFavMod(loader.Module):
     """Сохраняет сообщения, видео, файлы и т.д в избранное"""    
     strings = {"name": "SaveFav"}
+
+    async def client_ready(self, client, db):
+        self.client = client
+        self.db = db
 
     @loader.command()
     async def fav(self, message):
