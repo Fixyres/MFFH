@@ -1,5 +1,5 @@
 __version__ = (1, 0, 0)
-# meta developer: @psyho_Kuznetsov
+# meta developer: @psyhomodules
 
 from hikkatl.types import Message
 from .. import loader, utils
@@ -24,7 +24,8 @@ class StickSpam(loader.Module):
         self.spamming = False
 
     async def client_ready(self, client, db):
-        self._client = client
+        self.client = client
+        self.db = db
 
     @loader.command(ru_doc="🚀 Начать спам стикерами")
     async def stickspam(self, message: Message):
