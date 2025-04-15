@@ -157,7 +157,7 @@ class Spotify4ik(loader.Module):
         self.current_track = ""
 
         self.musicdl = await self.import_lib(
-            "https://libs.hikariatama.ru/musicdl.py",
+            "https://famods.fajox.one/assets/musicdl.py",
             suspend_on_error=True,
         )
 
