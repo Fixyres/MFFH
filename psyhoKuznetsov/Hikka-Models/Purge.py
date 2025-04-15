@@ -1,5 +1,5 @@
-__version__ = (1, 0, 0)
-# meta developer: @psyho_Kuznetsov
+__version__ = (1, 0, 1)
+# meta developer: @psyhomodules
 
 import logging
 import asyncio
@@ -15,7 +15,7 @@ class TotalPurge(loader.Module):
     async def client_ready(self, client, db):
         self.client = client
         self.db = db
-
+        
     @loader.unrestricted
     async def purgecmd(self, message: Message):
         """Удалить ВСЕ сообщения в текущем чате также работает и в каналах просто напиши ету команду"""
