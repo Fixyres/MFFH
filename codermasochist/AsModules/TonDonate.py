@@ -27,7 +27,7 @@ class TonDonate(loader.Module):
 
     @loader.command()
     async def dton(self, message):
-        """— текст / сумма / коммент"""
+        """— текст | сумма | коммент"""
         args = utils.get_args_raw(message)
 
         wallet = self.config["WALLET_ADDRESS"]
@@ -37,8 +37,8 @@ class TonDonate(loader.Module):
         if not args:
             return await utils.answer(message, "<blockquote><emoji document_id=5458924238037590515>😮</emoji> <b>чел, укажи хотя бы сумму...</b></blockquote>")
 
-        if "/" in args:
-            parts = list(map(str.strip, args.split("/", 2)))
+        if "|" in args:
+            parts = list(map(str.strip, args.split("|", 2)))
 
             if len(parts) < 2:
                 return
