@@ -1,12 +1,12 @@
-__version__ = (2, 2, 5)
+__version__ = (2, 2, 7)
 
 # -------------------------------------------------------------------------------- 
 #                                                                                  
 # Name: AccountManager                                                             
-# Description: - нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ                          
+# Description: нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ                          
 # meta developer: @llocJlednuy_cepafum, @ManulMods                                             
-# author: @llocJlednuy_cepafum, @ManulMods
-# version: 2.2.5                                                                                 
+# authors: @llocJlednuy_cepafum, @ManulMods
+# version: 2.2.7                                                                                 
 #
 # -------------------------------------------------------------------------------- 
 
@@ -16,13 +16,13 @@ from .. import loader, utils
 
 @loader.tds
 class AccountManager(loader.Module):
-    """- нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ"""
+    """нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ"""
 
     strings = {
         "name": "AccountManager",
-        "description": "- нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ",
-        "author": "@llocJlednuy_cepafum, @ManulMods",
-        "version": "2.2.5",
+        "description": "нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ",
+        "authors": "@llocJlednuy_cepafum, @ManulMods",
+        "versions": "2.2.7",
         "error": "<emoji document_id=5237814653010076467>🗓</emoji> нᴇ ʏдᴀлось совᴇᴘшить кᴀкиᴇ-лиҕо вᴀши дᴇйствия...",
         "bio_success": "<emoji document_id=5229132514060167056>🗓</emoji> <b>ҕио ʏспᴇшно оҕновлᴇно!</b>\n<b><emoji document_id=5237814653010076467>🗓</emoji> новоᴇ ҕио:</b> <code>{}</code>",
         "name_success": "<emoji document_id=5233429444156223307>🗓</emoji> <b>имя ʏспᴇшно измᴇнᴇно!</b>\n<b><emoji document_id=5237814653010076467>🗓</emoji> новоᴇ имя:</b> <code>{}</code>",
@@ -44,7 +44,7 @@ class AccountManager(loader.Module):
 
     @loader.command()
     async def setbio(self, message):
-        """<текст> - измᴇнить ҕио"""
+        """<описание> - измᴇнить ҕио"""
         args = utils.get_args_raw(message)
         if not args:
             await utils.answer(message, self.strings["arg_missing"])
@@ -138,7 +138,7 @@ class AccountManager(loader.Module):
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>пᴘиглᴀшᴇния в гᴘʏппы:</b> {self._format_privacy(groups.rules)}",
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>кᴘʏжки/голосовыᴇ:</b> {self._format_privacy(voice.rules)}",
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>звонки:</b> {self._format_privacy(call.rules)}\n",
-            f"<emoji document_id=5231112502573555738>🗓</emoji> <b>ᴀᴘхив и новыᴇ чᴀты:</b> {'<emoji document_id=5237814653010076467>🗓</emoji> Скрыто' if global_settings.archive_and_mute_new_noncontact_peers else '<emoji document_id=5231112502573555738>🗓</emoji> Не скрыто'}"
+            f"<emoji document_id=5231112502573555738>🗓</emoji> <b>ᴀᴘхив и новыᴇ чᴀты:</b> {'<emoji document_id=5237814653010076467>🗓</emoji> Скрыто' if global_settings.archive_and_mute_new_noncontact_peers else '<emoji document_id=5229132514060167056>🗓</emoji> Не скрыто'}"
         )
 
         await utils.answer(
