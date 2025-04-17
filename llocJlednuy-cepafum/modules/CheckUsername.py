@@ -1,12 +1,12 @@
-__version__ = (1, 1, 3)
+__version__ = (1, 1, 4)
 
 # -------------------------------------------------------------------------------- 
 #                                                                                  
 # Name: CheckUsername                                                            
 # Description: пᴘовᴇᴘкᴀ имя пользовᴀтᴇля в ᴛᴇʟᴇɢʀᴀᴍ                          
-# meta developer: @llocJlednuy_cepafum, @ManulMods                                             
-# authors: @llocJlednuy_cepafum, @ManulMods
-# version: 1.1.3                                                                                 
+# meta developer: @ManulMods                                             
+# authors: @ManulMods
+# version: 1.1.4                                                                                 
 #
 # █▀▀ █▀▀ █▀█ ▄▀▄ █▀▀ █ █ █▄ ▄█
 # █▄▄ ██▄ █▀▀ █▀█ █▀  █▄█ █ ▀ █
@@ -29,8 +29,8 @@ class CheckUsername(loader.Module):
     strings = {
         "name": "CheckUsername",
         "description": "пᴘовᴇᴘкᴀ имя пользовᴀтᴇля в ᴛᴇʟᴇɢʀᴀᴍ",
-        "authors": "@llocJlednuy_cepafum, @ManulMods",
-        "versions": "1.1.3",
+        "authors": "@ManulMods",
+        "versions": "1.1.4",
         "error": "<emoji document_id=5237814653010076467>🗓</emoji> <b>нᴇ ʏдᴀлось совᴇᴘшить вᴀши дᴇйствия...</b>",
         "check_true": "<emoji document_id=5237814653010076467>🗓</emoji> <b>юзᴇᴘнᴇйм:</b> @{} <b>(нᴇ достʏпᴇн!)</b>",
         "check_false": "<emoji document_id=5235875883297824772>🗓</emoji> <b>юзᴇᴘнᴇйм:</b> @{} <b>(достʏпᴇн!)</b>",
