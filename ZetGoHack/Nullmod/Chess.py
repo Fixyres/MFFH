@@ -1,4 +1,4 @@
-__version__ = (1,1,0)
+__version__ = (1,1,"1.01")
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -533,6 +533,7 @@ class Chess(loader.Module):
         if self.chsn == False:
             await self.checkMove(call,coord)
         else:
+            matching_place = None
             for place in self.places:
                 if place[2:4] == coord.lower():
                     if len(place) == 5:
@@ -676,9 +677,9 @@ class Chess(loader.Module):
                     return f"♔ Белые - {self.opp_name} \n♚ Чёрные - {self.saymyname}\n\n🤝 Правило 50 ходов. Ничья"
         elif self.Timer and self.reason:
             if int(await self.Timer.white_time()) == 0:
-                return f"♔ Белые - {self.saymyname}\n♚ Чёрные - {self.opp_name}\n\n❗⏱️ Истекло время: {self.saymyname}. 🎉 Победил(а) {self.opp_name}"
+                return f"♔ Белые - {self.saymyname}\n♚ Чёрные - {self.opp_name}\n\n❗⏱️ Истекло время: {self.opp_name}. 🎉 Победил(а) {self.saymyname}"
             else:
-                return f"♔ Белые - {self.opp_name}\n♚ Чёрные - {self.saymyname}\n\n❗⏱️ Истекло время: {self.opp_name}. 🎉 Победил(а) {self.saymyname}"
+                return f"♔ Белые - {self.opp_name}\n♚ Чёрные - {self.saymyname}\n\n❗⏱️ Истекло время: {self.saymyname}. 🎉 Победил(а) {self.opp_name}"
 
 
     #####Ходы#####
