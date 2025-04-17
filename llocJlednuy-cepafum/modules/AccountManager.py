@@ -1,18 +1,23 @@
-__version__ = (2, 2, 7)
+__version__ = (2, 3, 3)
 
 # -------------------------------------------------------------------------------- 
 #                                                                                  
 # Name: AccountManager                                                             
 # Description: нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ                          
-# meta developer: @llocJlednuy_cepafum, @ManulMods                                             
-# authors: @llocJlednuy_cepafum, @ManulMods
-# version: 2.2.7                                                                                 
+# meta developer: @ManulMods                                             
+# authors: @ManulMods
+# version: 2.3.3                                                                                 
+#
+# █▀▀ █▀▀ █▀█ ▄▀▄ █▀▀ █ █ █▄ ▄█
+# █▄▄ ██▄ █▀▀ █▀█ █▀  █▄█ █ ▀ █
+#
+# ▀▄▀ █▄ ▄█ █▄ ▄█ █▀█ █▀▄ █ █ █   █▀▀ █▀▀ 
+#  █  █ ▀ █ █ ▀ █ █▄█ █▄▀ █▄█ █▄▄ ██▄ ▄██ 
 #
 # -------------------------------------------------------------------------------- 
 
 from telethon import functions, types
 from .. import loader, utils
-
 
 @loader.tds
 class AccountManager(loader.Module):
@@ -21,8 +26,8 @@ class AccountManager(loader.Module):
     strings = {
         "name": "AccountManager",
         "description": "нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ",
-        "authors": "@llocJlednuy_cepafum, @ManulMods",
-        "versions": "2.2.7",
+        "authors": "@ManulMods",
+        "versions": "2.3.3",
         "error": "<emoji document_id=5237814653010076467>🗓</emoji> нᴇ ʏдᴀлось совᴇᴘшить кᴀкиᴇ-лиҕо вᴀши дᴇйствия...",
         "bio_success": "<emoji document_id=5229132514060167056>🗓</emoji> <b>ҕио ʏспᴇшно оҕновлᴇно!</b>\n<b><emoji document_id=5237814653010076467>🗓</emoji> новоᴇ ҕио:</b> <code>{}</code>",
         "name_success": "<emoji document_id=5233429444156223307>🗓</emoji> <b>имя ʏспᴇшно измᴇнᴇно!</b>\n<b><emoji document_id=5237814653010076467>🗓</emoji> новоᴇ имя:</b> <code>{}</code>",
@@ -33,6 +38,9 @@ class AccountManager(loader.Module):
         "avatar_error": "<emoji document_id=5237814653010076467>🗓</emoji> <b>отвᴇтьтᴇ нᴀ фото сооҕщᴇниᴇ!</b>",
         "privacy_settings": "<emoji document_id=5237814653010076467>🗓</emoji> <b>нᴀстᴘойки конфидᴇнциᴀльности:</b>\n\n{}",
         "arg_missing": "<emoji document_id=5237814653010076467>🗓</emoji> <b>ʏкᴀжитᴇ ᴀᴘгʏмᴇнт!</b>",
+        "check_true": "<emoji document_id=5229132514060167056>🗓</emoji> <b>юзᴇᴘнᴇйм:</b> @{} <b>(достʏпᴇн!)</b>",
+        "check_false": "<emoji document_id=5235875883297824772>🗓</emoji> <b>юзᴇᴘнᴇйм:</b> @{} <b>(нᴇ достʏпᴇн!)</b>",
+        "check_false_args": "<emoji document_id=5237814653010076467>🗓</emoji> <b>пожᴀлʏйстᴀ впишитᴇ юзᴇᴘнᴇйм котоᴘый вы хотитᴇ пᴘовᴇᴘить...</b>",
         "privacy_everybody": "<emoji document_id=5235875883297824772>🗓</emoji> Все",
         "privacy_contacts": "<emoji document_id=5233429444156223307>🗓</emoji> Контакты",
         "privacy_nobody": "<emoji document_id=5237814653010076467>🗓</emoji> Никто"
@@ -104,6 +112,28 @@ class AccountManager(loader.Module):
             await utils.answer(message, self.strings["error"])
 
     @loader.command()
+    async def checkuser(self, message):
+        """<юзернейм> - пᴘовᴇᴘяᴇт достʏпность юзᴇᴘнᴇймᴀ"""
+        args = utils.get_args_raw(message)
+        if not args:
+            await utils.answer(message, self.strings["check_false_args"])
+            return
+        
+        username = args.strip()
+
+        result = await self.check_username(self._client, username)
+
+        if result:
+            await utils.answer(message, self.strings["check_false"].format(username))
+        else:
+            await utils.answer(message, self.strings["check_true"].format(username))
+    
+    async def check_username(self, message, username: str) -> bool:
+        request = functions.account.CheckUsernameRequest(username=username)
+        result = await self._client(request)
+        return result
+
+    @loader.command()
     async def getprivacy(self, message):
         """- покᴀзᴀть тᴇкʏщиᴇ нᴀстᴘойки конфидᴇнциᴀльности"""
         last_seen = await self._client(functions.account.GetPrivacyRequest(
@@ -137,7 +167,7 @@ class AccountManager(loader.Module):
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>пᴇᴘᴇсылкᴀ сооҕщᴇний:</b> {self._format_privacy(forwards.rules)}",
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>пᴘиглᴀшᴇния в гᴘʏппы:</b> {self._format_privacy(groups.rules)}",
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>кᴘʏжки/голосовыᴇ:</b> {self._format_privacy(voice.rules)}",
-            f"<emoji document_id=5231112502573555738>🗓</emoji> <b>звонки:</b> {self._format_privacy(call.rules)}\n",
+            f"<emoji document_id=5231112502573555738>🗓</emoji> <b>звонки:</b> {self._format_privacy(call.rules)}",
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>ᴀᴘхив и новыᴇ чᴀты:</b> {'<emoji document_id=5237814653010076467>🗓</emoji> Скрыто' if global_settings.archive_and_mute_new_noncontact_peers else '<emoji document_id=5229132514060167056>🗓</emoji> Не скрыто'}"
         )
 
