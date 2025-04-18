@@ -1,4 +1,4 @@
-__version__ = (1,1,"1.01")
+__version__ = (1,1,2)
 #░░░░░░░░░░░░░░░░░░░░░░
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
@@ -23,7 +23,6 @@ __version__ = (1,1,"1.01")
 from hikkatl.tl.types import PeerUser
 import asyncio, random, chess, time
 from .. import loader, utils
-# from itertools import chain
 
 #######Таймер#######
 class Timer:#еее мой первый класс
@@ -98,14 +97,14 @@ class Chess(loader.Module):
 
     async def client_ready(self):
         self.board = {}
-        self.symbols = {
+        self.style1 = {
             "r": "♜", "n": "♞", "b": "♝", "q": "𝗾", "k": "♚", "p": "♟",
             "R": "♖", "N": "♘", "B": "♗", "Q": "𝗤", "K": "♔", "P": "♙",
         }
-        # self.symbolsL = {
-        #     "r": "𝗿", "n": "𝗻", "b": "𝗯", "q": "𝗾", "k": "𝗸", "p": "𝗽",
-        #     "R": "𝗥", "N": "𝗡", "B": "𝗕", "Q": "𝗤", "K": "𝗞", "P": "𝗣",
-        # } будто кто-то будет за буквы играть...
+        self.style2 = {
+            "r": "♖⚫", "n": "♘⚫", "b": "♗⚫", "q": "♕⚫", "k": "♔⚫", "p": "♙⚫",
+            "R": "♖⚪", "N": "♘⚪", "B": "♗⚪", "Q": "♕⚪", "K": "♔⚪", "P": "♙⚪",
+        }
         self.chsn = False
         self.saymyname = (await self.client.get_me()).first_name
         self.reverse = False
@@ -118,6 +117,7 @@ class Chess(loader.Module):
         self.loopState = False
         self.game = False
         self.reason = False
+        self.style = self.style1
 
     async def purgeSelf(self):
         self.board = {}
@@ -154,43 +154,30 @@ class Chess(loader.Module):
     async def settings(self, call, nT):
         if call.from_user.id not in self.you_n_me:
             await call.answer("Настройки не для вас!")
-            return
-        if not nT:    
-            await call.edit(
-                text=f"[⚙️] Настройки этой партии\n| - > Хост играет за {self.colorName} цвет\n| - > Время: {self.timeName}",
-                reply_markup=[
-                    [
-                        {"text":f"⏱️ Время: {self.timeName}","callback":self.time, "args":(nT,)}
-                    ],
-                    [
-                        {"text":f"♟️ Цвет (хоста): {self.colorName}","callback":self.color, "args":(nT,)}
-                    ],
-                    [
-                        {"text":"⤴️ Вернуться","callback":self.backToInvite, "args":(nT,)}
-                    ]
+            return  
+        await call.edit(
+            text=f"[⚙️] Настройки этой партии\n| - > Хост играет за {self.colorName} цвет\n| - > Время: {self.timeName}\n| - > Стиль: #{1 if self.style == self.style1 else 2}",
+            reply_markup=[
+                [
+                    {"text":f"⏱️ Время: {self.timeName}","callback":self.time, "args":(nT,)} if not nT else {"text":f"❌ Время: ...","action":"answer","show_alert":True,"message":"Приглашение находится в чате.\n\nИз-за ограничений для ботов, партии на время могут проводиться только в лс"}
+                ],
+                [
+                    {"text":f"♟️ Цвет (хоста): {self.colorName}","callback":self.color, "args":(nT,)}
+                ],
+                [
+                    {"text":f"🎛️ Стиль доски: #{1 if self.style == self.style1 else 2}","callback":self._style, "args":(nT,)}
+                ],
+                [
+                    {"text":"⤴️ Вернуться","callback":self.backToInvite, "args":(nT,)}
                 ]
-            )
-        else:
-            await call.edit(
-                text=f"[⚙️] Настройки этой партии\n| - > Хост играет за {self.colorName} цвет\n| - > Время: {self.timeName}",
-                reply_markup=[
-                    [
-                        {"text":f"❌ Время: ...","action":"answer","show_alert":True,"message":"Приглашение находится в чате.\n\nИз-за ограничений для ботов партии на время могут проводиться только в лс"}
-                    ],
-                    [
-                        {"text":f"♟️ Цвет (хоста): {self.colorName}","callback":self.color, "args":(nT,)}
-                    ],
-                    [
-                        {"text":"⤴️ Вернуться","callback":self.backToInvite, "args":(nT,)}
-                    ]
-                ]
-            )    
+            ]
+        )
 
     async def backToInvite(self,call,nT):
         if call.from_user.id not in self.you_n_me:
             await call.answer("Это не для вас!")
             return
-        await call.edit(text = f"<a href='tg://user?id={self.opp_id}'>{self.opp_name}</a>, вас пригласили сыграть партию шахмат, примите?\n-- --\n[⚙️] Текущие настройки:\n| - > • Хост играет за {self.colorName} цвет\n| - > • Время: {self.timeName}", 
+        await call.edit(text = f"<a href='tg://user?id={self.opp_id}'>{self.opp_name}</a>, вас пригласили сыграть партию шахмат, примите?\n-- --\n[⚙️] Текущие настройки:\n| - > • Хост играет за {self.colorName} цвет\n| - > • Время: {self.timeName}\n| - > • Стиль: #{1 if self.style == self.style1 else 2}", 
                                reply_markup = [
                                    [
                                        {"text": "Принимаю", "callback": self.ans, "args":("y",)},
@@ -268,6 +255,50 @@ class Chess(loader.Module):
         self.colorName = txt
         self.you_play = color
         await self.color(call,nT)
+
+    async def _style(self, call, nT):
+        if call.from_user.id not in self.you_n_me:
+            await call.answer("Настройки не для вас!")
+            return
+        await call.edit(
+            text=f"• Настройки этой партии.\n| - > [🎛️] Текущий стиль доски: #{1 if self.style == self.style1 else 2} цвет.\nВыберите стиль доски",
+            reply_markup=[
+                [
+                    {"text":("✅ " if self.style == self.style1 else "❌ ") + "Стиль #1", "callback":self._show_style,"args":(1,nT,)},
+                    {"text":("✅ " if self.style != self.style1 else "❌ ") + "Стиль #2", "callback":self._show_style,"args":(2,nT,)}
+                ],
+                [
+                    {"text":"⤴️ Обратно к настройкам", "callback":self.settings, "args":(nT,)}
+                ]
+            ]
+        )
+    async def _show_style(self, call, style, nT):
+        if call.from_user.id not in self.you_n_me:
+            await call.answer("Настройки не для вас!")
+            return
+        self.style = self.style1 if style == 1 else self.style2
+        self.Board = chess.Board()
+        btns = []
+        # - - -
+        for row in range(1,9):
+            rows = []
+            for col in "ABCDEFGH":
+                coord = f"{col}{row}"
+                piece = self.Board.piece_at(chess.parse_square(coord.lower()))
+                self.board[coord] =  self.style[piece.symbol()] if piece else " "
+        # - - -
+        self.Board = None
+        for row in range(1,9):
+            rows = []
+            for col in "ABCDEFGH":
+                coord = f"{col}{row}"
+                rows.append({"text": f"{self.board[f'{col}{row}']}", "action":"answer", "message":"😨 Вот это фигура, да?"})
+            btns.append(rows)
+        btns = btns[::-1]
+        self.board = {}
+        btns.append([{"text":"⤴️ Назад", "callback":self._style, "args":(nT,)}])
+        await call.edit(text=f"🎛️ Выбран стиль: #{1 if self.style == self.style1 else 2}\n\nВот как он выглядит",reply_markup=btns)
+        
         #####Настройки#####
 
 
@@ -310,7 +341,7 @@ class Chess(loader.Module):
             await message.edit("<emoji document_id=5384398004172102616>😈</emoji> Одиночные шахматы? Простите, нет.")
             return
         self.you_n_me = [self.opp_id, self.message.sender_id]
-        await self.inline.form(message = message, text = f"<a href='tg://user?id={self.opp_id}'>{self.opp_name}</a>, вас пригласили сыграть партию шахмат, примите?\n-- --\n[⚙️] Текущие настройки:\n| - > • Хост играет за {self.colorName} цвет\n| - > • Время: {self.timeName}", 
+        await self.inline.form(message = message, text = f"<a href='tg://user?id={self.opp_id}'>{self.opp_name}</a>, вас пригласили сыграть партию шахмат, примите?\n-- --\n[⚙️] Текущие настройки:\n| - > • Хост играет за {self.colorName} цвет\n| - > • Время: {self.timeName}\n| - > • Стиль: #{1 if self.style == self.style1 else 2}", 
                                reply_markup = [
                                    [
                                        {"text": "Принимаю", "callback": self.ans, "args":("y",)},
@@ -320,7 +351,7 @@ class Chess(loader.Module):
                                        {"text": "⚙️ Настройки", "callback": self.settings, "args":(noTimer,)}
                                    ],
                                    [
-                                       {"text": "❗ ВАЖНО","action":"answer","show_alert":True,"message":"В игре фигуры показаны ASCII-символами, но в тёмной теме их трудно различить, особенно '♕' и '♛'.\n\nДля удобства они были заменены на Q (бел) и q (чёрн).",}
+                                       {"text": "❗ ВАЖНО","action":"answer","show_alert":True,"message":"В игре фигуры показаны ASCII-символами, но в тёмной теме их трудно различить, особенно '♕' и '♛'.\n\nДля удобства они были заменены на Q (бел) и q (чёрн) в первом стиле.",}
                                    ]
                                ], 
                                disable_security = True, on_unload=self.outdated()
@@ -400,7 +431,7 @@ class Chess(loader.Module):
             for col in "ABCDEFGH":
                 coord = f"{col}{row}"
                 piece = self.Board.piece_at(chess.parse_square(coord.lower()))
-                self.board[coord] =  self.symbols[piece.symbol()] if piece else " "
+                self.board[coord] =  self.style[piece.symbol()] if piece else " "
 
 
 
@@ -418,16 +449,12 @@ class Chess(loader.Module):
         )
 
     async def UpdBoard(self, call):
-        #log = []
-        #log.append(f"plcs: {self.places}")
         for row in range(1,9):
             rows = []
             for col in "ABCDEFGH":
                 coord = f"{col}{row}"
                 for place in self.places:
-                    #log.append(f"p: {coord}")
                     if place[2:4] == coord.lower():
-                        #log.append("yes")
                         if len(place) == 5:
                             self.board[coord] = "×↻" if (move := next((chess.Move.from_uci(p) for p in self.places if p[2:4] == coord.lower()), None)) and self.Board.is_capture(move) else "↻"
                         else:
@@ -435,10 +462,8 @@ class Chess(loader.Module):
                         break
                        
                     else:
-                        #log.append(f"nothing")
                         piece = self.Board.piece_at(chess.parse_square(coord.lower()))
-                        self.board[coord] =  self.symbols[piece.symbol()] if piece else " "
-        #await self.client.send_message("me",f"{log}")
+                        self.board[coord] =  self.style[piece.symbol()] if piece else " "
 
         text = await self.sttxt()  
         btns = []
@@ -473,7 +498,7 @@ class Chess(loader.Module):
                        
                     else:
                         piece = self.Board.piece_at(chess.parse_square(coord.lower()))
-                        self.board[coord] =  self.symbols[piece.symbol()] if piece else " "
+                        self.board[coord] =  self.style[piece.symbol()] if piece else " "
         return
        
          
