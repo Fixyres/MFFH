@@ -1,4 +1,4 @@
-__version__ = (2, 3, 3)
+__version__ = (2, 3, 8)
 
 # -------------------------------------------------------------------------------- 
 #                                                                                  
@@ -6,7 +6,7 @@ __version__ = (2, 3, 3)
 # Description: нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ                          
 # meta developer: @ManulMods                                             
 # authors: @ManulMods
-# version: 2.3.3                                                                                 
+# version: 2.3.8                                                                                 
 #
 # █▀▀ █▀▀ █▀█ ▄▀▄ █▀▀ █ █ █▄ ▄█
 # █▄▄ ██▄ █▀▀ █▀█ █▀  █▄█ █ ▀ █
@@ -17,7 +17,11 @@ __version__ = (2, 3, 3)
 # -------------------------------------------------------------------------------- 
 
 from telethon import functions, types
+from telethon.tl.functions.users import GetFullUserRequest
+import logging
 from .. import loader, utils
+
+logging.basicConfig(level=logging.INFO)
 
 @loader.tds
 class AccountManager(loader.Module):
@@ -27,7 +31,7 @@ class AccountManager(loader.Module):
         "name": "AccountManager",
         "description": "нᴀстᴘойкᴀ конфидᴇнциᴀльности в ᴛᴇʟᴇɢʀᴀᴍ",
         "authors": "@ManulMods",
-        "versions": "2.3.3",
+        "versions": "2.3.8",
         "error": "<emoji document_id=5237814653010076467>🗓</emoji> нᴇ ʏдᴀлось совᴇᴘшить кᴀкиᴇ-лиҕо вᴀши дᴇйствия...",
         "bio_success": "<emoji document_id=5229132514060167056>🗓</emoji> <b>ҕио ʏспᴇшно оҕновлᴇно!</b>\n<b><emoji document_id=5237814653010076467>🗓</emoji> новоᴇ ҕио:</b> <code>{}</code>",
         "name_success": "<emoji document_id=5233429444156223307>🗓</emoji> <b>имя ʏспᴇшно измᴇнᴇно!</b>\n<b><emoji document_id=5237814653010076467>🗓</emoji> новоᴇ имя:</b> <code>{}</code>",
@@ -41,6 +45,14 @@ class AccountManager(loader.Module):
         "check_true": "<emoji document_id=5229132514060167056>🗓</emoji> <b>юзᴇᴘнᴇйм:</b> @{} <b>(достʏпᴇн!)</b>",
         "check_false": "<emoji document_id=5235875883297824772>🗓</emoji> <b>юзᴇᴘнᴇйм:</b> @{} <b>(нᴇ достʏпᴇн!)</b>",
         "check_false_args": "<emoji document_id=5237814653010076467>🗓</emoji> <b>пожᴀлʏйстᴀ впишитᴇ юзᴇᴘнᴇйм котоᴘый вы хотитᴇ пᴘовᴇᴘить...</b>",
+        "full_profile_info": "<emoji document_id=5237814653010076467>🗓</emoji> Полная информация о профиле:",
+        "id": "<emoji document_id=5228764435362900200>🗓</emoji> Индификатор: @{}",
+        "first_name": "<emoji document_id=5237814653010076467>🗓</emoji> Нейм: {}",
+        "username": "<emoji document_id=5231112502573555738>🗓</emoji> Юзернейм: @{}",
+        "bio": "<emoji document_id=5233261334841289002>🗓</emoji> Описание профиля: {}",
+        "is_bot": "<emoji document_id=5231188729653127746>🗓</emoji> Бот-Аккаунт: {}",
+        "verified": "<emoji document_id=5229132514060167056>🗓</emoji> Верифицированый Аккаунт: {}",
+        "restricted": "<emoji document_id=5235875883297824772>🗓</emoji> Ограничение на аккаунте: {}",
         "privacy_everybody": "<emoji document_id=5235875883297824772>🗓</emoji> Все",
         "privacy_contacts": "<emoji document_id=5233429444156223307>🗓</emoji> Контакты",
         "privacy_nobody": "<emoji document_id=5237814653010076467>🗓</emoji> Никто"
@@ -49,6 +61,7 @@ class AccountManager(loader.Module):
     async def client_ready(self, client, db):
         self._db = db
         self._client = client
+
 
     @loader.command()
     async def setbio(self, message):
@@ -113,25 +126,61 @@ class AccountManager(loader.Module):
 
     @loader.command()
     async def checkuser(self, message):
-        """<юзернейм> - пᴘовᴇᴘяᴇт достʏпность юзᴇᴘнᴇймᴀ"""
+        """<юзернейм> - пᴘовᴇᴘяᴇт достʏпность имᴇни пользовᴀтᴇля"""
         args = utils.get_args_raw(message)
+
         if not args:
             await utils.answer(message, self.strings["check_false_args"])
             return
-        
+
         username = args.strip()
 
-        result = await self.check_username(self._client, username)
+        result = await self.check_username_availability(username)
 
         if result:
             await utils.answer(message, self.strings["check_false"].format(username))
         else:
             await utils.answer(message, self.strings["check_true"].format(username))
-    
-    async def check_username(self, message, username: str) -> bool:
-        request = functions.account.CheckUsernameRequest(username=username)
-        result = await self._client(request)
-        return result
+
+    async def check_username_availability(self, username: str) -> bool:
+        try:
+            request = functions.account.CheckUsernameRequest(username=username)
+            result = await self._client(request)
+            return result
+        except Exception as e:
+            logging.exception(f"Ошибка при проверке юзернейма {username}: {e}")
+            return False
+        
+    @loader.command()
+    async def profile(self, message):
+        """- полʏчᴀᴇт и отоҕᴘᴀжᴀᴇт полнʏю инфоᴘмᴀцию о пᴘофилᴇ пользовᴀтᴇля"""
+        args = utils.get_args_raw(message)
+        user_id = None
+        if args:
+            try:
+                user_id = int(args)
+            except ValueError:
+                await utils.answer(message, "❗ ID пользователя должен быть числом.")
+                return
+        else:
+            user_id = message.sender_id
+            full_user = await self._client(GetFullUserRequest(id=types.InputUser(user_id=user_id, access_hash=0)))
+
+            # Собираем информацию о профиле
+            user = full_user.users[0]  # Информация о пользователе
+            profile = full_user.full_user  # Полная информация о профиле
+
+            # Формируем текстовое сообщение
+            text = self.strings["full_profile_info"] + "\n\n"
+            text += self.strings["id"].format(user.id) + "\n"
+            text += self.strings["first_name"].format(user.first_name) + "\n"
+            text += self.strings["username"].format(user.username or "Отсутствует") + "\n"
+            text += self.strings["bio"].format(profile.about or "Отсутствует") + "\n"
+            text += self.strings["is_bot"].format(user.bot or "Нет") + "\n"
+            text += self.strings["verified"].format(user.verified or "Нет") + "\n"
+            text += self.strings["restricted"].format(user.restricted or "Нет") + "\n"
+
+            await utils.answer(message, text)
 
     @loader.command()
     async def getprivacy(self, message):
