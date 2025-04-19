@@ -69,28 +69,29 @@ class AIModule(loader.Module):
     """
 🧠 Модуль Zetta - AI Models
 >> Часть экосистемы Zetta - AI models << 
-🌒 Version: 8.3 | MoDeLs
+🌒 Version: 9.0 | Optimization
 
-**Описание:**
-Модуль объединяет несколько мощных инструментов для работы с ИИ, делая общение и взаимодействие максимально удобным. Подходит как для быстрых запросов, так и для создания глубоких диалогов с контекстом.  
+📍Описание:
+Модуль дает доступ к 21 модели ИИ, подходит как для быстрых запросов, так и для общения с контекстом и автоматизации общения/обслуживания. 
 
-**Режимы работы:**
-  - **Одиночный запрос:**
-    .ai **запрос** - мгновенный ответ без сохранения истории диалога.  
+🔀Режимы работы:
 
-  - **Чат:**
-    **.chat** - ведите диалог с ИИ, который запоминает контекст беседы.  
+Одиночный запрос:
+.ai <запрос> - мгновенный ответ без сохранения истории диалога.  
 
-  - **Создание личностей:**
-    Создавайте роли для ИИ, чтобы он мог выполнять уникальные задачи. Сохранение ролей и их переключение через **.switchpersona.**
+Чат:
+.chat - ведите диалог с ИИ, который запоминает контекст беседы.  
 
-  - **Переписывание текстов:**
-    Используйте .rewrite для перевода, стилизации или упрощения сложных формулировок.  
+Создание плагинов:
+Создавайте инструкции для ИИ, чтобы он мог выполнять уникальные задачи. Сохранение ролей и их переключение через *.switchplugin.*
 
-  - **Работа с Hikka Userbot:**
-    Команды aisup, aicreate, aierror помогут в создании, улучшении и отладке модулей.  
+Переписывание текстов:
+Используйте .rewrite для перевода, стилизации или упрощения сложных текстов.  
 
-**Особенности:**
+Работа с Hikka Userbot:
+Команды aisup, aicreate, aierror задействуют дообученые модели GPT, и могут заменить вам чат поддержки Hikka или написать вам модуль.  
+
+Особенности:
 - Поддержка до 21 моделей ИИ.  
 - Полная интеграция с Telegram.  
 - Универсальность и практичность для любых задач.
@@ -214,6 +215,85 @@ class AIModule(loader.Module):
         except Exception as e:
             await message.reply(f"Произошла ошибка: {e}")
 
+    def _create_zettacfg_buttons(self):
+        buttons = []
+        buttons.append([{"text": "Super promt", "callback": self._zettacfg, "args": ("superpromt",)}])
+        buttons.append([{"text": "Human mode", "callback": self._zettacfg, "args": ("humanmode",)}])
+        buttons.append([{"text": "Ultra mode", "callback": self._zettacfg, "args": ("ultramode",)}])
+        buttons.append([{"text": "API provider", "callback": self._zettacfg, "args": ("apiswitch",)}])
+        return buttons
+
+    @loader.unrestricted
+    async def zettacfgcmd(self, message):
+        """
+        Расширенные настройки модуля
+
+        """
+        await self.inline.form(
+            text="🔧<b>Выберите настройку для изменения:</b>",
+            message=message,
+            reply_markup=self._create_zettacfg_buttons()
+        )
+
+    async def _zettacfg(self, call, setting):
+        from telethon import Button
+
+        # Для обычных настроек
+        if setting == "superpromt":
+            text = (
+                "<b>💫 Улучшает и корректирует ваш запрос с помощью ИИ перед отправкой его модели ИИ.</b>"
+            )
+            current = self.edit_promt if hasattr(self, "edit_promt") else "off"
+        elif setting == "humanmode":
+            text = (
+                "<b>💬 Отображение 'Ответ модели ...' в режиме чата.</b>"
+            )
+            current = self.humanmode if hasattr(self, "humanmode") else "off"
+        elif setting == "ultramode":
+            text = (
+                "📚 <b>Расширенная база знаний для aisup. Время генерации ответа увеличивается.</b>"
+            )
+            current = self.metod if hasattr(self, "metod") else "off"
+        elif setting == "apiswitch":
+            text = (
+                "<b>🔄 Провайдер API для запросов.\nПо умолчанию: Zetta AI</b>"
+            )
+            current = self.provider if hasattr(self, "provider") else "zetta"
+        else:
+            text = "Неизвестная настройка."
+            current = "off"
+
+        # Формирование кнопок с эмодзи и индикатором активного состояния
+        if setting in ("superpromt", "humanmode", "ultramode"):
+            btn_on = "Вкл" + ("🟣" if current == "on" else "")
+            btn_off = "Выкл" + ("🟣" if current == "off" else "")
+        elif setting == "apiswitch":
+            btn_on = "Zetta AI" + ("🟣" if current == "Zetta AI" else "")
+            btn_off = "Devj" + ("🟣" if current == "Devj" else "")
+
+        buttons = [
+            [{"text": btn_on, "callback": self._zettaset, "args": (setting, btn_on.split("🟣")[0] if "🟣" in btn_on else btn_on)}],
+            [{"text": btn_off, "callback": self._zettaset, "args": (setting, btn_off.split("🟣")[0] if "🟣" in btn_off else btn_off)}],
+            [{"text": "⬅️Назад", "callback": self._back_zettacfg}]
+        ]
+        await call.edit(text, reply_markup=buttons)
+
+    async def _zettaset(self, call, setting, value):
+        if setting == "superpromt":
+            self.edit_promt = value
+        elif setting == "humanmode":
+            self.humanmode = value
+        elif setting == "ultramode":
+            self.metod = value
+        elif setting == "apiswitch":
+            self.provider = value
+        # Обновляем кнопки с индикатором, не изменяя описание
+        await self._zettacfg(call, setting)
+
+    async def _back_zettacfg(self, call):
+        await call.edit("🔧<b>Выберите настройку для изменения:</b>", reply_markup=self._create_zettacfg_buttons())
+
+    
     @loader.unrestricted
     async def modelcmd(self, message):
         """
@@ -241,7 +321,6 @@ class AIModule(loader.Module):
     async def chatcmd(self, message):
         """
         Включает/выключает режим чата.
-        Использование: `.chat`
         """
         chat_id = str(message.chat_id)
         if self.active_chats.get(chat_id):
@@ -379,24 +458,6 @@ class AIModule(loader.Module):
         if answer:
             await self.allmodule(answer, message, request_text)
 
-    @loader.unrestricted
-    async def apiswitchcmd(self, message):
-        """
-        Поменять API для запросов
-        Использование: `.apiswitch <провайдер>
-        доступные: zetta и devj.
-        
-        """
-        args = utils.get_args_raw(message)
-        if args:
-            provider = args.lower()  # Получаем аргумент и приводим к нижнему регистру
-            if provider in ("zetta", "devj"):
-                self.provider = provider
-                await message.edit(f"✅ Провайдер API изменен на {provider}")
-            else:
-                await message.edit("🚫 Недопустимый провайдер API. Доступные: zetta, devj")
-        else:
-            await message.edit("🤔 Укажите провайдер API: zetta или devj")
 
     @loader.unrestricted
     async def aicreatecmd(self, message):
@@ -406,26 +467,6 @@ class AIModule(loader.Module):
         r = "create"
         await self.process_request(message, self.module_instructions, r)
 
-    @loader.unrestricted
-    async def ultramodecmd(self, message):
-        """
-        Вкл/выкл качественного ответа для aisup
-        Использование: `.ultramode <on/off>`
-        
-        """
-        args = utils.get_args_raw(message)
-        if args:
-            metod = args.lower()
-            if metod in ("on", "off"):
-                self.metod = metod
-                if metod == 'on':
-                    await message.edit(f"📚 Качественный ответ включен. Скорость ответа aisup меньше.")
-                elif metod == 'off':
-                    await message.edit(f"🏃‍♂️‍➡️ Качественный ответ выключен. Скорость ответа aisup быстрее")
-            else:
-                await message.edit("🚫 Неправильные аргументы. Доступные: on, off")
-        else:
-            await message.edit("🤔 Укажите аргументы: on или off")
 
     async def save_and_send_code(self, answer, message):
         """Сохраняет код в файл, отправляет его и удаляет."""
@@ -498,8 +539,7 @@ class AIModule(loader.Module):
     @loader.unrestricted
     async def clearcmd(self, message):
         """
-        Сбрасывает историю диалога.
-        Использование: `.clear`
+        Сбрасывает историю диалога для модели ИИ
         """
         chat_id = str(message.chat_id)
         if chat_id in self.chat_history or chat_id in self.chat_archive:
@@ -544,20 +584,20 @@ class AIModule(loader.Module):
         await message.edit(f"✅ <b>Режим ответа установлен на:</b> {args}")
 
     @loader.unrestricted
-    async def createpersonacmd(self, message):
+    async def createplugincmd(self, message):
         """
-        Создает новую личность.
-        Использование: `.createpersona <имя> <роль>`
+        Создает новый плагин.
+        Использование: `.createplugin <название> <инструкция>`
         """
         args = utils.get_args_raw(message)
         if not args:
-            await message.edit("🤔 <b>Укажите имя и роль для личности.</b>")
+            await message.edit("🤔 <b>Укажите название и инструкцию для плагина.</b>")
             return
 
         try:
             name, role = args.split(" ", 1)
         except ValueError:
-            await message.edit("🤔 <b>Неверный формат. Используйте: .createpersona <имя> <роль></b>")
+            await message.edit("🤔 <b>Неверный формат. Используйте: .createplugin <название> <инструкция></b>")
             return
 
         # Изменено: chat_id заменен на 'global'
@@ -565,61 +605,58 @@ class AIModule(loader.Module):
             personas['global'] = {}
         personas['global'][name] = role
         save_personas(personas)  # Сохраняем изменения в файл
-        await message.edit(f"✅ <b>Личность {name} создана.</b>")
+        await message.edit(f"✅ <b>Плагин ' {name} ' создан.</b>")
 
     @loader.unrestricted
-    async def personascmd(self, message):
+    async def pluginscmd(self, message):
         """
-        Показывает список личностей.
-        Использование: `.personas`
+        Показывает список плагинов.
         """
-        # Изменено: chat_id заменен на 'global'
         if 'global' not in personas or not personas['global']:
-            await message.edit("🤔 <b>Список личностей пуст.</b>")
+            await message.edit("🤔 <b>Список плагинов пуст.</b>")
             return
 
         persona_list = "\n".join([f"<b>{name}:</b> {role}" for name, role in personas['global'].items()])
-        await message.edit(f"📝 <b>Доступные личности:</b>\n{persona_list}\n\nА в нашем боте, есть модель o1-preview с стримингом рассуждений. на заметку)")
+        await message.edit(f"🧩 <b>Доступные плагины:</b>\n{persona_list}\n\nА в нашем боте функционал больше, и возможностей тоже)")
 
     @loader.unrestricted
-    async def switchpersonacmd(self, message):
+    async def switchplugincmd(self, message):
         """
-        Переключается на указанную личность.
-        Использование: `.switchpersona <имя>`
+        Переключается на указанный плагин.
+        Использование: `.switchplugin <название>`
         """
         args = utils.get_args_raw(message)
         if not args:
-            await message.edit("🤔 <b>Укажите имя личности.</b>")
+            await message.edit("🤔 <b>Укажите название плагина.</b>")
             return
 
         # Изменено: chat_id заменен на 'global'
         if 'global' not in personas or args not in personas['global']:
-            await message.edit("🚫 <b>Личность не найдена.</b>")
+            await message.edit("🚫 <b>Плагин не найден.</b>")
             return
 
         chat_id = str(message.chat_id)
         self.role[chat_id] = personas['global'][args]
-        await message.edit(f"✅ <b>Переключено на личность:</b> {args}")
+        await message.edit(f"✅ <b>Переключено на плагин:</b> {args}")
 
     @loader.unrestricted
-    async def deletepersonacmd(self, message):
+    async def deleteplugincmd(self, message):
         """
-        Удаляет личность.
-        Использование: `.deletepersona <имя>`
+        Удаляет плагин.
+        Использование: `.deleteplugin <Название>`
         """
         args = utils.get_args_raw(message)
         if not args:
-            await message.edit("🤔 <b>Укажите имя личности.</b>")
+            await message.edit("🤔 <b>Укажите название плагина.</b>")
             return
 
-        # Изменено: chat_id заменен на 'global'
         if 'global' not in personas or args not in personas['global']:
-            await message.edit("🚫 <b>Личность не найдена.</b>")
+            await message.edit("🚫 <b>Плагин не найден.</b>")
             return
 
         del personas['global'][args]
         save_personas(personas)  # Сохраняем изменения в файл
-        await message.edit(f"✅ <b>Личность {args} удалена.</b>")
+        await message.edit(f"✅ <b>Плагин ' {args} ' удален.</b>")
 
     @loader.unrestricted
     async def aicmd(self, message):
@@ -703,11 +740,14 @@ class AIModule(loader.Module):
         """
         - Информация об обновлении✅
         """
-        await message.edit('''<b>Обновление 8.3:
+        await message.edit('''<b>Обновление 9.0:
 Изменения:
-- Новые модели: o3-mini, DeepSeek R1, DeepSeek v3
+- Перенос настроек в .zettacfg.
+- Упрощение описания модуля.
+- переименование личностей в плагины
+- Поддержка плагина(личности) и роли для команды .ai
 
-советую команду .moduleinfo для подробной информации о модуле.
+советуем команду .moduleinfo для подробной информации о модуле.
 
 🔗Тг канал модуля: https://t.me/hikkagpt</b>''')
 
@@ -717,40 +757,34 @@ class AIModule(loader.Module):
         """
         - Информация о провайдерах🔆
         """
-        await message.edit('''<b>🟣Zetta: Стабильный, средняя скорость ответа, персональный. Только для этого модуля. Базируется на OnlySq и хостится на их серверах.
+        await message.edit('''<b>🟣Zetta AI: Стабильный, быстрая скорость ответа, персональный. Только для этого модуля. Базируется на OnlySq и хостится на их серверах.
 
 🔸devj: Быстрая скорость ответа, Не стабилен из за разного возврата ответа от сервера.</b>''')
     
     
     async def standart_process_request(self, message, request_text):
         """
-        Обрабатывает запрос к API модели ИИ.
+        Обрабатывает запрос к API модели ИИ для .aicmd.
         """
         api_url = "http://109.172.94.236:5001/Zetta/v1/models"
         chat_id = str(message.chat_id)
+        current_role = self.role.get(chat_id, ".")
 
-        # Если включено улучшение запроса
         if self.edit_promt == "on":
             request_text = await self.t9_promt(message, request_text)
 
-        # Формируем payload для запроса в другой API
         payload = {
             "model": self.default_model,
             "request": {
                 "messages": [
-                    {
-                        "role": "user",
-                        "content": request_text
-                    }
+                    {"role": "system", "content": current_role},
+                    {"role": "user", "content": request_text}
                 ]
             }
         }
 
         try:
-            # Редактируем сообщение, чтобы информировать пользователя о процессе
             await message.edit("🤔 <b>Думаю...</b>")
-
-            # Отправляем запрос в ваше новое API, которое передаст его дальше
             async with aiohttp.ClientSession() as session:
                 async with session.post(api_url, json=payload) as response:
                     response.raise_for_status()  # Проверка на успешный статус
@@ -758,8 +792,13 @@ class AIModule(loader.Module):
                     # Получаем данные из ответа
                     data = await response.json()
                     answer = data.get("answer", "🚫 <b>Ответ не получен.</b>").strip()
-                    decoded_answer = base64.b64decode(answer).decode('utf-8')
-                    answer = decoded_answer
+                    try:
+                        decoded_bytes = base64.b64decode(answer)
+                        decoded_answer = decoded_bytes.decode('utf-8')
+                        answer = decoded_answer
+                    except (base64.binascii.Error, UnicodeDecodeError) as decode_error:
+                        pass
+
 
                     # Форматируем ответ в зависимости от состояния запроса
                     if self.edit_promt == "on":
@@ -773,48 +812,11 @@ class AIModule(loader.Module):
         except aiohttp.ClientError as e:
             # Обработка ошибок в случае проблем с запросом
             await message.edit(f"⚠️ <b>Ошибка при запросе к API:</b> {e}\n\n💡 <b>Попробуйте поменять модель или проверить код модуля.</b>")
+        except Exception as e:
+             await message.edit(f"⚠️ <b>Произошла непредвиденная ошибка:</b> {e}")
 
-    @loader.unrestricted
-    async def humanmodecmd(self, message):
-        """
-        Вкл/выкл улучшения вашего промта
-        Использование: `.humanmode <on/off>`
-        
-        """
-        args = utils.get_args_raw(message)
-        if args:
-            humanmode = args.lower()
-            if humanmode in ("on", "off"):
-                self.humanmode = humanmode
-                if humanmode == 'on':
-                    await message.edit(f"💫 <b>Отображение 'Ответ модели ...' отключено в режиме чата.\n\nОтветы ИИ будут отправляться без лишнего текста, буд то это написали вы.</b>")
-                elif humanmode == 'off':
-                    await message.edit(f"💬 <b>Пометка 'Ответ модели ...' включена. \n\nОтветы ИИ будут отправляться с указанием что это написала модель ИИ.</b>")
-            else:
-                await message.edit("🚫 Неправильные аргументы. Доступные: on, off")
-        else:
-            await message.edit("🤔 Укажите аргументы: on или off")
-
-    @loader.unrestricted
-    async def superpromtcmd(self, message):
-        """
-        Вкл/выкл улучшения вашего промта
-        Использование: `.superpromt <on/off>`
-        
-        """
-        args = utils.get_args_raw(message)
-        if args:
-            edit_promt = args.lower()
-            if edit_promt in ("on", "off"):
-                self.edit_promt = edit_promt
-                if edit_promt == 'on':
-                    await message.edit(f"💫 <b>Улучшение вашего промта включено.\n\nПолезно для тех, кто не умеет правильно задавать промт или нету на это времени.</b>")
-                elif edit_promt == 'off':
-                    await message.edit(f"💬 <b>Улучшение вашего промта выключено</b>")
-            else:
-                await message.edit("🚫 Неправильные аргументы. Доступные: on, off")
-        else:
-            await message.edit("🤔 Укажите аргументы: on или off")
+    
+    
 
     @loader.unrestricted
     async def watcher(self, message):
@@ -1035,10 +1037,10 @@ class AIModule(loader.Module):
 - ИИ различает участников беседы благодаря передаче <i>ников</i>.  
 - Модель может стать полноценным <i>участником ваших обсуждений.</i>  
 
-3️⃣ <b>Создание личностей.</b>  
-- Задайте временную роль для модели в чате.  
-- Создайте <i>постоянную личность</i> с функцией сохранения ролей.  
-- Используйте команду <code>.switchpersona</code> для <i>мгновенного переключения</i> ролей.  
+3️⃣ <b>Создание плагинов.</b>  
+- Задайте инструкцию или дайте модели ИИ набор данных, что бы она лучше давала ответы.  
+- Создавайте <i>постоянные плагины</i> ведь есть функция создания и сохранения плагинов.  
+- Используйте команду <code>.switchplugin</code> для <i>мгновенного переключения</i> инструкций.  
 
 4️⃣ <b>Выбор до 21 моделей ИИ.</b>  
 Настраивайте работу с различными моделями под ваши задачи.  
