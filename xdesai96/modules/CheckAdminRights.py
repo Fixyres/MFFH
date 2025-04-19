@@ -20,7 +20,6 @@ class CheckAdminRightsMod(loader.Module):
         "manage_topics": "Управление темами",
         "post_messages": "Публиковать сообщения",
         "edit_messages": "Изменять сообщения",
-        "loading": "<blockquote><emoji document_id=5355040476774815817>🕰</emoji> <b>Обработка данных...</b></blockquote>",
         "not_a_chat": "<blockquote><emoji document_id=5312526098750252863>❌</emoji> <b>Команда не может быть запущена в личных сообщениях.</b></blockquote>",
         "no_user": "<blockquote><emoji document_id=5312383351217201533>⚠️</emoji> <b>Вы не указали пользователя.</b></blockquote>",
         "get_rights_header": "Права <a href='tg://user?id={id}'>{name}</a> в этом чате:",
@@ -43,7 +42,6 @@ class CheckAdminRightsMod(loader.Module):
         "manage_topics": "Manage topics",
         "post_messages": "Post messages",
         "edit_messages": "Edit messages",
-        "loading": "<blockquote><emoji document_id=5355040476774815817>🕰</emoji> <b>Processing data...</b></blockquote>",
         "admin_rights": "<emoji document_id=5818778798782420696>➡️</emoji> <u>Admin rights:</u>\n",
         "get_rights_header": "<a href='tg://user?id={id}'>{name}</a>'s rights in this chat:",
         "not_admin": "<blockquote>❌ <a href='tg://user?id={id}'>{name}</a> is not an admin</blockquote>\n",
@@ -57,7 +55,6 @@ class CheckAdminRightsMod(loader.Module):
         """<reply/username/id> | Check rights in the current chat."""
         if message.is_private:
             return await utils.answer(message, self.strings('not_a_chat'))
-        await utils.answer(message, self.strings("loading"))
         args = utils.get_args_raw(message)
         reply = await message.get_reply_message()
         chat = await message.get_chat()
