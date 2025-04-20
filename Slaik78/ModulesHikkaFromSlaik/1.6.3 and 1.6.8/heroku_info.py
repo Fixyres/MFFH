@@ -194,7 +194,7 @@ class HerokuInfoMod(loader.Module):
         imgform = self.config['bannerUrl'].split('.')[-1]
         imgset = self.config['imgSettings']
         if imgform in ['jpg', 'jpeg', 'png', 'bmp', 'webp']:
-            response = requests.get(self.config['bannerUrl'])
+            response = requests.get(self.config['bannerUrl'], stream=True)
             img = Image.open(BytesIO(response.content))
             font = ImageFont.truetype(
                 glob.glob(f'{os.getcwd()}/assets/font.*')[0], 
@@ -273,7 +273,7 @@ class HerokuInfoMod(loader.Module):
             await utils.answer_file(
                 message,
                 self.config["bannerUrl"],
-                self._render_info(False),
+                self._render_info(),
             )
 
     @loader.command()
