@@ -12,11 +12,12 @@
 #     \/__/         \/__/     \/__/                     \|__|   
 #------------------------------------------------------------------ 
 # meta developer: @Hicota
-# requires: pillow
+# requires: Pillow
 
 import glob
 import os
 import requests
+import PIL
 from .. import loader
 
 @loader.tds
@@ -38,7 +39,7 @@ class IIHikkaInfomod(loader.Module):
             response = requests.get('https://raw.githubusercontent.com/Slaik78/ModulesHikkaFromSlaik/refs/heads/main/hikka_info.py')
         with open(path, 'wb') as file:
             file.write(response.content)
-        response = requests.get('https://x0.at/cZdy.ttf')
+        response = requests.get('https://pomf2.lain.la/f/hh6urh8j.ttf')
         if response.status_code != 200:
             await message.edit(f'<emoji document_id=5465665476971471368>❌</emoji><b>Server error {response.status_code}</b>')
             return
