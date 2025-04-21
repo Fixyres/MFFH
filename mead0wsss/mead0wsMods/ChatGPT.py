@@ -1,4 +1,4 @@
-__version__ = (2, 0, 0)
+__version__ = (2, 1, 0)
 
 # ███╗░░░███╗███████╗░█████╗░██████╗░░█████╗░░██╗░░░░░░░██╗░██████╗░██████╗
 # ████╗░████║██╔════╝██╔══██╗██╔══██╗██╔══██╗░██║░░██╗░░██║██╔════╝██╔════╝
@@ -16,7 +16,10 @@ __version__ = (2, 0, 0)
 
 import requests
 from telethon import events
+from telethon import functions
+from telethon.tl.types import Message
 from .. import loader, utils
+import os
 
 @loader.tds
 class ChatGPT(loader.Module):
@@ -49,13 +52,13 @@ class ChatGPT(loader.Module):
         """Команда для разговора с ИИ."""
         args = utils.get_args_raw(event)
         if not args:
-            await event.edit("❌ Нет вопроса.")
+            await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Нет вопроса.</b>")
             return
 
         model = self.config.get("model")
 
         if not model:
-            await event.edit("❌ Модель ИИ не указана в cfg!")
+            await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Модель ИИ не указана в cfg!</b>")
             return
 
         data = {
@@ -64,25 +67,44 @@ class ChatGPT(loader.Module):
                 {"role": "user", "content": args}
             ]
         }
-
+        await event.edit(f"<b><emoji document_id=5328272518304243616>💠</emoji> Генерирую ответ...</b>")
         response = requests.post("https://cablyai.com/v1/chat/completions", headers={
-            'Authorization': 'Bearer sk-csPV6DEqRj07V4jGxPvq0NomUcfo6LIxO_rlxBMuenGaebco',
+            'Authorization': 'Bearer sk-l4HU4KwZt6bF8gOwwKCOMpfpIKvR9YhDHvTFIGJ6tJ5rPKXE',
             'Content-Type': 'application/json',
         }, json=data)
 
         if response.status_code == 200:
             answer = response.json()["choices"][0]["message"]["content"]
-            await event.edit(f"<b><emoji document_id=5974038293120027938>👤</emoji> Вопрос: <code>{args}</code></b>\n\n<b><emoji document_id=5199682846729449178>🤖</emoji> Ответ: {answer}</b>", parse_mode="HTML")
+        
+            if "```" in answer:
+
+                parts = answer.split("```")
+                formatted_answer = ""
+                for i, part in enumerate(parts):
+                    if i % 2 == 1:
+                        language = part.split("\n")[0] if "\n" in part else ""
+                        code = "\n".join(part.split("\n")[1:]) if "\n" in part else part
+                        formatted_answer += f"<pre><code class='language-{language}'>\n{code}\n</code></pre>"
+                    else:
+                        formatted_answer += part.replace("\n", "<br>")
+            else:
+
+                formatted_answer = answer.replace("\n", "<br>")
+
+            await event.edit(
+                f"<b><emoji document_id=5879770735999717115>👤</emoji> Вопрос: <code>{args}</code></b>\n\n"
+                f"<emoji document_id=5199682846729449178>🤖</emoji> Ответ:\n{formatted_answer}"
+            )
         else:
-            await event.reply("❌ Ошибка при запросе к ИИ.")
+            await event.edit("<b><emoji document_id=5215400550132099476>❌</emoji> Ошибка при запросе к ИИ.</b>")
 
     async def imagecmd(self, event):
         """Команда для генерации изображений с помощью ИИ."""
         args = utils.get_args_raw(event)
         if not args:
-            await event.reply("❌ Нет текста для генерации изображения.")
+            await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Нет текста для генерации изображения.</b>")
             return
-
+        await event.edit(f"<b><emoji document_id=5328272518304243616>💠</emoji> Генерирую изображение...</b>")
         translation_model = self.config.get("translation_model")
         image_model = self.config.get("image_model")
 
@@ -94,14 +116,14 @@ class ChatGPT(loader.Module):
         }
 
         translation_response = requests.post("https://cablyai.com/v1/chat/completions", headers={
-            'Authorization': 'Bearer sk-csPV6DEqRj07V4jGxPvq0NomUcfo6LIxO_rlxBMuenGaebco',
+            'Authorization': 'Bearer sk-l4HU4KwZt6bF8gOwwKCOMpfpIKvR9YhDHvTFIGJ6tJ5rPKXE',
             'Content-Type': 'application/json',
         }, json=translation_data)
 
         if translation_response.status_code == 200:
             translated_text = translation_response.json()["choices"][0]["message"]["content"]
         else:
-            await event.reply("❌ Ошибка при запросе к ИИ для перевода. Попробуйте снова либо измените модель в cfg! ")
+            await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Ошибка при запросе к ИИ для перевода. Попробуйте снова либо измените модель в cfg! </b>")
             return
 
         data = {
@@ -113,7 +135,7 @@ class ChatGPT(loader.Module):
         }
 
         response = requests.post("https://cablyai.com/v1/images/generations", headers={
-            'Authorization': 'Bearer sk-csPV6DEqRj07V4jGxPvq0NomUcfo6LIxO_rlxBMuenGaebco',
+            'Authorization': 'Bearer sk-l4HU4KwZt6bF8gOwwKCOMpfpIKvR9YhDHvTFIGJ6tJ5rPKXE',
             'Content-Type': 'application/json',
         }, json=data)
 
@@ -124,4 +146,4 @@ class ChatGPT(loader.Module):
 
             await event.reply(f"<b>Промпт: <code>{args}</code></b>\n\n<b>Модель генерации: <code>{image_model}</code>\n<b>Модель переводчика: <code>{translation_model}</code>\n\n<b>🖼 Сгенерированное изображение:</b>\n{image_url}", parse_mode="HTML")
         else:
-            await event.reply("😢 Ошибка при запросе на генерацию изображения\nВполне возможно вы просите создать что-то непристойное (18+), либо техническая ошибка (попробуй сменить модель в cfg).")
+            await event.reply("<b><emoji document_id=6042029429301973188>☹️</emoji> Ошибка при запросе на генерацию изображения\nВполне возможно вы просите создать что-то непристойное (18+), либо техническая ошибка (попробуй сменить модель в cfg).</b>")
