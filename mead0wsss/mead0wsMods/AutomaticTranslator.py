@@ -20,7 +20,7 @@ from telethon import events
 
 @loader.tds
 class AutomaticTranslator(loader.Module):
-    """Модуль для автоматического перевода сообщений на язык выбранный вами. Модуль создан ради забавы."""
+    """Модуль для автоматического перевода сообщений на язык. Создан ради забавы."""
     strings = {"name": "AutomaticTranslator"}
 
     def __init__(self):
@@ -41,7 +41,7 @@ class AutomaticTranslator(loader.Module):
         self.ignore_commands = ['off', 'on', 'cfg']
 
     async def translate_text(self, text, target_language):
-        api_key = 'Bearer sk-csPV6DEqRj07V4jGxPvq0NomUcfo6LIxO_rlxBMuenGaebco'
+        api_key = 'Bearer sk-l4HU4KwZt6bF8gOwwKCOMpfpIKvR9YhDHvTFIGJ6tJ5rPKXE'
         data = {
             "model": "gpt-4o",
             "messages": [
@@ -89,5 +89,4 @@ class AutomaticTranslator(loader.Module):
             await message.edit(translated_text)
         else:
             await message.edit("❌ Ошибка при переводе сообщения.")
-
 # артемко лох
