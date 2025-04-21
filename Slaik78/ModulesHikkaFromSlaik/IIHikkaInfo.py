@@ -12,10 +12,11 @@
 #     \/__/         \/__/     \/__/                     \|__|   
 #------------------------------------------------------------------ 
 # meta developer: @Hicota
-# requires: Pillow
+# requires: Pillow, beautifulsoup4
 
 import glob
 import os
+import bs4
 import requests
 import PIL
 from .. import loader
@@ -33,10 +34,10 @@ class IIHikkaInfomod(loader.Module):
         path = glob.glob(f'{os.getcwd()}/*/modules/*_info.py')[0]
         if 'heroku' in path:
             os.remove(path)
-            response = requests.get('https://raw.githubusercontent.com/Slaik78/ModulesHikkaFromSlaik/refs/heads/main/heroku_info.py')
+            response = requests.get('https://raw.githubusercontent.com/Slaik78/ModulesHikkaFromSlaik/refs/heads/main/1.6.3%20and%201.6.8/heroku_info.py')
         elif 'hikka' in path:
             os.remove(path)
-            response = requests.get('https://raw.githubusercontent.com/Slaik78/ModulesHikkaFromSlaik/refs/heads/main/hikka_info.py')
+            response = requests.get('https://raw.githubusercontent.com/Slaik78/ModulesHikkaFromSlaik/refs/heads/main/1.6.3%20and%201.6.8/hikka_info.py')
         with open(path, 'wb') as file:
             file.write(response.content)
         response = requests.get('https://pomf2.lain.la/f/hh6urh8j.ttf')
