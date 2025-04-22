@@ -307,7 +307,7 @@ class HerokuInfoMod(loader.Module):
             await utils.answer_file(
                 message,
                 self.config["bannerUrl"],
-                self._render_info(False),
+                self._render_info(),
             )
 
     @loader.command()
