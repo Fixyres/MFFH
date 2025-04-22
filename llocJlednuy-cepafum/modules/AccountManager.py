@@ -206,6 +206,8 @@ class AccountManager(loader.Module):
         voice = await self._client(functions.account.GetPrivacyRequest(
             key=types.InputPrivacyKeyVoiceMessages()
         ))
+        time_account_ttl = await self._client(functions.account.GetAccountTTLRequest(
+        ))
 
         global_settings = await self._client(functions.account.GetGlobalPrivacySettingsRequest())
         
@@ -217,6 +219,7 @@ class AccountManager(loader.Module):
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>пᴘиглᴀшᴇния в гᴘʏппы:</b> {self._format_privacy(groups.rules)}",
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>кᴘʏжки/голосовыᴇ:</b> {self._format_privacy(voice.rules)}",
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>звонки:</b> {self._format_privacy(call.rules)}",
+            f"<emoji document_id=5231112502573555738>🗓</emoji> <b>ʏстᴀновлᴇннᴀя дᴀтᴀ ʏдᴀлᴇниᴇ ᴀккᴀʏнтᴀ:</b> {time_account_ttl.days} Дней\n"
             f"<emoji document_id=5231112502573555738>🗓</emoji> <b>ᴀᴘхив и новыᴇ чᴀты:</b> {'<emoji document_id=5237814653010076467>🗓</emoji> Скрыто' if global_settings.archive_and_mute_new_noncontact_peers else '<emoji document_id=5229132514060167056>🗓</emoji> Не скрыто'}"
         )
 
