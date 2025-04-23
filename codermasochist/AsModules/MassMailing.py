@@ -5,7 +5,7 @@
 | |  | | (_| \__ \__ \ | | | | | (_| | | | | | | | (_| |
 |_|  |_|\__,_|___/___/_| |_| |_|\__,_|_|_|_|_| |_|\__, |
                                                   |___/
-                                                  """
+"""
 
 # meta developer: @codermasochist
 
@@ -29,18 +29,39 @@ class MassMailing(loader.Module):
         self._stop_rsl = False
 
     async def rslcmd(self, message: Message):
-        """— текст | задержка | повторы"""
+        """— текст | задержка | повторы (или ответом на сообщение, включая медиа)"""
         penis = utils.get_args_raw(message)
         parts = penis.split("|")
-        if len(parts) != 3:
-            await utils.answer(message, self.strings["what"])
-            return
+        reply = await message.get_reply_message()
 
-        try:
-            text = parts[0].strip()
-            delay = int(parts[1].strip())
-            repeat = int(parts[2].strip())
-        except Exception:
+        media = None
+        text = ""
+        delay = 0
+        repeat = 0
+
+        if reply and len(parts) == 2:
+            text = reply.raw_text or reply.message or ""
+            media = reply.media
+            try:
+                delay = int(parts[0].strip())
+                repeat = int(parts[1].strip())
+            except Exception:
+                await utils.answer(message, self.strings["what"])
+                return
+        elif reply and len(parts) == 0:
+            text = reply.raw_text or reply.message or ""
+            media = reply.media
+            delay = 2
+            repeat = 1
+        elif len(parts) == 3:
+            try:
+                text = parts[0].strip()
+                delay = int(parts[1].strip())
+                repeat = int(parts[2].strip())
+            except Exception:
+                await utils.answer(message, self.strings["what"])
+                return
+        else:
             await utils.answer(message, self.strings["what"])
             return
 
@@ -67,7 +88,7 @@ class MassMailing(loader.Module):
                     return
 
                 try:
-                    await message.client.send_message(dialog.id, text)
+                    await message.client.send_file(dialog.id, media, caption=text) if media else await message.client.send_message(dialog.id, text)
                     success += 1
                     await sleep(3)
                 except Exception:
