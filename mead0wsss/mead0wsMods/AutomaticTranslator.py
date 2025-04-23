@@ -43,7 +43,7 @@ class AutomaticTranslator(loader.Module):
     async def translate_text(self, text, target_language):
         api_key = 'Bearer sk-l4HU4KwZt6bF8gOwwKCOMpfpIKvR9YhDHvTFIGJ6tJ5rPKXE'
         data = {
-            "model": "gpt-4o",
+            "model": "deepseek-v3",
             "messages": [
                 {"role": "user", "content": f"Please translate the following text to {target_language}, no extra text, just translation: {text}"}
             ]
