@@ -5,14 +5,13 @@
     ██  ██  ██ ██    ██ ██   ██ ██    ██ ██      ██    ██      ██ ██  
     ██      ██  ██████  ██   ██  ██████  ███████  ██████  ███████ ███████ 
 
-                                   
     WynnCraft
 """
 
 # scopes:
 # requires: dataclasses-json
 
-# 🔒      Licensed under the GNU AGPLv3
+# 🔒 Licensed under the GNU AGPLv3
 
 # meta banner: link
 # meta desc: Wynncraft API Module
@@ -32,11 +31,6 @@ import urllib.parse
 import re
 
 from datetime import datetime
-import logging
-
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 @dataclass_json
 @dataclass
@@ -106,6 +100,7 @@ class PlayerStats:
     ranking: Dict[str, int]
     previousRanking: Dict[str, int]
     publicProfile: bool
+    characters: Optional[Dict[str, Dict]] = None
 
 @dataclass_json
 @dataclass
@@ -144,16 +139,12 @@ class WynnCraftAPI:
 
     async def get_player_stats(self, identifier: str) -> PlayerStats:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.v3_url}/player/{identifier}") as response:
-                logger.info(f"Player stats request: URL={self.v3_url}/player/{identifier}, Status={response.status}")
+            async with session.get(f"{self.v3_url}/player/{identifier}?fullResult") as response:
                 if response.status == 404:
                     raise HTTPNotFound
                 if response.status == 300:
-                    data = await response.json()
-                    logger.info(f"Multiple choices for {identifier}: {data}")
                     raise ValueError("Multiple players found, please use UUID")
                 data = await response.json()
-                logger.info(f"Player stats response: {data}")
                 if "globalData" in data:
                     global_data = data["globalData"]
                     for section in ["dungeons", "raids"]:
@@ -170,56 +161,37 @@ class WynnCraftAPI:
     async def get_guild_stats(self, identifier: str) -> GuildStats:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{self.v3_url}/guild/{identifier}") as response:
-                logger.info(f"Guild stats request: URL={self.v3_url}/guild/{identifier}, Status={response.status}")
                 if response.status == 404:
                     raise HTTPNotFound
                 if response.status == 300:
-                    data = await response.json()
-                    logger.info(f"Multiple choices for guild {identifier}: {data}")
                     raise ValueError("Multiple guilds found, please use exact name or prefix")
                 data = await response.json()
-                logger.info(f"Guild stats response keys: {list(data.keys())}")
-                logger.info(f"Guild stats response members type: {type(data.get('members'))}")
                 return GuildStats.from_dict(data.get("data", data))
 
     async def get_leaderboard(self, type: str, result_limit: int = 100) -> Dict:
         async with aiohttp.ClientSession() as session:
             url = f"{self.v3_url}/leaderboards/{type}?resultLimit={result_limit}"
             async with session.get(url) as response:
-                logger.info(f"Leaderboard request: URL={url}, Status={response.status}")
                 if response.status != 200:
-                    response_text = await response.text()
-                    logger.info(f"Leaderboard failed for type {type}: Status={response.status}, Response={response_text}")
                     raise HTTPNotFound
-                data = await response.json()
-                logger.info(f"Leaderboard response: {data}")
-                return data
+                return await response.json()
 
     async def get_leaderboard_types(self) -> List[str]:
         async with aiohttp.ClientSession() as session:
             url = f"{self.v3_url}/leaderboards/types"
             async with session.get(url) as response:
-                logger.info(f"Leaderboard types request: URL={url}, Status={response.status}")
                 if response.status != 200:
-                    response_text = await response.text()
-                    logger.info(f"Leaderboard types failed: Status={response.status}, Response={response_text}")
                     raise HTTPNotFound
-                data = await response.json()
-                logger.info(f"Leaderboard types response: {data}")
-                return data
+                return await response.json()
 
     async def search(self, query: str) -> List[Dict]:
         encoded_query = urllib.parse.quote(query)
         async with aiohttp.ClientSession() as session:
             url = f"{self.v3_url}/search/{encoded_query}"
             async with session.get(url) as response:
-                logger.info(f"Search request: URL={url}, Status={response.status}")
                 if response.status != 200:
-                    response_text = await response.text()
-                    logger.info(f"Search failed: Status={response.status}, Response={response_text}")
                     raise HTTPNotFound
                 data = await response.json()
-                logger.info(f"Search response: {data}")
                 results = []
                 for uuid, name in data.get("players", {}).items():
                     results.append({"type": "player", "uuid": uuid, "name": name})
@@ -236,8 +208,7 @@ class WynnCraft(loader.Module):
         try:
             lb_types = await self.api.get_leaderboard_types()
             self.leaderboard_types = {t: t.replace("Level", "").replace("Completion", "").title() for t in lb_types}
-        except Exception as e:
-            logger.info(f"Failed to load leaderboard types: {e}")
+        except Exception:
             self.leaderboard_types = {
                 "guildLevel": "Guild Level",
                 "guildTerritories": "Guild Territories",
@@ -349,6 +320,11 @@ class WynnCraft(loader.Module):
             "\n<emoji document_id=5413515838034561530>⚔️</emoji> <b>Total Raids</b>: {total}"
             "\n{raids_list}"
         ),
+        "extended_info_characters": (
+            "<emoji document_id=5411535325535162690>👤</emoji> <b>Characters: {player}</b>\n"
+            "\n<emoji document_id=5413515838034561530>🎭</emoji> <b>Characters</b>:"
+            "\n{characters_list}"
+        ),
         "leaderboard": "<emoji document_id=5413515838034561530>⭐</emoji> <b>{title}</b>\n",
         "leaderboard_select": "<emoji document_id=5413515838034561530>🏆</emoji> <b>Choose Leaderboard</b>",
         "search_results": "<emoji document_id=5411535325535162690>🔍</emoji> <b>Search Results for '{query}'</b>\n",
@@ -363,7 +339,7 @@ class WynnCraft(loader.Module):
         "btn_pvp": "PvP",
         "btn_dungeons": "Dungeons",
         "btn_raids": "Raids",
-        "btn_members": "Members",
+        "btn_characters": "Characters",
         "btn_solo": "Solo",
         "btn_global": "Global",
         "btn_pvp_leaderboard": "PvP",
@@ -438,6 +414,11 @@ class WynnCraft(loader.Module):
             "\n<emoji document_id=5413515838034561530>⚔️</emoji> <b>Всего рейдов</b>: {total}"
             "\n{raids_list}"
         ),
+        "extended_info_characters": (
+            "<emoji document_id=5411535325535162690>👤</emoji> <b>Персонажи: {player}</b>\n"
+            "\n<emoji document_id=5413515838034561530>🎭</emoji> <b>Персонажи</b>:"
+            "\n{characters_list}"
+        ),
         "leaderboard": "<emoji document_id=5413515838034561530>⭐</emoji> <b>{title}</b>\n",
         "leaderboard_select": "<emoji document_id=5413515838034561530>🏆</emoji> <b>Выберите лидерборд</b>",
         "search_results": "<emoji document_id=5411535325535162690>🔍</emoji> <b>Результаты поиска для '{query}'</b>\n",
@@ -452,7 +433,7 @@ class WynnCraft(loader.Module):
         "btn_pvp": "PvP",
         "btn_dungeons": "Подземелья",
         "btn_raids": "Рейды",
-        "btn_members": "Участники",
+        "btn_characters": "Персонажи",
         "btn_solo": "Соло",
         "btn_global": "Глобальный",
         "btn_pvp_leaderboard": "PvP",
@@ -506,6 +487,42 @@ class WynnCraft(loader.Module):
                 formatted.append(f"  - {name} ({rank.capitalize()}): Joined {joined}")
         return "\n".join(formatted[:10]) or "  - None"
 
+    def format_characters(self, characters: Optional[Dict[str, Dict]]) -> str:
+        if not characters:
+            return "  - None"
+        formatted = []
+        for uuid, char_data in list(characters.items())[:5]:  # Limit to 5 characters
+            char_type = char_data.get("type", "Unknown")
+            level = char_data.get("level", 0)
+            xp = char_data.get("xp", 0)
+            xp_percent = char_data.get("xpPercent", 0)
+            gamemodes = ", ".join(char_data.get("gamemode", [])) or "None"
+            died = "Yes" if char_data.get("meta", {}).get("died", False) else "No"
+            skills = char_data.get("skillPoints", {})
+            professions = char_data.get("professions", {})
+            dungeons = char_data.get("dungeons", {}).get("total", 0)
+            raids = char_data.get("raids", {}).get("total", 0)
+            formatted.append(
+                f"  - {char_type} (Level {level})\n"
+                f"    - XP: {xp} ({xp_percent}%)\n"
+                f"    - Gamemodes: {gamemodes}\n"
+                f"    - Died: {died}\n"
+                f"    - Skills:\n"
+                f"      - Strength: {skills.get('strength', 0)}\n"
+                f"      - Dexterity: {skills.get('dexterity', 0)}\n"
+                f"      - Intelligence: {skills.get('intelligence', 0)}\n"
+                f"      - Defence: {skills.get('defence', 0)}\n"
+                f"      - Agility: {skills.get('agility', 0)}\n"
+                f"    - Professions:\n"
+                f"      - Fishing: {professions.get('fishing', {}).get('level', 0)}\n"
+                f"      - Mining: {professions.get('mining', {}).get('level', 0)}\n"
+                f"      - Woodcutting: {professions.get('woodcutting', {}).get('level', 0)}\n"
+                f"      - Farming: {professions.get('farming', {}).get('level', 0)}\n"
+                f"    - Dungeons: {dungeons}\n"
+                f"    - Raids: {raids}"
+            )
+        return "\n".join(formatted) or "  - None"
+
     def format_leaderboard_entry(self, entry: Dict, lb_type: str) -> str:
         if "Guild" in lb_type:
             return (
@@ -538,40 +555,36 @@ class WynnCraft(loader.Module):
             )
 
     def get_extended_info_buttons(self, player_id: str, stats_text: str, current_category: str) -> List[Dict]:
-        categories = ["rankings", "prev_rankings", "global", "pvp", "dungeons", "raids"]
-        buttons = [
-            {
-                "text": self.strings[f"btn_{category}"],
-                "callback": self.show_extended_info,
-                "args": (player_id, stats_text, category)
-            }
-            for category in categories
-            if category != current_category
+        categories = ["rankings", "prev_rankings", "global", "pvp", "dungeons", "raids", "characters"]
+        buttons = []
+        for category in categories:
+            text = f"🟢 {self.strings[f'btn_{category}']}" if category == current_category else self.strings[f"btn_{category}"]
+            buttons.append({"text": text, "callback": self.show_extended_info, "args": (player_id, stats_text, category)})
+        buttons.append({"text": self.strings["btn_back"], "callback": self.show_stats, "args": (stats_text, player_id)})
+        return [
+            buttons[0:2],  # Rankings, Prev Rankings
+            buttons[2:4],  # Global, PvP
+            buttons[4:6],  # Dungeons, Raids
+            [buttons[6]],  # Characters
+            [buttons[7]]   # Back
         ]
-        buttons.append({
-            "text": self.strings["btn_back"],
-            "callback": self.show_stats,
-            "args": (stats_text, player_id)
-        })
-        return [buttons[i:i+2] for i in range(0, len(buttons), 2)]
 
     def get_guild_info_buttons(self, guild_id: str, stats_text: str, current_category: str) -> List[Dict]:
         categories = ["members"]
         buttons = [
             {
-                "text": self.strings[f"btn_{category}"],
+                "text": f"🟢 {self.strings[f'btn_{category}']}" if category == current_category else self.strings[f"btn_{category}"],
                 "callback": self.show_guild_extended_info,
                 "args": (guild_id, stats_text, category)
             }
             for category in categories
-            if category != current_category
         ]
         buttons.append({
             "text": self.strings["btn_back"],
             "callback": self.show_guild_stats,
             "args": (stats_text, guild_id)
         })
-        return [buttons[i:i+2] for i in range(0, len(buttons), 2)]
+        return [buttons]
 
     async def show_extended_info(self, call: InlineCall, player_id: str, stats_text: str, category: str = "rankings"):
         try:
@@ -612,6 +625,11 @@ class WynnCraft(loader.Module):
                     player=stats.username,
                     total=stats.globalData.raids.total if stats.globalData.raids else 0,
                     raids_list=self.format_raids(stats.globalData.raids)
+                )
+            elif category == "characters":
+                text = self.strings["extended_info_characters"].format(
+                    player=stats.username,
+                    characters_list=self.format_characters(stats.characters)
                 )
             await call.edit(
                 text,
