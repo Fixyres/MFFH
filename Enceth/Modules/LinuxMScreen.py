@@ -1,3 +1,4 @@
+# meta developer: @Enceth
 import io
 from PIL import Image, ImageDraw, ImageFilter
 
