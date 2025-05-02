@@ -1,4 +1,4 @@
-__version__ = (2,0,0)
+__version__ = (2,0,2)
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
 #░░░░░░░░░████████░░░░░
@@ -49,6 +49,7 @@ class WaifuHarem(loader.Module):
     }
     async def client_ready(self):
         self.id = 6704842953
+        self.blockBot = False
         
     def getmarkup(self):
         return [
@@ -86,10 +87,24 @@ class WaifuHarem(loader.Module):
     @loader.loop(interval=1, autostart=True)
     async def check_loop(self):
         if self.config["ab"]:
-            if (not self.get("ABonus_time") or (time.time() - self.get("ABonus_time")) >= 3600*4):
+            if (not self.get("ABonus_time") or (time.time() - self.get("ABonus_time")) >= int(3600*2.9)):
                 await self.autobonus()
                 
     ########loop########
+
+    ########Блок ботов########
+    @loader.watcher("only_messages")
+    async def watcher(self, message: Message):
+        """Watcher"""
+        if self.blockBot:
+            bot = await self.client.get_entity(message.from_id)
+            if bot.bot:
+                botf = await self.client.get_fulluser(message.from_id)
+                if botf.full_user.settings.request_chat_title is not None:
+                    await self.client(BlockRequest(botf.users[0].id))
+                    await self.client.delete_dialog(botf.users[0].id)
+                    self.blockBot = False
+                    return
                         
 
 
@@ -124,89 +139,96 @@ class WaifuHarem(loader.Module):
                         except:
                             pass
                 if "проверка пройдена" not in r.text:
-                    to_leave = []
-                    to_block = []
-                    folders = []
-                    chats_in_folders = []
+                    to_leave, to_block, folders, chats_in_folders = [], [], [], []
                     wait_boost = False
                     if r.reply_markup:
                         a = r.buttons
                         for i in a:
-                            for button in i:
+                            for button in i: # каждая кнопка...
                                 if button.url:
-                                    alr = False
-                                    if "addlist/" in button.url:
-                                        slug = self.button.split('addlist/')[-1]
+                                    alr = False # "уже зашёл"
+                                    if "addlist/" in button.url: # добавление папок
+                                        slug = self.button.url.split("addlist/")[-1]
                                         peers = await self.client(CheckChatlistInviteRequest(slug=slug))
                                         if peers:
                                             peers = peers.peers
                                             try:
                                                 a = await self.client(JoinChatlistInviteRequest(slug=slug, peers=peers))
-                                                chats_in_folders.append(peers)
-
+                                                chats_in_folders.append(peers) # для выхода
                                                 for update in a.updates:
-                                                    if isinstance(update, hikkatl.tl.types.UpdateDialogFilter):   
-                                                        folder.append(InputChatlistDialogFilter(filter_id=update.id))
-                                        
-                                            except:
-                                                pass
+                                                    if isinstance(update, hikkatl.tl.types.UpdateDialogFilter):
+                                                        folder.append(InputChatlistDialogFilter(filter_id=update.id)) # для удаления папки
+                                            except: pass
                                         continue
-                                    if not bool(re.match(r'^https?:\/\/t\.me\/[^\/]+\/?$',button.url)):
+                                    if not bool(re.match(r"^https?:\/\/t\.me\/[^\/]+\/?$", button.url)): # дополнительные вложения отметаем
                                         continue
-                                    if "t.me/boost" in button.url:
+                                    if "t.me/boost" in button.url: # бустить не обязательно
                                         wait_boost = True
                                         continue
-                                    if "t.me/+" in button.url:
+                                    if "t.me/+" in button.url: # приватные чаты
                                         try:
                                             a = await self.client(CheckChatInviteRequest(button.url.split("+")[-1]))
-                                            if not hasattr(a, "request_needed") or not a.request_needed:
+                                            if not hasattr(a, "request_needed") or not a.request_needed: # получить айди приватного чата/канала с приглашениями без входа невозможно
                                                 pass
                                             else:
-                                                continue
-                                        except:
-                                            continue
-                                    url = button.url
-                                    if "?" in button.url:
-                                        url = button.url.split("?")[0]
-                                    try:
-                                        entity = await self.client.get_entity(url)
-                                    except:
+                                                url = button.url.split("?")[0] if "?" in button.url else button.url
+                                                self.blockBot = True ######
+                                                try:
+                                                    await self.client(ImportChatInviteRequest(button.url.split("+")[-1]))
+                                                except InviteRequestSentError: pass
+                                                await asyncio.sleep(3)
+                                                try:
+                                                    entity = await self.client.get_entity(url)
+                                                except ValueError:
+                                                    try:
+                                                        await asyncio.sleep(15)
+                                                        entity = await self.client.get_entity(url)
+                                                    except: 
+                                                        self.blockBot = False
+                                                        continue
+                                                except Exception as e:
+                                                    pass
+                                                self.blockBot = False
+                                                alr = True
+                                        except: continue
+                                    url = button.url.split("?")[0] if "?" in button.url else button.url
+                                    if not alr:
                                         try:
-                                            await self.client(ImportChatInviteRequest(button.url.split("+")[-1]))
-                                        except InviteRequestSentError:
-                                            pass
-                                        entity = await self.client(CheckChatInviteRequest(button.url.split("+")[-1]))
-                                        alr = True
-                                    if hasattr(entity,'broadcast'):
+                                            entity = await self.client.get_entity(url)
+                                        except:
+                                            try:
+                                                await self.client(ImportChatInviteRequest(button.url.split("+")[-1]))
+                                            except InviteRequestSentError: pass
+                                            entity = await self.client(CheckChatInviteRequest(button.url.split("+")[-1]))
+                                            alr = True
+                                    if hasattr(entity, "broadcast"):
                                         if not alr:
                                             await self.client(JoinChannelRequest(button.url))
                                             to_leave.append(entity.id)
                                         else:
-                                            to_leave.append(entity.chat.id)
-                                    elif hasattr(entity,'bot'):
+                                            to_leave.append(entity.chat.id) if hasattr(entity,"chat") else to_leave.append(entity.id) if hasattr(entity,"id") else None
+                                    elif hasattr(entity, "bot"):
                                         try:
                                             await self.client(UnblockRequest(entity.username))
-                                        except:
-                                            print('блин')
-                                        await self.client.send_message(entity,"/start")
+                                        except: print("блин")
+                                        await self.client.send_message(entity, "/start")
                                         to_block.append(entity.username)
                         flyer_messages = await self.client.get_messages(self.id, limit=1)
-                        
                         if wait_boost:
-                            await asyncio.sleep(120)
+                            await asyncio.sleep(150)
                         for m in flyer_messages:
                             await asyncio.sleep(5)
                             await m.click()
                             await asyncio.sleep(5)
                         for folder, chats in zip(folders, chats_in_folders):
-                            await client(LeaveChatlistRequest(peers=chats, chatlist=folder))
+                            await self.client(LeaveChatlistRequest(peers=chats, chatlist=folder))
                         for bot in to_block:
                             await self.client(BlockRequest(bot))
                             await self.client.delete_dialog(bot)
                         for channel in to_leave:
                             try:
                                 await self.client(LeaveChannelRequest(channel))
-                            except:
+                            except Exception as e:
                                 pass
                 count = 0
                 if not self.get("last_lout") or int(time.time()) - self.get("last_lout") > 43200:
