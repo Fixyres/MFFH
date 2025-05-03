@@ -1,4 +1,4 @@
-__version__ = (2,0,2)
+__version__ = (2,0,3)
 #░░░░░░░░░░██░░██░░░░░░
 #░░░░░░░░░████████░░░░░
 #░░░░░░░░░████████░░░░░
@@ -23,7 +23,7 @@ from hikkatl.tl.functions.chatlists import CheckChatlistInviteRequest, JoinChatl
 from hikkatl.tl.functions.messages import ImportChatInviteRequest, CheckChatInviteRequest
 from hikkatl.tl.functions.channels import JoinChannelRequest, LeaveChannelRequest
 from hikkatl.tl.functions.contacts import BlockRequest, UnblockRequest
-from hikkatl.tl.types import Message, InputChatlistDialogFilter
+from hikkatl.tl.types import Message, InputChatlistDialogFilter, UpdateDialogFilter
 from hikkatl.errors import YouBlockedUserError, InviteRequestSentError
 from .. import loader
 import asyncio
@@ -42,8 +42,13 @@ class WaifuHarem(loader.Module):
                 "Автобонус(/bonus, бонус за подписки, 'lights out')",
                 validator=loader.validators.Boolean(),
             ),
+            loader.ConfigValue(
+                "interval",
+                2.9,
+                "Интервал между автобонусом",
+                validator=loader.validators.Float(2.0)
+            )
         )
-
     strings = {
         "name": "WaifuHarem"
     }
@@ -87,7 +92,7 @@ class WaifuHarem(loader.Module):
     @loader.loop(interval=1, autostart=True)
     async def check_loop(self):
         if self.config["ab"]:
-            if (not self.get("ABonus_time") or (time.time() - self.get("ABonus_time")) >= int(3600*2.9)):
+            if (not self.get("ABonus_time") or (time.time() - self.get("ABonus_time")) >= int(3600*self.config["interval"])):
                 await self.autobonus()
                 
     ########loop########
@@ -156,7 +161,7 @@ class WaifuHarem(loader.Module):
                                                 a = await self.client(JoinChatlistInviteRequest(slug=slug, peers=peers))
                                                 chats_in_folders.append(peers) # для выхода
                                                 for update in a.updates:
-                                                    if isinstance(update, hikkatl.tl.types.UpdateDialogFilter):
+                                                    if isinstance(update, UpdateDialogFilter):
                                                         folder.append(InputChatlistDialogFilter(filter_id=update.id)) # для удаления папки
                                             except: pass
                                         continue
@@ -186,7 +191,7 @@ class WaifuHarem(loader.Module):
                                                     except: 
                                                         self.blockBot = False
                                                         continue
-                                                except Exception as e:
+                                                except:
                                                     pass
                                                 self.blockBot = False
                                                 alr = True
@@ -196,10 +201,7 @@ class WaifuHarem(loader.Module):
                                         try:
                                             entity = await self.client.get_entity(url)
                                         except:
-                                            try:
-                                                await self.client(ImportChatInviteRequest(button.url.split("+")[-1]))
-                                            except InviteRequestSentError: pass
-                                            entity = await self.client(CheckChatInviteRequest(button.url.split("+")[-1]))
+                                            entity = (await self.client(ImportChatInviteRequest(button.url.split("+")[-1]))).chats[0] #gotten class Updates
                                             alr = True
                                     if hasattr(entity, "broadcast"):
                                         if not alr:
