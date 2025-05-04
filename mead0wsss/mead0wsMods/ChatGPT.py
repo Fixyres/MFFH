@@ -1,4 +1,4 @@
-__version__ = (2, 2, 0)
+__version__ = (2, 5, 0)
 
 # ███╗░░░███╗███████╗░█████╗░██████╗░░█████╗░░██╗░░░░░░░██╗░██████╗░██████╗
 # ████╗░████║██╔════╝██╔══██╗██╔══██╗██╔══██╗░██║░░██╗░░██║██╔════╝██╔════╝
@@ -22,6 +22,15 @@ import time
 from datetime import datetime
 from telethon import events
 from .. import loader, utils
+from sentence_transformers import SentenceTransformer
+
+embedding_model = None
+
+def load_embedding_model():
+    global embedding_model
+    if embedding_model is None:
+        embedding_model = SentenceTransformer('all-mpnet-base-v2')
+    return embedding_model
 
 def cosine_similarity(a, b):
     """Упрощенное вычисление косинусного сходства"""
@@ -39,20 +48,20 @@ class ChatGPT(loader.Module):
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
                 "model",
-                "gpt-4o",
-                lambda: "Модель нейросети для разговоров. Список нейросетей: https://telegra.ph/II-modeli-dlya-modulya-ChatGPT-by-mead0wssMods-03-26",
+                "deepseek-v3",
+                lambda: "Модель нейросети для разговоров. Список нейросетей: https://telegra.ph/Modeli-nejrosetej-modulya-ChatGPT-05-04",
                 validator=loader.validators.String()
             ),
             loader.ConfigValue(
                 "image_model",
-                "Flux Pro",
-                lambda: "Модель для генерации изображений. Список нейросетей: https://telegra.ph/II-modeli-dlya-modulya-ChatGPT-by-mead0wssMods-03-26",
+                "flux-realism",
+                lambda: "Модель для генерации изображений.",
                 validator=loader.validators.String()
             ),
             loader.ConfigValue(
                 "translation_model",
                 "deepseek-v3",
-                lambda: "Модель для перевода текста. Список нейросетей: https://telegra.ph/II-modeli-dlya-modulya-ChatGPT-by-mead0wssMods-03-26",
+                lambda: "Модель для перевода текста (необходима для .image). Список нейросетей: https://telegra.ph/Modeli-nejrosetej-modulya-ChatGPT-05-04",
                 validator=loader.validators.String()
             ),
             loader.ConfigValue(
@@ -61,66 +70,91 @@ class ChatGPT(loader.Module):
                 lambda: "Максимальное количество записей в памяти (10-1000)",
                 validator=loader.validators.Integer(minimum=10, maximum=1000)
             ),
+            loader.ConfigValue(
+                "embedding_model",
+                "all-mpnet-base-v2",
+                lambda: "Модель для эмбеддингов (all-MiniLM-L6-v2 или all-mpnet-base-v2)",
+                validator=loader.validators.Choice(["all-MiniLM-L6-v2", "all-mpnet-base-v2"])
+            ),
         )
         self.memory_file = "chatgpt_memory.json"
         self.memory = self._load_memory()
+        self.embedding_model = None
 
     def _load_memory(self):
         """Загрузка памяти из файла"""
         if os.path.exists(self.memory_file):
             try:
                 with open(self.memory_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except:
+                    data = json.load(f)
+                    for item in data.get("embeddings", []):
+                        if isinstance(item["embedding"], list):
+                            item["embedding"] = np.array(item["embedding"])
+                    return data
+            except Exception as e:
+                print(f"Ошибка загрузки памяти: {e}")
                 return {"embeddings": []}
         return {"embeddings": []}
 
     def _save_memory(self):
         """Сохранение памяти в файл"""
+        memory_to_save = {"embeddings": []}
+        for item in self.memory["embeddings"]:
+            memory_to_save["embeddings"].append({
+                "text": item["text"],
+                "embedding": item["embedding"].tolist(),
+                "timestamp": item["timestamp"]
+            })
+        
         with open(self.memory_file, "w", encoding="utf-8") as f:
-            json.dump(self.memory, f, ensure_ascii=False, indent=2)
+            json.dump(memory_to_save, f, ensure_ascii=False, indent=2)
 
-    async def _get_embedding(self, session, text):
-        """Получение embedding для текста"""
+    async def _get_embedding(self, text):
+        """Получение embedding для текста (локальная модель)"""
         try:
-            async with session.post(
-                "https://cablyai.com/v1/embeddings",
-                headers={
-                    'Authorization': 'Bearer sk-l4HU4KwZt6bF8gOwwKCOMpfpIKvR9YhDHvTFIGJ6tJ5rPKXE',
-                    'Content-Type': 'application/json',
-                },
-                json={
-                    "input": text,
-                    "model": "text-embedding-ada-002"
-                }
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return data["data"][0]["embedding"]
-        except:
+            if self.embedding_model is None:
+                self.embedding_model = SentenceTransformer(self.config["embedding_model"])
+            
+            embedding = self.embedding_model.encode(text)
+            return embedding
+        except Exception as e:
+            print(f"Ошибка получения эмбеддинга: {e}")
             return None
-        return None
 
-    async def _find_similar(self, query_embedding, threshold=0.75):
-        """Поиск похожих записей в памяти"""
+    async def _find_similar(self, query_embedding, threshold=0.45):
+        """Поиск похожих записей в памяти с учетом типа сообщения"""
         if not self.memory["embeddings"]:
             return []
 
         results = []
         for item in self.memory["embeddings"]:
-            similarity = cosine_similarity(query_embedding, item["embedding"])
-            if similarity >= threshold:
-                results.append({
-                    "text": item["text"],
-                    "score": float(similarity)
-                })
-        
-        return sorted(results, key=lambda x: x["score"], reverse=True)[:3]
+            try:
+                item_embedding = item["embedding"] if isinstance(item["embedding"], np.ndarray) else np.array(item["embedding"])
+                similarity = cosine_similarity(query_embedding, item_embedding)
 
+                time_weight = 1.0
+                if "timestamp" in item:
+                    hours_passed = (datetime.now() - datetime.fromisoformat(item["timestamp"])).total_seconds() / 3600
+                    time_weight = max(0.5, 1.0 - hours_passed/48)
+                
+                type_weight = 1.2 if item.get("type") == "answer" else 1.0
+                
+                weighted_similarity = similarity * time_weight * type_weight
+                
+                if weighted_similarity >= threshold:
+                    results.append({
+                        "text": item["text"],
+                        "score": float(weighted_similarity),
+                        "type": item.get("type", "message"),
+                        "timestamp": item.get("timestamp", "")
+                    })
+            except Exception as e:
+                print(f"Ошибка обработки элемента памяти: {e}")
+                continue
+        
+        return sorted(results, key=lambda x: x["score"], reverse=True)
     async def gptcmd(self, event):
         """- Разговор с ИИ."""
-        count = len(self.memory["embeddings"])
-        max_size = self.config["max_memory_size"]
         args = utils.get_args_raw(event)
         if not args:
             await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Нет вопроса.</b>")
@@ -128,21 +162,33 @@ class ChatGPT(loader.Module):
 
         model = self.config.get("model")
         if not model:
-            await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Модель ИИ не указана в cfg!</b>")
+            await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Модель нейросети не указана в cfg!</b>")
             return
 
-        await event.edit(f"<b><emoji document_id=5328272518304243616>💠</emoji> Генерирую ответ...</b>")
+        await event.edit(f"<b><emoji document_id=5328272518304243616>💠</emoji> {model} генерирует ответ...</b>")
         
         start_time = time.time()
         
         async with aiohttp.ClientSession() as session:
-            query_embedding = await self._get_embedding(session, args)
-            similar = await self._find_similar(query_embedding) if query_embedding else []
-            
+            query_embedding = await self._get_embedding(args)
+            similar = await self._find_similar(query_embedding, threshold=0.45) if query_embedding is not None else []
             messages = []
+            system_message = (
+                "Ты - ассистент с долгосрочной памятью. Тщательно анализируй историю диалога. "
+                "Особое внимание уделяй последним сообщениям и конкретным инструкциям."
+                "Формируй свой ответ простым сообщением с минимальным форматированием. Запрещается например использовать: \text{ часа} = 20 \text{ минут}\]. И тому подобное, но разрешаются форматирования по типу ```, **** и так далее и те которые поддерживает мессенджер Telegram."
+            )
+            messages.append({"role": "system", "content": system_message})
+
             if similar:
-                context = "\n".join([f"- {item['text']}" for item in similar])
-                messages.append({"role": "system", "content": f"Ранее обсуждалось:\n{context}"})
+                context_limit = 500
+                top_similar = sorted(similar, key=lambda x: x['score'], reverse=True)[:context_limit]
+                
+                context = "Контекст диалога:\n" + "\n".join(
+                    [f"- {item['text']} (релевантность: {item['score']:.2f})" 
+                     for item in top_similar]
+                )
+                messages.append({"role": "system", "content": context})
             
             messages.append({"role": "user", "content": args})
             
@@ -155,7 +201,8 @@ class ChatGPT(loader.Module):
                     },
                     json={
                         "model": model,
-                        "messages": messages
+                        "messages": messages,
+                        "temperature": 0.7
                     }
                 ) as response:
                     end_time = time.time()
@@ -163,34 +210,44 @@ class ChatGPT(loader.Module):
                     
                     if response.status == 200:
                         answer = (await response.json())["choices"][0]["message"]["content"]
-                        
-                        if query_embedding:
-                            self.memory["embeddings"].append({
-                                "text": args,
-                                "embedding": query_embedding,
-                                "timestamp": str(datetime.now())
-                            })
-                            
+
+                        if query_embedding is not None:
+                            self.memory["embeddings"].extend([
+                                {
+                                    "text": args,
+                                    "embedding": query_embedding,
+                                    "timestamp": str(datetime.now()),
+                                    "type": "question"
+                                },
+                                {
+                                    "text": answer,
+                                    "embedding": await self._get_embedding(answer),
+                                    "timestamp": str(datetime.now()),
+                                    "type": "answer"
+                                }
+                            ])
                             max_size = self.config["max_memory_size"]
                             if len(self.memory["embeddings"]) > max_size:
-                                self.memory["embeddings"] = self.memory["embeddings"][-max_size:]
+                                keep = max(20, max_size // 2)
+                                self.memory["embeddings"] = self.memory["embeddings"][-keep:]
                             
                             self._save_memory()
-                        
                         time_str = f"{response_time:.2f} сек" if response_time < 1 else f"{response_time:.1f} сек"
                         formatted_answer = self._format_answer(answer)
-                        
+                        count = len(self.memory["embeddings"])
+                        if count != 1:
+                            count_fin = count // 2
                         await event.edit(
                             f"<b><emoji document_id=5879770735999717115>👤</emoji> Вопрос: <code>{args}</code></b>\n\n"
-                            f"<b><emoji document_id=5199682846729449178>🤖</emoji> Ответ от {model}:\n{formatted_answer}</b>\n\n"
+                            f"<emoji document_id=5199682846729449178>🤖</emoji> <b>Ответ от {model}:</b>\n{formatted_answer}\n\n"
                             f"<b><emoji document_id=5983150113483134607>⏰️</emoji> Время ответа: <code>{time_str}</code></b>\n"
-                            f"<b><emoji document_id=5350445475948414299>🧠</emoji> Память: <code>{count}/{max_size}</code></b>"
+                            f"<b><emoji document_id=5350445475948414299>🧠</emoji> Память: <code>{count_fin}/{self.config['max_memory_size']}</code></b>"
                         )
                     else:
-                        await event.edit("<b><emoji document_id=5215400550132099476>❌</emoji> Ошибка при запросе к ИИ.</b>")
+                       await event.edit(f'<b><emoji document_id=5215400550132099476>❌</emoji> Ошибка при запросе к {model}. Скорее всего вы выбрали нестабильную модель (!). Список всех моделей модуля можно узнать <a href="https://telegra.ph/Modeli-nejrosetej-modulya-ChatGPT-05-04">*тут*</a></b>')
             except Exception as e:
                 await event.edit(f"<b><emoji document_id=5215400550132099476>❌</emoji> Ошибка: {str(e)}</b>")
-
+                
     def _format_answer(self, text):
         """Форматирование ответа с кодом"""
         if "```" not in text:
@@ -269,7 +326,7 @@ class ChatGPT(loader.Module):
                     if translation_response.status == 200:
                         translated_text = (await translation_response.json())["choices"][0]["message"]["content"]
                     else:
-                        await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Ошибка при запросе к ИИ для перевода. Попробуйте снова либо измените модель в cfg! </b>")
+                        await event.edit("<b><emoji document_id=5019523782004441717>❌</emoji> Ошибка при запросе к нейросети для перевода. Попробуйте снова либо измените модель в cfg. </b>")
                         return
 
                 data = {
