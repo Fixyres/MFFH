@@ -944,53 +944,38 @@ class ChatModule(loader.Module):
     @loader.command(
         ru_doc="<реплай/кол-во> | Удаляет сообщения."
     )
-    async def delcmd(self, message):
+    async def d(self, message):
         """<reply/count> | Deletes messages."""
         args = utils.get_args_raw(message)
         reply = await message.get_reply_message()
 
-        if args:
-            if not args.isdigit():
-                return await utils.answer(message, self.strings("invalid_args", message))
-            chat = message.chat
-            purge_count = int(args)
-            await message.delete()
-            await self._purge_user_messages(chat, (await self.client.get_me()).id, purge_count)
-        
         if not reply:
-            return await utils.answer(message, self.strings("no_reply", message))
+            return await self._client.delete_messages(message.chat_id, message.id)
 
-        try:
-            await message.delete()
-            await reply.delete()
-        except Exception:
-            pass
-    
-    async def _purge_user_messages(
-        self,
-        chat: EntityLike,
-        user_id: int,
-        purge_count: int,
-    ) -> int:
-        msgs = []
-        msg_count = 0
-        itermsg = self._client.iter_messages(entity=chat)
-        i = 0
-        async for msg in itermsg:
-            if msg.sender_id == user_id:
-                if i == purge_count:
-                    break
-                i += 1
-                msgs += [msg.id]
-                msg_count += 1
-                if len(msgs) >= 99:
-                    await self._client.delete_messages(chat, msgs)
-                    msgs.clear()
+        if not args:
+            return await self._client.delete_messages(message.chat_id, [reply.id, message.id])
 
-        if msgs:
-            await self._client.delete_messages(chat, msgs)
+        ids_to_delete = []
+        if args.startswith("a"):
+            if args[1:].isdigit():
+                count = int(args[1:])
+                async for msg in self._client.iter_messages(message.chat_id, offset_id=reply.id-1, limit=count, reverse=True):
+                    ids_to_delete.append(msg.id)
+            else:
+                async for msg in self._client.iter_messages(message.chat_id, offset_id=reply.id-1, limit=100, reverse=True):
+                    ids_to_delete.append(msg.id)
 
-        return msg_count
+        elif args.startswith("b"):
+            if args[1:].isdigit():
+                count = int(args[1:])
+                async for msg in self._client.iter_messages(message.chat_id, offset_id=reply.id+1, limit=count):
+                    ids_to_delete.append(msg.id)
+            else:
+                async for msg in self._client.iter_messages(message.chat_id, offset_id=reply.id+1, limit=100):
+                    ids_to_delete.append(msg.id)
+        else:
+            return await self._client.delete_messages(message.chat_id, message.id)
+        return await self._client.delete_messages(message.chat_id, ids_to_delete+[message.id])
 
     @loader.command(
         ru_doc="<ID или ссылка> | Удаляет группу/канал."
