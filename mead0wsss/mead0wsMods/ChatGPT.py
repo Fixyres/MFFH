@@ -23,6 +23,7 @@ from datetime import datetime
 from telethon import events
 from .. import loader, utils
 from sentence_transformers import SentenceTransformer
+import sentence_transformers
 
 embedding_model = None
 
