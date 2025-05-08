@@ -1,5 +1,4 @@
 # meta developer: @xdesai
-# requires: aiohttp aiodns
 
 from .. import loader, utils
 import socket
