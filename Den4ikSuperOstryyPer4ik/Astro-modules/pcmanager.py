@@ -67,7 +67,7 @@ class PCManagerMod(loader.Module):
 	async def pcoff(self, message: Message):
 		"""- выключить компьютер""" 
 		bot = self.config["bot_username"]
-		call = await self.lib.message_g('🛑 Shutdown',
+		call = await self.lib.message_g('/off',
 			bot,
 			mark_read=True,
 			delete=True
@@ -78,7 +78,7 @@ class PCManagerMod(loader.Module):
 	async def pcreboot(self, message: Message):
 		"""- перезагрузить компьютер"""
 		bot = self.config["bot_username"]
-		call = await self.lib.message_g('🔄 Reboot',
+		call = await self.lib.message_g('/reboot',
 			bot,
 			mark_read=True,
 			delete=True
@@ -89,7 +89,7 @@ class PCManagerMod(loader.Module):
 	async def pcinfo(self, message: Message):
 		"""- просмотреть характеристики системы"""
 		bot = self.config["bot_username"]
-		call = await self.lib.message_q('💻 System Info',
+		call = await self.lib.message_q('/info',
 			bot,
 			mark_read=True,
 			delete=True
@@ -100,7 +100,7 @@ class PCManagerMod(loader.Module):
 	async def pcip(self, message: Message):
 		"""- просмотреть информацию об айпи адресе"""
 		bot = self.config["bot_username"]
-		call = await self.lib.message_q('🌐 IP Info',
+		call = await self.lib.message_q('/ip',
 			bot,
 			mark_read=True,
 			delete=True
@@ -108,10 +108,10 @@ class PCManagerMod(loader.Module):
 		await utils.answer(message, f'<emoji document_id=5787544344906959608>ℹ️</emoji> <b>[PC_Manager]</b> <emoji document_id=5787544344906959608>ℹ️</emoji>\n\n{call.text}')
 
 	@loader.command()
-	async def pcscrin(self, message: Message):
+	async def pcscreen(self, message: Message):
 		"""- сделать скриншот экрана"""
 		bot = self.config['bot_username']
-		call = await self.lib.message_g('/screenshot',
+		call = await self.lib.message_q('/screenshot',
 			bot,
 			mark_read=True,
 			delete=True
@@ -121,29 +121,19 @@ class PCManagerMod(loader.Module):
 
 	@loader.command()
 	async def pcweb(self, message: Message):
-		"""<ссылка> - открыть ссылку в браузере"""
+		"""<ссылка> - открыть ссылку в браузере
+  
+🔑 Дополнительно:"""
 		bot = self.config['bot_username']
 		args = utils.get_args_raw(message)
-		call = await self.lib.message_q(f'/browse {args}',
+		call = await self.lib.message_q(f'/web {args}',
 			bot,
 			mark_read=True,
 			delete=True
 		)
 		await utils.answer(message, f'<emoji document_id=5787544344906959608>ℹ️</emoji> <b>[PC_Manager]</b> <emoji document_id=5787544344906959608>ℹ️</emoji>\n\n{call.text}\n\nСсылка: {args}')
 
-	@loader.command()
-	async def pcwebscrin(self, message: Message):
-		"""- сделать снимок с веб-камеры
 
-🔑 Дополнительно:"""
-		bot = self.config['bot_username']
-		call = await self.lib.message_g('/photo',
-			bot,
-			mark_read=True,
-			delete=True
-		)
-		await utils.answer(message, '<emoji document_id=5787544344906959608>ℹ️</emoji> <b>[PC_Manager]</b> <emoji document_id=5787544344906959608>ℹ️</emoji>\n\nОтправка снимка...')
-		await message.respond(call)
 
 	@loader.command()
 	async def pcalert(self, message: Message):
@@ -217,19 +207,14 @@ class PCManagerMod(loader.Module):
 				],
 				[	
 					{
-						"text": "⬆️",
+						"text": "0%",
 						"callback": self.set_volume,
-						"args": ("up",)
-					},			
+						"args": (0,)
+					},
 					{
 						"text": "100%",
 						"callback": self.set_volume,
 						"args": (100,)
-					},
-					{
-						"text": "⬇️",
-						"callback": self.set_volume,
-						"args": ("down",)
 					},
 				],
 				[
