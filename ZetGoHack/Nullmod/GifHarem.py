@@ -47,7 +47,7 @@ class GifHarem(loader.Module):
             ),
             loader.ConfigValue(
                 "interval",
-                2.9,
+                4,
                 "Интервал между автобонусом",
                 validator=loader.validators.Float(2.0)
             ),
@@ -184,7 +184,7 @@ class GifHarem(loader.Module):
                                 if button.url:
                                     alr = False # "уже зашёл"
                                     if "addlist/" in button.url: # добавление папок
-                                        slug = self.button.url.split("addlist/")[-1]
+                                        slug = button.url.split("addlist/")[-1]
                                         peers = await self.client(CheckChatlistInviteRequest(slug=slug))
                                         if peers:
                                             peers = peers.peers
@@ -196,10 +196,10 @@ class GifHarem(loader.Module):
                                                         folder.append(InputChatlistDialogFilter(filter_id=update.id)) # для удаления папки
                                             except: pass
                                         continue
-                                    if not bool(re.match(r"^https?:\/\/t\.me\/[^\/]+\/?$", button.url)): # дополнительные вложения отметаем
-                                        continue
                                     if "t.me/boost" in button.url: # бустить не обязательно
                                         wait_boost = True
+                                        continue
+                                    if not bool(re.match(r"^https?:\/\/t\.me\/[^\/]+\/?$", button.url)): # дополнительные вложения отметаем
                                         continue
                                     if "t.me/+" in button.url: # приватные чаты
                                         try:
