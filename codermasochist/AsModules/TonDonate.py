@@ -55,7 +55,7 @@ class TonDonate(loader.Module):
             amount_float = float(amount)
         except ValueError:
             return await utils.answer(message, """<blockquote><emoji document_id=5852812849780362931>❌</emoji><b> неверно!</b></blockquote>
-<blockquote><emoji document_id=5314504236132747481>⁉️</emoji><b> пример: .<u>dton текст - (по желанию) / сумма (обязательна) / комментарий - (по желанию).</u></b></blockquote>""")
+<blockquote><emoji document_id=5314504236132747481>⁉️</emoji><b> пример: .<u>dton текст - (по желанию) | сумма (обязательна) | комментарий - (по желанию).</u></b></blockquote>""")
 
         if amount_float <= 0:
             return await utils.answer(message, "<blockquote><emoji document_id=5852812849780362931>❌</emoji><b> сумма должна быть больше нуля..</b></blockquote>")
