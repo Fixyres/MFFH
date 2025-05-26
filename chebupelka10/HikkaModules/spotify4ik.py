@@ -1,5 +1,5 @@
 # This is fixed copy of module. Credits: https://raw.githubusercontent.com/hikariatama/ftg/master/spotify.py
-# meta developer: @MiSidePlayer
+# meta developer: @chepuxcat
 
 import asyncio
 import contextlib
@@ -40,7 +40,7 @@ ARTIST_FS = 32
 
 @loader.tds
 class Spotify4ikMod(loader.Module):
-    """Display beautiful spotify now bar. Idea: t.me/fuccsoc. Implementation: t.me/hikariatama. Fixed by @MiSidePlayer."""
+    """Display beautiful spotify now bar. Idea: t.me/fuccsoc. Implementation: t.me/hikariatama. Fixed by @chepuxcat."""
 
     strings = {
         "name": "Spotify4ik",
@@ -203,38 +203,40 @@ class Spotify4ikMod(loader.Module):
     async def autobio(self):
         try:
             current_playback = self.sp.current_playback()
+            if not current_playback or not current_playback.get("item"):
+                return
             track = current_playback["item"]["name"]
             track = re.sub(r"([(].*?[)])", "", track).strip()
-
-            artists = [
-                artist["name"]
-                for artist in current_playback.get("item", {}).get("artists", [])
-                if "name" in artist
-            ]
+            artists = [artist["name"] for artist in current_playback.get("item", {}).get("artists", []) if "name" in artist]
             artist_name = ", ".join(artists)
-
+            track_id = current_playback["item"].get("id")
+            if not track_id:
+                return
+            universal_link = f"https://song.link/s/{track_id}"
         except Exception:
             return
 
-        bio_template = self.config.get("AutoBioTemplate", "🎧 {track} - {author}")
+        bio_text = f"{track} - {artist_name}\n{universal_link}"
 
+        bio_template = self.config.get("AutoBioTemplate", "🎧 {track} - {author}")
         if "{track}" in bio_template and "{author}" in bio_template:
-            bio = bio_template.format(track=track, author=artist_name)
+            profile_bio = bio_template.format(track=track, author=artist_name)
         elif "{track}" in bio_template:
-            bio = bio_template.replace("{track}", track)
+            profile_bio = bio_template.replace("{track}", track)
         elif "{author}" in bio_template:
-            bio = bio_template.replace("{author}", artist_name)
+            profile_bio = bio_template.replace("{author}", artist_name)
         else:
-            bio = bio_template
+            profile_bio = bio_template
 
         try:
             await self._client(
-                UpdateProfileRequest(about=bio[: 140 if self._premium else 70])
+                UpdateProfileRequest(about=profile_bio[: 140 if self._premium else 70])
             )
         except FloodWaitError as e:
-            logger.info(f"Sleeping {max(e.seconds, 60)} bc of floodwait")
+            logger.info(f"Спим {max(e.seconds, 60)} секунд из-за FloodWaitError")
             await asyncio.sleep(max(e.seconds, 60))
             return
+
 
 
     async def _dl_font(self):
@@ -267,11 +269,6 @@ class Spotify4ikMod(loader.Module):
 
         with contextlib.suppress(Exception):
             await utils.dnd(client, "@DirectLinkGenerator_Bot", archive=True)
-
-        self.musicdl = await self.import_lib(
-            "https://libs.hikariatama.ru/musicdl.py",
-            suspend_on_error=True,
-        )
 
     def tokenized(func) -> FunctionType:
         @functools.wraps(func)
@@ -548,38 +545,7 @@ class Spotify4ikMod(loader.Module):
                 )
                 await progress_message.delete()
                 return
-            except Exception:
-                pass
-
-            try:
-                name = track.get("name")
-                artists = [artist["name"] for artist in track.get("artists", []) if "name" in artist]
-                full_song_name = f"{name} - {', '.join(artists)}"
-                music = await self.musicdl.dl(full_song_name, only_document=True)
-
-                caption = (
-                    f"<emoji document_id=5870794890006237381>🎶</emoji> "
-                    f"<code>{track_name}</code> - <code>{artist_name}</code>\n"
-                    f"<emoji document_id=5870570722778156940>💿</emoji> <b>Альбом:</b> <code>{album_name}</code>\n"
-                    f"<emoji document_id=5872756762347573066>🕒</emoji> <b>Длина трека: {track_duration // 60}:{track_duration % 60:02d}</b>"
-                )
-                if track_url:
-                    caption += (
-                        f"\n\n<emoji document_id=5294137402430858861>🎵</emoji> "
-                        f"<b><a href=\"{track_url}\">Открыть на Spotify</a></b>"
-                    )
-                if universal_link:
-                    caption += (
-                        f"\n<emoji document_id=5902449142575141204>🔗</emoji> "
-                        f"<b><a href=\"{universal_link}\">Открыть на song.link</a></b>"
-                    )
-
-                await self._client.send_file(
-                    message.peer_id,
-                    music,
-                    caption=caption,
-                )
-                await progress_message.delete()
+            
             except Exception:
                 await utils.answer(
                     message,
@@ -587,48 +553,6 @@ class Spotify4ikMod(loader.Module):
                 )
             finally:
                 await progress_message.delete()
-
-    async def _open_track(
-        self,
-        track: dict,
-        message: Message,
-        override_text: str = None,
-    ):
-        name = track.get("name")
-        artists = [
-            artist["name"] for artist in track.get("artists", []) if "name" in artist
-        ]
-
-        full_song_name = f"{name} - {', '.join(artists)}"
-
-        music = await self.musicdl.dl(full_song_name, only_document=True)
-
-        await self._client.send_file(
-            message.peer_id,
-            music,
-            caption=(
-                override_text
-                or (
-                    (
-                        f"🗽 <b>{utils.escape_html(full_song_name)}</b>{{is_flac}}"
-                        if artists
-                        else f"🗽 <b>{utils.escape_html(track)}</b>{{is_flac}}"
-                    )
-                    if track
-                    else "{is_flac}"
-                )
-            ).format(
-                is_flac=(
-                    "\n<emoji document_id=5359582743992737342>😎</emoji> <b>FLAC"
-                    f" {self.strings('quality')}</b>"
-                    if getattr(music, "is_flac", False)
-                    else ""
-                )
-            ),
-        )
-
-        if message.out:
-            await message.delete()
 
     @error_handler
     @tokenized
@@ -929,7 +853,6 @@ class Spotify4ikMod(loader.Module):
             except Exception:
                 pass
             try:
-                await self._open_track(current_playback["item"], message, result)
                 await progress_message.delete()
             except Exception:
                 await utils.answer(message, result + "\n\n<emoji document_id=5274099962655816924>❗️</emoji> <b>Скачать трек не удалось!</b>")
