@@ -69,7 +69,8 @@ class AIModule(loader.Module):
     """
 🧠 Модуль Zetta - AI Models
 >> Часть экосистемы Zetta - AI models << 
-🌒 Version: 9.0 | Optimization
+🌒 Version: 9.1 | Rename API
+Основанно на базе инструментов API - @OnlySq
 
 📍Описание:
 Модуль дает доступ к 21 модели ИИ, подходит как для быстрых запросов, так и для общения с контекстом и автоматизации общения/обслуживания. 
@@ -116,7 +117,7 @@ class AIModule(loader.Module):
         self.module_instruction3 = self.get_module_instruction3()
         self.allmodule_instruction2 = self.get_allmodule_instruction2()
         self.metod = "on"
-        self.provider = 'zetta'
+        self.provider = 'OnlySq-Zetta'
         self.api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
         self.handle_voice_message = self.handle_voice_message()
         self.humanmode = 'off'
@@ -256,9 +257,9 @@ class AIModule(loader.Module):
             current = self.metod if hasattr(self, "metod") else "off"
         elif setting == "apiswitch":
             text = (
-                "<b>🔄 Провайдер API для запросов.\nПо умолчанию: Zetta AI</b>"
+                "<b>🔄 Провайдер API для запросов.\nПо умолчанию: OnlySq-Zetta AI</b>"
             )
-            current = self.provider if hasattr(self, "provider") else "zetta"
+            current = self.provider if hasattr(self, "provider") else "OnlySq-Zetta"
         else:
             text = "Неизвестная настройка."
             current = "off"
@@ -268,7 +269,7 @@ class AIModule(loader.Module):
             btn_on = "Вкл" + ("🟣" if current == "on" else "")
             btn_off = "Выкл" + ("🟣" if current == "off" else "")
         elif setting == "apiswitch":
-            btn_on = "Zetta AI" + ("🟣" if current == "Zetta AI" else "")
+            btn_on = "OnlySq-Zetta AI" + ("🟣" if current == "OnlySq-Zetta AI" else "")
             btn_off = "Devj" + ("🟣" if current == "Devj" else "")
 
         buttons = [
@@ -350,7 +351,7 @@ class AIModule(loader.Module):
 
     async def send_request_to_api(self, message, instructions, request_text, model="gpt-4o-mini"):
         """Отправляет запрос к API и возвращает ответ."""
-        api_url = "http://109.172.94.236:5001/Zetta/v1/models" if self.provider == "zetta" else "https://api.vysssotsky.ru/"
+        api_url = "http://109.172.94.236:5001/OnlySq-Zetta/v1/models" if self.provider == "OnlySq-Zetta" else "https://api.vysssotsky.ru/"
         if self.provider == 'devj':
             # Формируем payload для запроса к devj API
             payload = {
@@ -372,12 +373,12 @@ class AIModule(loader.Module):
                             answer = f"<blockquote>{answer}</blockquote>"
                             return answer
                         else:
-                            await message.edit("⚠️ Ошибка при запросе к API: Обезьяна съела арбуз🍉. Деталей ошибки нет.")
+                            await message.edit("⚠️ Ошибка при запросе к API: Обезьяна съела арбуз🍉. Деталей ошибки не получены.")
             except Exception as e:
                 await message.edit(f"⚠️ Ошибка при запросе к API: {e}")
 
         else:
-            api_url = "http://109.172.94.236:5001/Zetta/v1/models"
+            api_url = "http://109.172.94.236:5001/OnlySq-Zetta/v1/models"
             payload = {
                 "model": self.default_model,
                 "request": {
@@ -404,7 +405,7 @@ class AIModule(loader.Module):
                         return answer
 
             except aiohttp.ClientError as e:
-                await message.edit(f"⚠️ Ошибка при запросе к API: {e}\n\n💡 Попробуйте поменять модель или проверить код модуля.")
+                await message.edit(f"<b>У провайдера предоставляющего бесплатный и неограниченный доступ к модели случились неполадки. \n\nПопробуйте поменять модель, попробовать еще раз или если вы изменяли код модуля - перепроверить его на ошибки. \n\nПровайдер: OnlySq in Telegram </b>")
                 return None
 
 
@@ -684,7 +685,7 @@ class AIModule(loader.Module):
         """
         Обрабатывает запрос к новому API для улучшения запроса.
         """
-        api_url = "http://109.172.94.236:5001/Zetta/v1/models"
+        api_url = "http://109.172.94.236:5001/OnlySq-Zetta/v1/models"
         chat_id = str(message.chat_id)
 
         # Формируем запрос для улучшения текста
@@ -732,7 +733,7 @@ class AIModule(loader.Module):
 
         except aiohttp.ClientError as e:
             logging.error(f"Ошибка при запросе к API: {e}")
-            await message.reply(f"⚠️ <b>Ошибка при запросе к API:</b> {e}\n\n💡 <b>Попробуйте поменять модель или проверить код модуля.</b>")
+            await message.reply(f"⚠️ Ошибка при запросе к API: {e}\n\n💡 <b>У провайдера предоставляющего бесплатный и неограниченный доступ к модели случились неполадки. \n\nПопробуйте поменять модель, попробовать еще раз или если вы изменяли код модуля - перепроверить его на ошибки. \n\nПровайдер: OnlySq in Telegram </b>")
 
 
     @loader.unrestricted
@@ -740,12 +741,9 @@ class AIModule(loader.Module):
         """
         - Информация об обновлении✅
         """
-        await message.edit('''<b>Обновление 9.0:
+        await message.edit('''<b>Обновление 9.1:
 Изменения:
-- Перенос настроек в .zettacfg.
-- Упрощение описания модуля.
-- переименование личностей в плагины
-- Поддержка плагина(личности) и роли для команды .ai
+- Переименование API в OnlySq-Zetta. Для рекламы провайдеров.
 
 советуем команду .moduleinfo для подробной информации о модуле.
 
@@ -757,7 +755,7 @@ class AIModule(loader.Module):
         """
         - Информация о провайдерах🔆
         """
-        await message.edit('''<b>🟣Zetta AI: Стабильный, быстрая скорость ответа, персональный. Только для этого модуля. Базируется на OnlySq и хостится на их серверах.
+        await message.edit('''<b>🟣OnlySq-Zetta AI: Стабильный, быстрая скорость ответа. Базируется на OnlySq и хостится на их серверах. Их телеграмм - канал: @OnlySq
 
 🔸devj: Быстрая скорость ответа, Не стабилен из за разного возврата ответа от сервера.</b>''')
     
@@ -766,7 +764,7 @@ class AIModule(loader.Module):
         """
         Обрабатывает запрос к API модели ИИ для .aicmd.
         """
-        api_url = "http://109.172.94.236:5001/Zetta/v1/models"
+        api_url = "http://109.172.94.236:5001/OnlySq-Zetta/v1/models"
         chat_id = str(message.chat_id)
         current_role = self.role.get(chat_id, ".")
 
@@ -811,7 +809,7 @@ class AIModule(loader.Module):
 
         except aiohttp.ClientError as e:
             # Обработка ошибок в случае проблем с запросом
-            await message.edit(f"⚠️ <b>Ошибка при запросе к API:</b> {e}\n\n💡 <b>Попробуйте поменять модель или проверить код модуля.</b>")
+            await message.edit(f"⚠️ Ошибка при запросе к API: {e}\n\n💡 <b>У провайдера предоставляющего бесплатный и неограниченный доступ к модели случились неполадки. \n\nПопробуйте поменять модель, попробовать еще раз или если вы изменяли код модуля - перепроверить его на ошибки. \n\nПровайдер: OnlySq in Telegram </b>")
         except Exception as e:
              await message.edit(f"⚠️ <b>Произошла непредвиденная ошибка:</b> {e}")
 
@@ -890,7 +888,7 @@ class AIModule(loader.Module):
             
         self.chat_history[chat_id][-1]["content"] = f"{user_name} написал: {question}"
 
-        api_url = "http://109.172.94.236:5001/Zetta/v1/models"
+        api_url = "http://109.172.94.236:5001/OnlySq-Zetta/v1/models"
         payload = {
             "model": self.default_model,
             "request": {
@@ -927,7 +925,7 @@ class AIModule(loader.Module):
                         await message.reply(answer)
 
         except aiohttp.ClientError as e:
-            await message.reply(f"⚠️ <b>Ошибка при запросе к API:</b> {e}\n\n💡 <b>Попробуйте поменять модель или проверить код модуля.</b>")
+            await message.reply(f"⚠️ Ошибка при запросе к API: {e}\n\n💡 <b>У провайдера предоставляющего бесплатный и неограниченный доступ к модели случились неполадки. \n\nПопробуйте поменять модель, попробовать еще раз или если вы изменяли код модуля - перепроверить его на ошибки. \n\nПровайдер: OnlySq in Telegram</b>")
 
     @loader.unrestricted
     async def rewritecmd(self, message):
@@ -952,7 +950,7 @@ class AIModule(loader.Module):
             return
 
         instruction = args
-        api_url = "http://109.172.94.236:5001/Zetta/v1/models"
+        api_url = "http://109.172.94.236:5001/OnlySq-Zetta/v1/models"
         payload = {
             "model": self.default_model,
             "request": {
