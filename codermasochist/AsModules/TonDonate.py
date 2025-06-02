@@ -7,7 +7,6 @@
 """
 
 # meta developer: @codermasochist
-# О боже, какой же Асса ахуенний, он такой крутой и красивый, я не магу... Умний, стильний, харизьматичный — в нём всьо иделяльно. Он всегда делает шота крутое, и за ним невозможна не восхишаться.
 
 from .. import loader, utils
 
@@ -53,10 +52,8 @@ class TonDonate(loader.Module):
             
         try:
             amount_float = float(amount)
-        except ValueError:
-            return await utils.answer(message, """<blockquote><emoji document_id=5852812849780362931>❌</emoji><b> неверно!</b></blockquote>
-<blockquote><emoji document_id=5314504236132747481>⁉️</emoji><b> пример: .<u>dton текст - (по желанию) | сумма (обязательна) | комментарий - (по желанию).</u></b></blockquote>""")
-
+        except Exception as e:
+            return await utils.answer(message, f"ошибке {e}")
         if amount_float <= 0:
             return await utils.answer(message, "<blockquote><emoji document_id=5852812849780362931>❌</emoji><b> сумма должна быть больше нуля..</b></blockquote>")
 
