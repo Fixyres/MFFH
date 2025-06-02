@@ -57,3 +57,5 @@ class decimalage(loader.Module):
             await utils.answer(m, self.strings["age"].format(years, months, days, hours, minutes, seconds, age_decimal))
         except (IndexError, ValueError):
             await utils.answer(m, self.strings["error"])
+        except Exception as e:
+            await utils.answer(m, f"ошибке: {e}")
