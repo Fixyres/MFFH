@@ -76,7 +76,7 @@ class FakeNeofetchMod(loader.Module):
                 "os",
                 "Arch Linux",
                 doc=lambda: self.strings["_cfg_os"],
-                validator=loader.validators.String(min_len=1, max_len=20)
+                validator=loader.validators.String(min_len=1, max_len=60)
             ),
             loader.ConfigValue(
                 "hostname",
@@ -151,7 +151,7 @@ class FakeNeofetchMod(loader.Module):
                 validator=loader.validators.Choice([
                      "arch", "arch_small", "ubuntu", "ubuntu_small",
                      "debian", "debian_small", "fedora", "fedora_small",
-                     "windows", "android", "macos", "macos_small"
+                     "windows", "windows_8" "android", "android_small" "macos", "macos_small"
                 ]),
             ),
             loader.ConfigValue(
