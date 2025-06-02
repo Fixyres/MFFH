@@ -166,9 +166,9 @@ Memory: {self.config['ram']}"""
         self.config["user"] = "root"
         self.config["kernel"] = "Linux 6.2.0-arch1"
         self.config["uptime"] = "69 days, 4 hours, 20 minutes"
-        self.config["packages"] = "1337"
+        self.config["packages"] = 1337
         self.config["cpu"] = "AMD Ryzen 9 7950X"
         self.config["ram"] = "64GB / 128GB"
-        self.config["delay"] = "1.5"
+        self.config["delay"] = 1.5
 
         await utils.answer(message, self.strings["custom_host_reset"])
