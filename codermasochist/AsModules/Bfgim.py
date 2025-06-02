@@ -33,8 +33,8 @@ class Bfgim(loader.Module):
                 try:
                     user = await self.client.get_entity(user)
                     user_id = user.id
-                except Exception:
-                    await message.reply("ошибочке.")
+                except Exception as:
+                    await message.reply(f"ошибke {e}")
                     return
 
         await self.show_main_menu(message, user_id, is_inline=False)
