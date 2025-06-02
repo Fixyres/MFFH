@@ -12,15 +12,15 @@ class CFile(loader.Module):
 
     async def cfilecmd(self, message):
         """— <reply/text> create file."""
-        penis = utils.get_args_raw(message)
-        pidor = await message.get_reply_message()
+        args = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
 
-        if "|" in penis:
-            text, filename = map(str.strip, penis.split("|", 1))
-        elif pidor and penis:
-            text = pidor.raw_text
-            filename = penis.strip()
-        elif pidor:
+        if "|" in args:
+            text, filename = map(str.strip, args.split("|", 1))
+        elif reply and args:
+            text = reply.raw_text
+            filename = args.strip()
+        elif reply:
             await utils.answer(message, "<i>Where is the file name? </i><emoji document_id=5431527977391237948>🤔</emoji>")
             return
         else:
@@ -35,7 +35,7 @@ class CFile(loader.Module):
         try:
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(text)
-            await message.client.send_file(message.chat_id, filename, reply_to=pidor.id if pidor else None)
+            await message.client.send_file(message.chat_id, filename, reply_to=reply.id if reply else None)
         except Exception as e:
             await utils.answer(message, f"Oopsies: {e}")
         finally:
