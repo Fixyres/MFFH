@@ -4,7 +4,8 @@
 #   | | (_) >  < (_| | | | | (_) |
 #   |_|\___/_/\_\__,_|_| |_|\___/ 
 # meta banner: https://envs.sh/oJa.jpg                               
-# scope: @Toxano_Modules
+# meta developer: @Toxano_Modules
+
 from .. import loader, utils
 from telethon.tl.types import Message
 import random
