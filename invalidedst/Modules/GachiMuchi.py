@@ -5,7 +5,7 @@
 #   |_|\___/_/\_\__,_|_| |_|\___/ 
 #                              
 # meta banner: https://envs.sh/oJH.jpg
-# scope: @Toxano_Modules
+# meta developer: @Toxano_Modules
 
 from .. import loader, utils
 from telethon import types
