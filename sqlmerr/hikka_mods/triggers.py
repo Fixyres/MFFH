@@ -20,7 +20,7 @@ import logging
 import asyncio
 import json
 from contextlib import suppress
-from typing import Dict, List, TypedDict, Any, Callable, Optional, Tuple, TypeVar, Union
+from typing import Dict, List, TypedDict, Any, Callable, Optional, Tuple, Union
 from meval import meval
 
 from .. import loader, utils
@@ -29,7 +29,11 @@ from hikkatl.tl.patched import Message
 from cachetools import TTLCache
 
 from ..inline.types import InlineCall
-from ..types import HikkaReplyMarkup, JSONSerializable
+from ..types import JSONSerializable
+try:
+    from ..types import HikkaReplyMarkup
+except ImportError:
+    from ..types import HerokuReplyMarkup as HikkaReplyMarkup
 
 
 logger = logging.getLogger(__name__)
