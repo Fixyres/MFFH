@@ -4,7 +4,7 @@
 #   | | (_) >  < (_| | | | | (_) |
 #   |_|\___/_/\_\__,_|_| |_|\___/ 
 #                              
-# meta banner: https://envs.sh/oJM.jpg
+# meta banner: https://i.ibb.co/r2VKP6yv/image-9709.jpg
 # meta developer: @Toxano_Modules
 # scope: @Toxano_Modules
 
