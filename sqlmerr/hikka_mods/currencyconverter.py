@@ -1,8 +1,8 @@
 import asyncio
 import logging
-from typing import Dict, Tuple, Union, Optional, List
-
 import aiohttp
+
+from typing import Dict, Tuple, Union, Optional, List
 
 from .. import utils, loader
 
