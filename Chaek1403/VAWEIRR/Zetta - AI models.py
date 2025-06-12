@@ -55,8 +55,6 @@ available_models = {
 }
 
 
-
-
 # Путь к файлу для хранения личностей
 PERSONAS_FILE = "personas.json"
 
@@ -76,8 +74,6 @@ def save_personas(personas):
         json.dump(personas, f, indent=4)
 
 
-
-
 # Загружаем личности при запуске модуля
 personas = load_personas()
 
@@ -87,7 +83,7 @@ class AIModule(loader.Module):
     """
 🧠 Модуль Zetta - AI Models
 >> Часть экосистемы Zetta - AI models <<
-🌒 Version: 11.1 | Voice Recognition Update
+🌒 Version: 11.3 | FastZetta Beta 1 Fixed logs
 Основанно на базе инструментов API - @OnlySq
 
 📍Описание:
@@ -139,6 +135,9 @@ class AIModule(loader.Module):
         self.provider = 'OnlySq-Zetta'
         self.api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
         self.humanmode = 'off'
+        # Новые настройки для .fastzetta
+        self.fastzetta_active_chats = {} # Теперь хранит состояние FastZetta для каждого чата
+        self.fastzetta_trigger_word = "Zetta" # Изначальное триггерное слово
 
     @loader.unrestricted
     async def aisupcmd(self, message):
@@ -207,19 +206,26 @@ class AIModule(loader.Module):
         self.chat_archive = self.db.get("AIModule", "chat_archive", {})
         self.role = self.db.get("AIModule", "role", {})
         self.response_mode = self.db.get("AIModule", "response_mode", {})
+        # Загрузка новых настроек для FastZetta
+        self.fastzetta_active_chats = self.db.get("AIModule", "fastzetta_active_chats", {}) # Загружаем состояние FastZetta для каждого чата
+        self.fastzetta_trigger_word = self.db.get("AIModule", "fastzetta_trigger_word", "Zetta")
+        logging.info(f"[AIModule Init] Loaded fastzetta_active_chats: {self.fastzetta_active_chats}")
+        logging.info(f"[AIModule Init] Loaded fastzetta_trigger_word: '{self.fastzetta_trigger_word}'")
 
 
     async def handle_voice_message(self, voice_message: Message, status_message: Message):
         """
         Обрабатывает голосовое сообщение, преобразуя его в текст.
         voice_message: Сообщение с голосом для скачивания.
-        status_message: Сообщение для редактирования статуса.
+        status_message: Сообщение для редактирования статуса (None для молчаливой обработки).
         """
         if not SPEECH_RECOGNITION_AVAILABLE:
-            await utils.answer(status_message, "🚫 <b>Библиотеки для распознавания речи не установлены.</b>\nУстановите их командами: `pip install SpeechRecognition pydub`")
+            if status_message: # Только если status_message не None
+                await utils.answer(status_message, "🚫 <b>Библиотеки для распознавания речи не установлены.</b>\nУстановите их командами: `pip install SpeechRecognition pydub`")
             return None
 
-        await status_message.edit("<b>🎤 Слушаю..</b>")
+        if status_message: # Только если status_message не None
+            await status_message.edit("<b>🎤 Слушаю..</b>")
         
         voice_file = io.BytesIO()
         try:
@@ -240,13 +246,19 @@ class AIModule(loader.Module):
             text = recognizer.recognize_google(audio_data, language="ru-RU")
             return text
         except sr.UnknownValueError:
-            await status_message.edit("<b>🔇 Не удалось распознать речь.</b>")
+            if status_message:
+                await status_message.edit("<b>🔇 Не удалось распознать речь.</b>")
+            logging.error("Не удалось распознать речь из голосового сообщения.")
             return None
         except sr.RequestError as e:
-            await status_message.edit(f"<b>🚫 Ошибка сервиса распознавания:</b> `{e}`")
+            if status_message:
+                await status_message.edit(f"<b>🚫 Ошибка сервиса распознавания:</b> `{e}`")
+            logging.error(f"Ошибка сервиса распознавания речи: {e}")
             return None
         except Exception as e:
-            await status_message.edit(f"<b>⚠️ Произошла ошибка при обработке голоса:</b> `{e}`")
+            if status_message:
+                await status_message.edit(f"<b>⚠️ Произошла ошибка при обработке голоса:</b> `{e}`")
+            logging.error(f"Произошла ошибка при обработке голосового сообщения: {e}")
             return None
 
     def _create_zettacfg_buttons(self):
@@ -413,6 +425,13 @@ class AIModule(loader.Module):
                     ]
                 }
             }
+            # Если instructions пусты, значит это запрос для "быстрого" ответа (FastZetta),
+            # и системная роль не нужна или должна быть минимальной.
+            if not instructions:
+                payload["request"]["messages"] = [
+                    {"role": "user", "content": request_text}
+                ]
+
 
             try:
                 async with aiohttp.ClientSession() as session:
@@ -425,8 +444,14 @@ class AIModule(loader.Module):
                         return answer
 
             except aiohttp.ClientError as e:
-                await message.edit(f"<b>У провайдера предоставляющего бесплатный и неограниченный доступ к модели случились неполадки. \n\nПопробуйте поменять модель, попробовать еще раз или если вы изменяли код модуля - перепроверить его на ошибки. \n\nПровайдер: OnlySq in Telegram </b>")
-                return None
+                # В случае ошибки для fastzetta, просто возвращаем None, чтобы не спамить ошибками в чат
+                if instructions == "": # Если это fastzetta запрос
+                    logging.error(f"Ошибка при запросе к API для fastzetta: {e}")
+                    # Убрано сообщение для отладки в чат, так как fastzetta должна быть молчаливой
+                    return None
+                else: # Для обычных запросов выводим ошибку
+                    await message.edit(f"<b>У провайдера предоставляющего бесплатный и неограниченный доступ к модели случились неполадки. \n\nПопробуйте поменять модель, попробовать еще раз или если вы изменяли код модуля - перепроверить его на ошибки. \n\nПровайдер: OnlySq in Telegram </b>")
+                    return None
 
 
 
@@ -523,6 +548,7 @@ class AIModule(loader.Module):
         # Проверяем, является ли ответ на сообщение голосовым
         if reply and reply.voice:
             # Обрабатываем голосовое сообщение
+            # Передаем message в качестве status_message, так как оно будет редактироваться
             request_text = await self.handle_voice_message(voice_message=reply, status_message=message)
             if not request_text: return # Если текст не распознан, выходим
             # Если после голосового есть еще текст, добавляем его
@@ -698,6 +724,7 @@ class AIModule(loader.Module):
         if reply:
             if reply.voice:
                 # Если это голосовое, обрабатываем его
+                # Передаем message в качестве status_message, так как оно будет редактироваться
                 request_text = await self.handle_voice_message(voice_message=reply, status_message=message)
                 if not request_text: return
                 # Добавляем текст из команды, если он есть
@@ -771,11 +798,10 @@ class AIModule(loader.Module):
         """
         - Информация об обновлении✅
         """
-        await message.edit('''<b>Обновление 10.1:
+        await message.edit('''<b>Обновление 11.3:
 Изменения:
-- Добавлено распознавание голосовых сообщений для команд `.ai` и режима чата `.chat`.
-- Переименование API в OnlySq-Zetta. Для рекламы провайдеров.
-- 6 новых моделей ИИ.
+- Бета версия FastZetta. Первая бета.
+- Пофикшен лог спам в консоли.
 
 советуем команду .moduleinfo для подробной информации о модуле.
 
@@ -841,8 +867,6 @@ class AIModule(loader.Module):
              await message.edit(f"⚠️ <b>Произошла непредвиденная ошибка:</b> {e}")
 
 
-
-
     @loader.unrestricted
     async def watcher(self, message):
         """
@@ -852,7 +876,7 @@ class AIModule(loader.Module):
         if not self.active_chats.get(chat_id):
             return
             
-        if message.out and message.text and message.text.startswith('.'): # Ignore own commands
+        if message.out and message.text and message.text.startswith('.'): # Игнорируем свои собственные команды
             return
 
         if self.response_mode.get(chat_id, "all") == "reply" and \
@@ -884,9 +908,6 @@ class AIModule(loader.Module):
             if reply_to_message and reply_to_message.sender_id == (await self.client.get_me()).id:
                 return True
         return False
-
-
-
 
 
     async def get_user_name(self, message):
@@ -964,6 +985,8 @@ class AIModule(loader.Module):
 
         except aiohttp.ClientError as e:
             await message.reply(f"⚠️ Ошибка при запросе к API: {e}\n\n💡 <b>У провайдера предоставляющего бесплатный и неограниченный доступ к модели случились неполадки. \n\nПопробуйте поменять модель, попробовать еще раз или если вы изменяли код модуля - перепроверить его на ошибки. \n\nПровайдер: OnlySq in Telegram</b>")
+        except Exception as e:
+            await message.reply(f"⚠️ <b>Произошла непредвиденная ошибка:</b> {e}")
     
     @loader.unrestricted
     async def rewritecmd(self, message):
@@ -1090,7 +1113,96 @@ class AIModule(loader.Module):
 🔗 Подписывайтесь на канал: <a href="[https://t.me/hikkagpt](https://t.me/hikkagpt)">@hikkagpt</a>
 
 ✨ <b>Раскройте весь потенциал Zetta - AI models уже сегодня!</b>
-
-
         """
         await message.edit(info_text)
+
+    @loader.unrestricted
+    async def fastzettacmd(self, message):
+        """
+        Включает/выключает режим "FastZetta" для текущего чата.
+        """
+        chat_id = str(message.chat_id)
+        if self.fastzetta_active_chats.get(chat_id):
+            self.fastzetta_active_chats.pop(chat_id, None)
+            status_text = "выключен"
+        else:
+            self.fastzetta_active_chats[chat_id] = True
+            status_text = "включен"
+        self.db.set("AIModule", "fastzetta_active_chats", self.fastzetta_active_chats)
+
+        if self.fastzetta_active_chats.get(chat_id):
+            await message.edit(f"⚡️ <b>Режим FastZetta {status_text} для этого чата.</b> \n\nПросто позови меня по имени в голосовом или текстовом сообщении ' <b>{self.fastzetta_trigger_word}</b> ', и я отвечу на твой вопрос.\n\n<b>Имя можно изменить: .namezetta <Новое имя></b>")
+        else:
+            await message.edit(f"🛑 <b>Режим FastZetta {status_text} для этого чата.</b>")
+
+    @loader.unrestricted
+    async def namezettacmd(self, message):
+        """
+        Устанавливает новое триггерное слово для режима FastZetta.
+        Использование: .namezetta <новое_слово>
+        """
+        args = utils.get_args_raw(message)
+        if not args:
+            await message.edit(f"🤔 <b>Укажи новое триггерное слово. Текущее: '{self.fastzetta_trigger_word}'</b>")
+            return
+
+        self.fastzetta_trigger_word = args.strip() # Используем strip(), чтобы убрать пробелы в начале/конце
+        self.db.set("AIModule", "fastzetta_trigger_word", self.fastzetta_trigger_word)
+        await message.edit(f"✅ <b>Триггерное слово для FastZetta изменено на: '{self.fastzetta_trigger_word}'</b>")
+
+    @loader.watcher(no_commands=True) # Этот watcher будет запускаться для всех сообщений, кроме команд
+    async def watcher_fastzetta(self, message):
+        """
+        Наблюдатель для режима FastZetta.
+        Молчаливо мониторит сообщения и отправляет запросы в API, если сообщение начинается с триггерного слова,
+        только в чатах, где FastZetta активна.
+        """
+        chat_id = str(message.chat_id)
+
+        if not self.fastzetta_active_chats.get(chat_id): # Проверяем, активен ли режим FastZetta для ЭТОГО чата
+            return
+        
+        # Игнорируем свои собственные команды, чтобы избежать бесконечных циклов, но реагируем на обычные сообщения
+        if message.out and message.text and message.text.startswith('.'):
+            logging.info("[FastZetta Watcher] Ignoring outgoing command message.")
+            return
+
+        request_text = ""
+        if message.voice:
+            # Передаем None в качестве status_message для молчаливой обработки
+            request_text = await self.handle_voice_message(voice_message=message, status_message=None)
+            if not request_text:
+                return
+        elif message.text:
+            request_text = message.text.strip()
+        else:
+            return
+
+        if not request_text:
+            return
+
+        # Проверяем, начинается ли сообщение с триггерного слова
+        # Используем re.IGNORECASE для регистронезависимого поиска
+        trigger_pattern = r"^{}\s*".format(re.escape(self.fastzetta_trigger_word))
+        match = re.match(trigger_pattern, request_text, re.IGNORECASE)
+
+        if match:
+            # Извлекаем текст после триггерного слова
+            query = request_text[match.end():].strip()
+            
+            if not query: # Если после триггера нет текста, игнорируем
+                return
+
+            try:
+                # Отправляем запрос в API без сохранения контекста
+                answer = await self.send_request_to_api(message, "", query)
+                if answer:
+                    # Добавляем приписку "Ответ модели..."
+                    await message.reply(f"<b>Ответ модели {self.default_model}:</b>\n{answer}")
+                else:
+                    a = "a"
+            except Exception as e:
+                # Молча логируем ошибку, чтобы не спамить в чат
+                logging.error(f"[FastZetta Watcher] Error during API request for FastZetta: {e}", exc_info=True)
+        else:
+            a = "a"
