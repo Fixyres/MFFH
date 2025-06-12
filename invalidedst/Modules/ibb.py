@@ -3,7 +3,7 @@
 #   | |/ _ \ \/ / _` | '_ \ / _ \ 
 #   | | (_) >  < (_| | | | | (_) |
 #   |_|\___/_/\_\__,_|_| |_|\___/                      
-# meta banner: https://envs.sh/oJf.jpg
+# meta banner: https://i.ibb.co/bRFKb6ys/image-9711.jpg
 # meta developer: @Toxano_Modules, @mqvon
 from .. import loader, utils
 import io
@@ -19,7 +19,7 @@ class ImgBBUploaderMod(loader.Module):
         "name": """ImgBBUploader""",
         "uploading": "⚡ <b>Uploading image to ImgBB...</b>",
         "reply_to_image": "❌ <b>Reply to an image!</b>",
-        "uploaded": "❤️ <b>Image uploaded to ImgBB!</b>\n\n🔥 <b>Direct URL:</b> <code>{}</code>\n📝 <b>Delete URL:</b> <code>{}</code>\n🔗 <b>Page URL:</b> <code>{}</code>",
+        "uploaded": "❤️ <b>Image uploaded to ImgBB!</b>\n\n🔥 <b>Direct URL:</b> <code>{}</code>",
         "error": "❌ <b>Error while uploading: {}</b>",
         "not_image": "❌ <b>The file is not an image!</b>",
         "config_api_key": "ImgBB API key. Get it at https://api.imgbb.com/",
@@ -30,7 +30,7 @@ class ImgBBUploaderMod(loader.Module):
         "name": """ImgBBUploader""",
         "uploading": "⚡ <b>Загружаю изображение на ImgBB...</b>",
         "reply_to_image": "❌ <b>Ответьте на изображение!</b>",
-        "uploaded": "❤️ <b>Изображение загружено на ImgBB!</b>\n\n🔥 <b>Прямая ссылка:</b> <code>{}</code>\n📝 <b>Ссылка для удаления:</b> <code>{}</code>\n🔗 <b>Ссылка на страницу:</b> <code>{}</code>",
+        "uploaded": "❤️ <b>Изображение загружено на ImgBB!</b>\n\n🔥 <b>Прямая ссылка:</b> <code>{}</code>",
         "error": "❌ <b>Ошибка при загрузке: {}</b>",
         "not_image": "❌ <b>Файл не является изображением!</b>",
         "config_api_key": "API ключ ImgBB. Получите его на https://api.imgbb.com/",
@@ -53,7 +53,6 @@ class ImgBBUploaderMod(loader.Module):
             await utils.answer(message, self.strings["reply_to_image"])
             return None
             
-        # Check if media is an image
         if not hasattr(reply.media, "photo") and not (
             hasattr(reply.media, "document") and 
             reply.media.document.mime_type and 
@@ -94,12 +93,10 @@ class ImgBBUploaderMod(loader.Module):
                 if data["success"]:
                     image_data = data["data"]
                     direct_url = image_data["url"]
-                    delete_url = image_data["delete_url"]
-                    page_url = image_data["url_viewer"]
                     
                     await utils.answer(
                         message, 
-                        self.strings["uploaded"].format(direct_url, delete_url, page_url)
+                        self.strings["uploaded"].format(direct_url)
                     )
                 else:
                     await utils.answer(message, self.strings["error"].format("API error"))
