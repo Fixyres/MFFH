@@ -16,7 +16,10 @@ from hikkatl.types import Message
 from .. import loader, utils
 from ..inline.types import InlineCall
 from ..log import HikkaException
-from ..types import HikkaReplyMarkup
+try:
+    from ..types import HikkaReplyMarkup
+except ImportError:
+    from ..types import HerokuReplyMarkup as HikkaReplyMarkup
 
 
 # meta banner: https://github.com/sqlmerr/hikka_mods/blob/main/assets/banners/upgradedeval.png?raw=true
