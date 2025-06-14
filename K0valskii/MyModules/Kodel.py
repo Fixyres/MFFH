@@ -1,5 +1,5 @@
-# meta developer: @K0vaIskii
-__version__ = (0, 0, 1)
+# meta developer: @Kovalsky_modules
+__version__ = (0, 1, 0)
 
 from hikkatl.types import Message
 from .. import loader, utils
