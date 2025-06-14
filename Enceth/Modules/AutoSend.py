@@ -91,3 +91,4 @@ class pososihui(loader.Module):
 
         job_list = "\n".join([f"{name}: {job['interval']} секунд, чаты: {', '.join(job['chats'])}" for name, job in self.jobs.items()])
         await utils.answer(message, self.strings["job_list"].format(jobs=job_list))
+# хлебо
