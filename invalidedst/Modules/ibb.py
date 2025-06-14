@@ -39,7 +39,7 @@ class ImgBBUploaderMod(loader.Module):
 
     def __init__(self):
         self.config = loader.ModuleConfig(
-            "api_key", "f391de54c0741ea2667b5e58b7849d9b", lambda: self.strings["config_api_key"]
+            "api_key", "ca6e0a16055b1b8354549fb9b605cded", lambda: self.strings["config_api_key"]
         )
 
     async def _get_image(self, message):
