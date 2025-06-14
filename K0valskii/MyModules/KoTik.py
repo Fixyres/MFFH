@@ -1,5 +1,5 @@
-__version__ = (0, 1, 4)
-# meta developer: @K0vaIskii
+__version__ = (0, 1, 5)
+# meta developer: @Kovalsky_modules
 
 
 import aiohttp
@@ -39,7 +39,7 @@ class tiktokModule(loader.Module):
                 validator=loader.validators.String(),
             ),
             loader.ConfigValue(
-                "audio_artist", '@K0vaIskii',
+                "audio_artist", '@Kovalsky_modules',
                 "Установить автора музыки",
                 validator=loader.validators.String(),
             ),
