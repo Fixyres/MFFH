@@ -1,5 +1,5 @@
 __version__ = (0, 0, 3)
-# meta developer: @K0vaIskii
+# meta developer: @Kovalsky_modules
 
 from hikkatl.tl.patched import Message
 from .. import loader, utils
