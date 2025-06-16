@@ -128,7 +128,7 @@ class HaremManager(loader.Module):
                             msgs = await message.client.get_messages(chatid, limit=10)
                             for msg in msgs:
                                 if msg.mentioned and "забрали" in msg.text and msg.sender_id == self.harems_ids[bot]:
-                                    if self.get(f"catch-{bot}", None):
+                                    if self.get(f"out-{bot}", None):
                                         match = re.search(r", Вы забрали (.+?)\. Вайфу", msg.text)
                                         waifu = match.group(1)
                                         caption = f"{waifu} в вашем гареме! <emoji document_id=5395592707580127159>😎</emoji>"
@@ -234,7 +234,7 @@ class HaremManager(loader.Module):
             bot = data
             await utils.answer(call, f"Меню <code>{self.harems[bot]}</code>", reply_markup=self._menu_markup(bot))
 
-    async def _autobonus(self, id, bot): ############ TODO: Переработать автобонус(айди конфига и дб тут указываются как ab-@bot, а не ab-bot)
+    async def _autobonus(self, id, bot):
         wait_boost = False
         async with self._client.conversation(id) as conv:
             try:
