@@ -1,8 +1,8 @@
 __version__ = (1, 0, 0)
-#          █  █ █▄ █ █▄ █ █▀▀ ▀▄▀ █▀█ █▄ █
-#          ▀▄▄▀ █ ▀█ █ ▀█ ██▄  █  █▄█ █ ▀█ ▄
+#          █▄▀ ▄▀█ █▀▄▀█ █▀▀ █▄▀ █  █ █▀█ █▀█
+#          █ █ █▀█ █ ▀ █ ██▄ █ █ ▀▄▄▀ █▀▄ █▄█ ▄
 #                © Copyright 2025
-#            ✈ https://t.me/unneyon
+#            ✈ https://t.me/kamekuro
 
 # 🔒 Licensed under CC-BY-NC-ND 4.0 unless otherwise specified.
 # 🌐 https://creativecommons.org/licenses/by-nc-nd/4.0
@@ -12,9 +12,9 @@ __version__ = (1, 0, 0)
 
 # You CANNOT edit, distribute or redistribute this file without direct permission from the author.
 
-# meta banner: https://mods.unneyon.ru/banners/deleter.png
-# meta pic: https://static.unneyon.ru/mods/deleter_icon.png
-# meta developer: @unneyon_hmods
+# meta banner: https://raw.githubusercontent.com/kamekuro/hikka-mods/main/banners/deleter.png
+# meta pic: https://raw.githubusercontent.com/kamekuro/hikka-mods/main/icons/deleter.png
+# meta developer: @kamekuro_hmods
 # scope: hikka_only
 # scope: hikka_min 1.6.3
 
