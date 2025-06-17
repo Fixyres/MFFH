@@ -1,8 +1,8 @@
-__version__ = (1, 0, 0)
-#          █  █ █▄ █ █▄ █ █▀▀ ▀▄▀ █▀█ █▄ █
-#          ▀▄▄▀ █ ▀█ █ ▀█ ██▄  █  █▄█ █ ▀█ ▄
+__version__ = (1, 0, 2)
+#          █▄▀ ▄▀█ █▀▄▀█ █▀▀ █▄▀ █  █ █▀█ █▀█
+#          █ █ █▀█ █ ▀ █ ██▄ █ █ ▀▄▄▀ █▀▄ █▄█ ▄
 #                © Copyright 2025
-#            ✈ https://t.me/unneyon
+#            ✈ https://t.me/kamekuro
 
 # 🔒 Licensed under CC-BY-NC-ND 4.0 unless otherwise specified.
 # 🌐 https://creativecommons.org/licenses/by-nc-nd/4.0
@@ -12,24 +12,30 @@ __version__ = (1, 0, 0)
 
 # You CANNOT edit, distribute or redistribute this file without direct permission from the author.
 
-# meta banner: https://mods.unneyon.ru/banners/yamusic.png
-# meta pic: https://static.unneyon.ru/mods/yamusic_icon.png
-# meta developer: @unneyon_hmods
+# meta banner: https://raw.githubusercontent.com/kamekuro/hikka-mods/main/banners/yamusic.png
+# meta pic: https://raw.githubusercontent.com/kamekuro/hikka-mods/main/icons/yamusic.png
+# meta developer: @kamekuro_hmods
 # scope: hikka_only
 # scope: hikka_min 1.6.3
-# requires: aiohttp asyncio requests git+https://github.com/MarshalX/yandex-music-api
+# requires: aiohttp asyncio requests pillow==11.2.1 git+https://github.com/MarshalX/yandex-music-api
 
 import aiohttp
 import asyncio
 import io
 import json
 import logging
-import re
+import random
 import requests
-import uuid
+import string
 import yandex_music
 
-from telethon import types
+import telethon
+import textwrap
+from PIL import (
+    Image, ImageDraw, ImageEnhance,
+    ImageFilter, ImageFont
+)
+import yandex_music.exceptions
 
 from .. import loader, utils
 
@@ -43,63 +49,151 @@ class YaMusicMod(loader.Module):
 
     strings = {
         "name": "YaMusic",
-        "no_token": "<emoji document_id=5312526098750252863>❌</emoji> <b>You didn't specify the access token in the config!</b>",
-        "there_is_no_playing": "<emoji document_id=5210956306952758910>👀</emoji> <b>You don't " \
-                               "listening to anything right now.</b>",
         "queue_types": {
             "VARIOUS": "Your queue",
             "RADIO": "«My Wave»",
             "PLAYLIST": "Playlist «{}»",
             "ALBUM": "Album «{}»"
         },
-        "now": "<emoji document_id=5438616889632761336>🎧</emoji> <b>{performer} — {title}</b>\n\n" \
-               "<emoji document_id=5407025283456835913>📱</emoji> <b>Now is listening on</b> <code>{device}" \
-               "</code>\n" \
-               "<emoji document_id=5431736674147114227>🗂</emoji> <b>Playing from:</b> {playing_from}\n\n" \
-               "<emoji document_id=5429189857324841688>🎵</emoji> <b><a href=\"https://music.yandex.ru/" \
-               "album/{album_id}/track/{track_id}\">Yandex.Music</a> | <a href=\"https://song.link/ya/{track_id}\">song.link</a></b>",
-        "search": "<emoji document_id=5438616889632761336>🎧</emoji> <b>{performer} — {title}</b>\n" \
-               "<emoji document_id=5429189857324841688>🎵</emoji> <b><a href=\"https://music.yandex.ru/" \
-               "album/{album_id}/track/{track_id}\">Yandex.Music</a> | <a href=\"https://song.link/ya/{track_id}\">song.link</a></b>",
-        "downloading": "\n\n<emoji document_id=5325617665874600234>🕔</emoji> <i>Downloading audio…</i>",
-        "args": "<emoji document_id=5312526098750252863>❌</emoji> <b>Specify search query</b>",
-        "404": "<emoji document_id=5312526098750252863>❌</emoji> <b>No results found</b>",
-        "searching": "<emoji document_id=5309965701241379366>🔍</emoji> <b>Searching…</b>",
-        "guide": "<emoji document_id=6334657396698253102>📜</emoji> <b><a " \
-                 "href=\"https://github.com/MarshalX/yandex-music-api/discussions/513" \
-                 "#discussioncomment-2729781\">Guide for obtaining a Yandex.Music token</a></b>",
-        "_cfg_token": "Your access token of Yandex.Music"
+        "guide": (
+            "<emoji document_id=5956561916573782596>📜</emoji> <b><a "
+            "href=\"https://github.com/MarshalX/yandex-music-api/discussions/513"
+            "#discussioncomment-2729781\">Guide for obtaining a Yandex.Music token</a></b>"
+        ),
+        "no_token": (
+            "<emoji document_id=5778527486270770928>❌</emoji> <b>You didn't specify "
+            "the access token in the config!</b>"
+        ),
+        "autobio_e": "<emoji document_id=5429189857324841688>🎧</emoji> <b>Autobio is on now</b>",
+        "autobio_d": "<emoji document_id=5429189857324841688>🎧</emoji> <b>Autobio is off now</b>",
+        "there_is_no_playing": (
+            "<emoji document_id=5474140048741901455>❌</emoji> <b>You don't "
+            "listening to anything right now.</b>"
+        ),
+        "now": (
+            "<emoji document_id=5474304919651491706>🎧</emoji> <b>{performer} — {title}</b>\n\n"
+            "<emoji document_id={device_eid}>⌨️</emoji> <b>Now is listening on</b> <code>{device}</code> "
+            "<b>(<emoji document_id=6039454987250044861>🔊</emoji> {volume}%)</b>\n"
+            "<emoji document_id=5257969839313526622>🗂</emoji> <b>Playing from:</b> {playing_from}\n\n"
+            "<emoji document_id=5429189857324841688>🎵</emoji> <b><a href=\"https://music.yandex.ru/"
+            "album/{album_id}/track/{track_id}\">Yandex.Music</a> | "
+            "<a href=\"https://song.link/ya/{track_id}\">song.link</a></b>"
+        ),
+        "downloading": "\n\n<emoji document_id=5841359499146825803>🕔</emoji> <i>Downloading audio…</i>",
+        "downloading_banner": "\n\n<emoji document_id=5841359499146825803>🕔</emoji> <i>Downloading banner…</i>",
+        "likes": {
+            "liked": (
+                "<emoji document_id=6037533152593842454>❤️</emoji> <b>Track "
+                "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a> "
+                "was successfully liked</b>"
+            ),
+            "unliked": (
+                "<emoji document_id=5992453811510186287>❤️</emoji> <b>Track "
+                "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a> "
+                "was successfully unliked</b>"
+            ),
+            "disliked": (
+                "<emoji document_id=5222400230133081714>💔</emoji> <b>Track "
+                "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a> "
+                "was successfully disliked</b>"
+            )
+        },
+        "lyrics": (
+            "<emoji document_id=5956561916573782596>📜</emoji> <b>Lyrics of the <a href=\""
+            "https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a> track:</b>\n"
+            "<blockquote expandable>{text}</blockquote>\n\n"
+            "<emoji document_id=5247213725080890199>©️</emoji> <b>Writers:</b> {writers}"
+        ),
+        "no_lyrics": (
+            "<emoji document_id=5886285363869126932>❌</emoji> <b>Track "
+            "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a> "
+            "has no lyrics!</b>"
+        ),
+        "search": (
+            "<emoji document_id=5474304919651491706>🎧</emoji> <b>{performer} — {title}</b>\n"
+            "<emoji document_id=5429189857324841688>🎵</emoji> <b><a href=\"https://music.yandex.ru/"
+            "album/{album_id}/track/{track_id}\">Yandex.Music</a> | "
+            "<a href=\"https://song.link/ya/{track_id}\">song.link</a></b>"
+        ),
+        "args": "<emoji document_id=5778527486270770928>❌</emoji> <b>Specify search query</b>",
+        "404": "<emoji document_id=5778527486270770928>❌</emoji> <b>No results found</b>",
+        "searching": "<emoji document_id=5258274739041883702>🔍</emoji> <b>Searching…</b>",
+        "_cfg_token": "Your access token of Yandex.Music",
+        "_cfg_autobio": "Automatic bio template (may contain {artist} and {title})",
+        "_cfg_no_playing_bio": "Bio that is set when nothing is playing"
     }
 
     strings_ru = {
         "_cls_doc": "Модуль для стримингового сервиса Яндекс.Музыка",
-        "no_token": "<emoji document_id=5312526098750252863>❌</emoji> <b>Ты не " \
-                    "указал токен Яндекс.Музыки в конфиге!</b>",
-        "there_is_no_playing": "<emoji document_id=5210956306952758910>👀</emoji> <b>Ты ничего не " \
-                               "слушаешь сейчас.</b>",
         "queue_types": {
             "VARIOUS": "Ваша очередь",
             "RADIO": "«Моя Волна»",
             "PLAYLIST": "Плейлист «{}»",
             "ALBUM": "Альбом «{}»"
         },
-        "now": "<emoji document_id=5438616889632761336>🎧</emoji> <b>{performer} — {title}</b>\n\n" \
-               "<emoji document_id=5407025283456835913>📱</emoji> <b>Сейчас слушаю на</b> <code>{device}" \
-               "</code>\n" \
-               "<emoji document_id=5431736674147114227>🗂</emoji> <b>Откуда играет:</b> {playing_from}\n\n" \
-               "<emoji document_id=5429189857324841688>🎵</emoji> <b><a href=\"https://music.yandex.ru/" \
-               "album/{album_id}/track/{track_id}\">Яндекс.Музыка</a> | <a href=\"https://song.link/ya/{track_id}\">song.link</a></b>",
-        "search": "<emoji document_id=5438616889632761336>🎧</emoji> <b>{performer} — {title}</b>\n" \
-               "<emoji document_id=5429189857324841688>🎵</emoji> <b><a href=\"https://music.yandex.ru/" \
-               "album/{album_id}/track/{track_id}\">Яндекс.Музыка</a> | <a href=\"https://song.link/ya/{track_id}\">song.link</a></b>",
-        "downloading": "\n\n<emoji document_id=5325617665874600234>🕔</emoji> <i>Загрузка трека…</i>",
+        "guide": (
+            "<emoji document_id=5956561916573782596>📜</emoji> <b><a "
+            "href=\"https://github.com/MarshalX/yandex-music-api/discussions/513"
+            "#discussioncomment-2729781\">Гайд по получению токена Яндекс.Музыки</a></b>"
+        ),
+        "no_token": (
+            "<emoji document_id=5312526098750252863>❌</emoji> <b>Ты не "
+            "указал токен Яндекс.Музыки в конфиге!</b>"
+        ),
+        "autobio_e": "<emoji document_id=5429189857324841688>🎧</emoji> <b>Автобио включено</b>",
+        "autobio_d": "<emoji document_id=5429189857324841688>🎧</emoji> <b>Автобио выключено</b>",
+        "there_is_no_playing": (
+            "<emoji document_id=5474140048741901455>❌</emoji> <b>Ты ничего " 
+            "не слушаешь сейчас.</b>"
+        ),
+        "now": (
+            "<emoji document_id=5474304919651491706>🎧</emoji> <b>{performer} — {title}</b>\n\n"
+            "<emoji document_id={device_eid}>⌨️</emoji> <b>Сейчас слушаю на</b> <code>{device}</code> "
+            " <b>(<emoji document_id=6039454987250044861>🔊</emoji> {volume}%)</b>\n"
+            "<emoji document_id=5257969839313526622>🗂</emoji> <b>Откуда играет:</b> {playing_from}\n\n"
+            "<emoji document_id=5429189857324841688>🎵</emoji> <b><a href=\"https://music.yandex.ru/"
+            "album/{album_id}/track/{track_id}\">Яндекс.Музыка</a> | "
+            "<a href=\"https://song.link/ya/{track_id}\">song.link</a></b>"
+        ),
+        "downloading": "\n\n<emoji document_id=5841359499146825803>🕔</emoji> <i>Загрузка трека…</i>",
+        "downloading_banner": "\n\n<emoji document_id=5841359499146825803>🕔</emoji> <i>Загрузка баннера…</i>",
+        "likes": {
+            "liked": (
+                "<emoji document_id=6037533152593842454>❤️</emoji> <b>Лайкнул трек "
+                "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a></b>"
+            ),
+            "unliked": (
+                "<emoji document_id=5992453811510186287>❤️</emoji> <b>Убрал лайк с трека "
+                "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a></b>"
+            ),
+            "disliked": (
+                "<emoji document_id=5222400230133081714>💔</emoji> <b>Дизлайкнул трек "
+                "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a></b>"
+            )
+        },
+        "lyrics": (
+            "<emoji document_id=5956561916573782596>📜</emoji> <b>Текст трека "
+            "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a>:</b>\n"
+            "<blockquote expandable>{text}</blockquote>\n\n"
+            "<emoji document_id=5247213725080890199>©️</emoji> <b>Авторы:</b> {writers}"
+        ),
+        "no_lyrics": (
+            "<emoji document_id=5886285363869126932>❌</emoji> <b>У трека "
+            "<a href=\"https://music.yandex.ru/album/{album_id}/track/{track_id}\">{track}</a> "
+            "нет текста!</b>"
+        ),
+        "search": (
+            "<emoji document_id=5474304919651491706>🎧</emoji> <b>{performer} — {title}</b>\n"
+            "<emoji document_id=5429189857324841688>🎵</emoji> <b><a href=\"https://music.yandex.ru/"
+            "album/{album_id}/track/{track_id}\">Яндекс.Музыка</a> | "
+            "<a href=\"https://song.link/ya/{track_id}\">song.link</a></b>"
+        ),
         "args": "<emoji document_id=5312526098750252863>❌</emoji> <b>Укажите поисковый запрос</b>",
         "404": "<emoji document_id=5312526098750252863>❌</emoji> <b>Ничего не найдено</b>",
-        "searching": "<emoji document_id=5309965701241379366>🔍</emoji> <b>Ищем…</b>",
-        "guide": "<emoji document_id=6334657396698253102>📜</emoji> <b><a " \
-                 "href=\"https://github.com/MarshalX/yandex-music-api/discussions/513" \
-                 "#discussioncomment-2729781\">Гайд по получению токена Яндекс.Музыки</a></b>",
-        "_cfg_token": "Твой токен от Яндекс.Музыки"
+        "searching": "<emoji document_id=5258274739041883702>🔍</emoji> <b>Ищем…</b>",
+        "_cfg_token": "Твой токен от Яндекс.Музыки",
+        "_cfg_autobio": "Шаблон автоматического био (может содержать {artist} и {title})",
+        "_cfg_no_playing_bio": "Био, которое ставится, когда ничего не играет"
     }
 
 
@@ -110,6 +204,18 @@ class YaMusicMod(loader.Module):
                 None,
                 lambda: self.strings["_cfg_token"],
                 validator=loader.validators.Hidden()
+            ),
+            loader.ConfigValue(
+                "autobio",
+                "🎧 {artist} - {title}",
+                lambda: self.strings["_cfg_autobio"],
+                validator=loader.validators.String()
+            ),
+            loader.ConfigValue(
+                "no_playing_bio",
+                "Hello!",
+                lambda: self.strings["_cfg_no_playing_bio"],
+                validator=loader.validators.String()
             )
         )
 
@@ -122,28 +228,81 @@ class YaMusicMod(loader.Module):
             self.set("guide_send", True)
 
     async def client_ready(self, client, db):
-        self.client = client
-        self.db = db
-        self.ym_client = self.get_client()
-        self.auth_session = False
+        self._client = client
+        self._db = db
 
-    def get_client(self):
-        client = None
-        if self.config['token']:
-            client = yandex_music.Client(self.config['token']).init()
-        return client
+        me = await self._client.get_me()
+        self._premium = me.premium if hasattr(me, "premium") else False
+        self.premium_check.start()
+
+        if self.get("autobio", False):
+            self.autobio.start()
+
+
+    @loader.loop(1800)
+    async def premium_check(self):
+        me = await self._client.get_me()
+        self._premium = me.premium if hasattr(me, "premium") else False
+
+
+    @loader.loop(30)
+    async def autobio(self):
+        if not self.config['token']:
+            self.autobio.stop(); self.set("autobio", False)
+            return
+        client = yandex_music.Client(self.config['token']).init()
+        now = await self.__get_now_playing(self.config['token'], client)
+        out = self.config['no_playing_bio'][:(140 if self._premium else 70)]
+        if now and (not now['paused']):
+            out = self.config['autobio'].format(
+                title=now['track']['title'],
+                artist=", ".join(now['track']['artist'])
+            )[:(140 if self._premium else 70)]
+        try:
+            await self._client(
+                telethon.functions.account.UpdateProfileRequest(about=out)
+            )
+        except telethon.errors.rpcerrorlist.FloodWaitError as e:
+            logger.info(f"Sleeping {max(e.seconds, 60)} because of floodwait")
+            await asyncio.sleep(max(e.seconds, 60))
 
 
     @loader.command(
         ru_doc="👉 Гайд по получению токена Яндекс.Музыки",
         alias="yg"
     )
-    async def yguidecmd(self, message: types.Message):
+    async def yguidecmd(self, message: telethon.types.Message):
         """👉 Guide for obtaining a Yandex.Music token"""
+        await utils.answer(message, self.strings("guide"))
+
+
+    @loader.command(
+        ru_doc="👉 Включить/выключить автобио",
+        alias="yb"
+    )
+    async def ybiocmd(self, message: telethon.types.Message):
+        """👉 Enable/disable autobio"""
+
+        if not self.config['token']:
+            return await utils.answer(message, self.strings("no_token"))
+
+        bio_now = self.get("autobio", False)
+        self.set("autobio", not bio_now)
+        if (not bio_now):
+            self.autobio.start()
+        else:
+            self.autobio.stop()
+            try:
+                await self._client(
+                    telethon.functions.account.UpdateProfileRequest(
+                        about=self.config['no_playing_bio'][:(140 if self._premium else 70)]
+                    )
+                )
+            except: pass
 
         await utils.answer(
             message,
-            self.strings("guide")
+            self.strings(f"autobio_{'e' if (not bio_now) else 'd'}")
         )
 
 
@@ -151,97 +310,229 @@ class YaMusicMod(loader.Module):
         ru_doc="👉 Получить трек, который играет сейчас",
         alias="yn"
     )
-    async def ynowcmd(self, message: types.Message):
+    async def ynowcmd(self, message: telethon.types.Message):
         """👉 Get now playing track"""
 
         if not self.config['token']:
             return await utils.answer(message, self.strings("no_token"))
-        if not self.ym_client: self.ym_client = self.get_client()
-
-        now = await self.get_now_playing(self.config['token'])
-        track, ynison = json.loads(now[0].data), now[1]
-        if len(ynison.get("player_state", {}).get("player_queue", {}).get("playable_list", [])) == 0:
-            return await utils.answer(message, self.strings("there_is_no_playing"))
-        elif ynison.get("player_state", {}).get("status", {}).get("paused", True):
+        client = yandex_music.Client(self.config['token']).init()
+        now = await self.__get_now_playing(self.config['token'], client)
+        if (not now) or now['paused']:
             return await utils.answer(message, self.strings("there_is_no_playing"))
 
-        index = ynison.get("player_state", {}).get("player_queue", {}).get("current_playable_index", 0)
-        playable_list = ynison.get("player_state", {}).get("player_queue", {}).get("playable_list", [])
-        playable = playable_list[index] if len(playable_list) >= index+1 else playable_list[0]
-
-        track_info = self.ym_client.tracks(playable["playable_id"])
-        device = "Unknown device"
-        playing_on = ynison.get("active_device_id_optional", "")
-        for i in ynison.get("devices", []):
-            if i['info']['device_id'] == playing_on:
-                device = i['info']['title']
-                break
-
-        playlist_name = "Любимое"
-        playing_from = ynison.get("player_state", {}).get("player_queue", {}).get("entity_type", "VARIOUS")
-        if playing_from == "PLAYLIST":
-            playlist_id = ynison.get("player_state", {}).get("player_queue", {}).get(
-                "entity_id",
-                f"{self.ym_client.me.account.uid}:3"
+        playlist_name = ""
+        if now['entity_type'] in ["PLAYLIST", "ALBUM"]:
+            func = getattr(
+                client,
+                "playlists_list" if now['entity_type'] == "PLAYLIST" else "albums"
             )
-            playlist = self.ym_client.playlists_list(
-                playlist_id
-            )
-            if len(playlist) > 0:
+            if func:
+                entity = func(now['entity_id'])[0]
                 playlist_name = f"<b><a href=\"https://music.yandex.ru/users/" \
-                                f"{self.ym_client.me.account.login}/playlists/" \
-                                f"{playlist_id.split(':')[1]}\">{playlist[0].title}</a></b>"
-        elif playing_from == "ALBUM":
-            album_id = ynison.get("player_state", {}).get("player_queue", {}).get(
-                "entity_id"
-            )
-            album = self.ym_client.albums(album_id)
-            if len(album) > 0:
-                logger.error(album)
-                playlist_name = f"<b><a href=\"https://music.yandex.ru/album/{album[0].id}\">" \
-                                f"{album[0].title}</a></b>"
-                logger.error(playlist_name)
+                                f"{client.me.account.login}/playlists/" \
+                                f"{now['entity_id'].split(':')[1]}\">{entity.title}</a></b>"
+            else:
+                now['entity_type'] = "RADIO"
+
+        device_eid, volume, device = "6039404727542747508", "Unknown Device", "❓"
+        if now['device']:
+            device=now['device']['info']['title']
+            volume=now['device']['volume']*100
+            if now['device']['info']['type'] == "ANDROID": device_eid = "5373266788970670174"
+            if now['device']['info']['type'] == "IOS": device_eid = "5372908412604525258"
 
         out = self.strings("now").format(
-            title=track_info[0].title + (
-                f" ({track_info[0].version})" if track_info[0].version else ""
-            ),
-            performer=", ".join([x.name for x in track_info[0].artists]),
-            device=device,
-            playing_from=self.strings("queue_types").get(playing_from, "RADIO").format(playlist_name),
-            album_id=track_info[0].albums[0].id, track_id=track_info[0].id
+            title=now['track']['title'],
+            performer=", ".join(now['track']['artist']),
+            device=device, volume=volume, device_eid=device_eid,
+            playing_from=self.strings("queue_types").get(now['entity_type'], "VARIOUS").format(playlist_name),
+            track_id=now['track']['track_id'],
+            album_id=now['track']['album_id']
         )
-        logger.error(out)
-        message = await utils.answer(message, out+self.strings("downloading"))
 
-        info = self.ym_client.tracks_download_info(track_info[0].id, True)
-        link = info[0].direct_link
-        audio = None
-        audio = io.BytesIO((await utils.run_sync(requests.get, link)).content)
+        await utils.answer(
+            message, out+self.strings("downloading")
+        )
+
+        audio = io.BytesIO((await utils.run_sync(requests.get, now['track']['download_link'])).content)
         audio.name = "audio.mp3"
 
         await utils.answer_file(
             message=message, file=audio, caption=out,
             attributes=([
-                types.DocumentAttributeAudio(
-                    duration=int(track_info[0].duration_ms / 1000),
-                    title=track_info[0].title,
-                    performer=", ".join([x.name for x in track_info[0].artists])
+                telethon.types.DocumentAttributeAudio(
+                    duration=now['track']['duration'],
+                    title=now['track']['title'],
+                    performer=", ".join(now['track']['artist'])
                 )
             ])
         )
 
 
     @loader.command(
+        ru_doc="👉 Получить баннер трека, который играет сейчас",
+        alias="ynb"
+    )
+    async def ynowbcmd(self, message: telethon.types.Message):
+        """👉 Get now playing track's banner"""
+
+        if not self.config['token']:
+            return await utils.answer(message, self.strings("no_token"))
+        client = yandex_music.Client(self.config['token']).init()
+        now = await self.__get_now_playing(self.config['token'], client)
+        if (not now) or now['paused']:
+            return await utils.answer(message, self.strings("there_is_no_playing"))
+
+        playlist_name = ""
+        if now['entity_type'] in ["PLAYLIST", "ALBUM"]:
+            func = getattr(
+                client,
+                "playlists_list" if now['entity_type'] == "PLAYLIST" else "albums"
+            )
+            if func:
+                entity = func(now['entity_id'])[0]
+                playlist_name = f"<b><a href=\"https://music.yandex.ru/users/" \
+                                f"{client.me.account.login}/playlists/" \
+                                f"{now['entity_id'].split(':')[1]}\">{entity.title}</a></b>"
+            else:
+                now['entity_type'] = "RADIO"
+
+        device_eid, volume, device = "6039404727542747508", "Unknown Device", "❓"
+        if now['device']:
+            device=now['device']['info']['title']
+            volume=now['device']['volume']*100
+            if now['device']['info']['type'] == "ANDROID": device_eid = "5373266788970670174"
+            if now['device']['info']['type'] == "IOS": device_eid = "5372908412604525258"
+
+        out = self.strings("now").format(
+            title=now['track']['title'],
+            performer=", ".join(now['track']['artist']),
+            device=device, volume=volume, device_eid=device_eid,
+            playing_from=self.strings("queue_types").get(now['entity_type'], "VARIOUS").format(playlist_name),
+            track_id=now['track']['track_id'],
+            album_id=now['track']['album_id']
+        )
+
+        await utils.answer(
+            message, out+self.strings("downloading_banner")
+        )
+
+        file = self.__create_banner(
+            now['track']['title'], now['track']['artist'],
+            requests.get(now['track']['img']).content
+        )
+        await utils.answer_file(
+            message=message, file=file, caption=out
+        )
+
+
+    @loader.command(
+        ru_doc="👉 Лайкнуть играющий сейчас трек"
+    )
+    async def ylikecmd(self, message: telethon.types.Message):
+        """👉 Like now playing track's banner"""
+
+        if not self.config['token']:
+            return await utils.answer(message, self.strings("no_token"))
+        client = yandex_music.Client(self.config['token']).init()
+        now = await self.__get_now_playing(self.config['token'], client)
+        if (not now) or now['paused']:
+            return await utils.answer(message, self.strings("there_is_no_playing"))
+
+        client.users_likes_tracks_add(now['track']['track_id'])
+        await utils.answer(
+            message, self.strings("likes")['liked'].format(
+                track_id=now['track']['track_id'], album_id=now['track']['album_id'],
+                track=f"{', '.join(now['track']['artist'])} — {now['track']['title']}"
+            )
+        )
+
+    @loader.command(
+        ru_doc="👉 Убрать лайк с играющего сейчас трека"
+    )
+    async def yunlikecmd(self, message: telethon.types.Message):
+        """👉 Unlike now playing track"""
+
+        if not self.config['token']:
+            return await utils.answer(message, self.strings("no_token"))
+        client = yandex_music.Client(self.config['token']).init()
+        now = await self.__get_now_playing(self.config['token'], client)
+        if (not now) or now['paused']:
+            return await utils.answer(message, self.strings("there_is_no_playing"))
+
+        client.users_likes_tracks_remove(now['track']['track_id'])
+        await utils.answer(
+            message, self.strings("likes")['unliked'].format(
+                track_id=now['track']['track_id'], album_id=now['track']['album_id'],
+                track=f"{', '.join(now['track']['artist'])} — {now['track']['title']}"
+            )
+        )
+
+    @loader.command(
+        ru_doc="👉 Дизлайкнуть играющий сейчас трек",
+        alias="ydis"
+    )
+    async def ydislikecmd(self, message: telethon.types.Message):
+        """👉 Dislike now playing track"""
+
+        if not self.config['token']:
+            return await utils.answer(message, self.strings("no_token"))
+        client = yandex_music.Client(self.config['token']).init()
+        now = await self.__get_now_playing(self.config['token'], client)
+        if (not now) or now['paused']:
+            return await utils.answer(message, self.strings("there_is_no_playing"))
+
+        client.users_dislikes_tracks_add(now['track']['track_id'])
+        await utils.answer(
+            message, self.strings("likes")['disliked'].format(
+                track_id=now['track']['track_id'], album_id=now['track']['album_id'],
+                track=f"{', '.join(now['track']['artist'])} — {now['track']['title']}"
+            )
+        )
+
+
+    @loader.command(
+        ru_doc="👉 Получить текст играющего сейчас трека"
+    )
+    async def ylyricscmd(self, message: telethon.types.Message):
+        """👉 Get lyrics of the now playing track"""
+
+        if not self.config['token']:
+            return await utils.answer(message, self.strings("no_token"))
+        client = yandex_music.Client(self.config['token']).init()
+        now = await self.__get_now_playing(self.config['token'], client)
+        if (not now) or now['paused']:
+            return await utils.answer(message, self.strings("there_is_no_playing"))
+
+        try:
+            lyrics = client.tracks_lyrics(now['track']['track_id'])
+            await utils.answer(
+                message, self.strings("lyrics").format(
+                    track_id=now['track']['track_id'], album_id=now['track']['album_id'],
+                    track=f"{', '.join(now['track']['artist'])} — {now['track']['title']}",
+                    text=requests.get(lyrics.download_url).text,
+                    writers=", ".join(lyrics.writers)
+                )
+            )
+        except yandex_music.exceptions.NotFoundError:
+            await utils.answer(
+                message, self.strings("no_lyrics").format(
+                    track_id=now['track']['track_id'], album_id=now['track']['album_id'],
+                    track=f"{', '.join(now['track']['artist'])} — {now['track']['title']}"
+                )
+            )
+
+
+    @loader.command(
         ru_doc="<запрос> 👉 Поиск трека в Яндекс.Музыке",
         alias="yq"
     )
-    async def ysearchcmd(self, message: types.Message):
+    async def ysearchcmd(self, message: telethon.types.Message):
         """<query> 👉 Search track in Yandex.Music"""
 
         if not self.config['token']:
             return await utils.answer(message, self.strings("no_token"))
-        if not self.ym_client: self.ym_client = self.get_client()
+        client = yandex_music.Client(self.config['token']).init()
 
         query = utils.get_args_raw(message)
         if not query:
@@ -250,7 +541,7 @@ class YaMusicMod(loader.Module):
 
         message = await utils.answer(message, self.strings("searching"))
 
-        search = self.ym_client.search(query, type_="track")
+        search = client.search(query, type_="track")
         if (not search.tracks) or (len(search.tracks.results) == 0):
             return await utils.answer(message, self.strings("404"))
 
@@ -263,7 +554,7 @@ class YaMusicMod(loader.Module):
         )
         message = await utils.answer(message, out+self.strings("downloading"))
 
-        info = self.ym_client.tracks_download_info(search.tracks.results[0].id, True)
+        info = client.tracks_download_info(search.tracks.results[0].id, True)
         link = info[0].direct_link
         audio = None
         audio = io.BytesIO((await utils.run_sync(requests.get, link)).content)
@@ -272,7 +563,7 @@ class YaMusicMod(loader.Module):
         await utils.answer_file(
             message=message, file=audio, caption=out,
             attributes=([
-                types.DocumentAttributeAudio(
+                telethon.types.DocumentAttributeAudio(
                     duration=int(search.tracks.results[0].duration_ms / 1000),
                     title=search.tracks.results[0].title,
                     performer=", ".join([x.name for x in search.tracks.results[0].artists])
@@ -281,115 +572,169 @@ class YaMusicMod(loader.Module):
         )
 
 
-    # Original code: https://github.com/FozerG/YandexMusicRPC/blob/302d3c83c59392dd32595844f0dd54a9439b70d8/main.py#L139
-    async def get_now_playing(self, token: str):
-        device_info = {"app_name": "Chrome", "type": 1}
+
+    # Original code: https://raw.githubusercontent.com/MIPOHBOPOHIH/YMMBFA/main/main.py
+    async def __create_ynison_ws(self, yamusic_token: str, ws_proto: dict) -> dict:
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                "wss://ynison.music.yandex.ru/redirector.YnisonRedirectService/GetRedirectToYnison",
+                headers={
+                    "Sec-WebSocket-Protocol": f"Bearer, v2, {json.dumps(ws_proto)}",
+                    "Origin": "http://music.yandex.ru",
+                    "Authorization": f"OAuth {yamusic_token}",
+                },
+            ) as ws:
+                response = await ws.receive()
+                return json.loads(response.data)
+
+    # Original code: https://raw.githubusercontent.com/MIPOHBOPOHIH/YMMBFA/main/main.py
+    async def  __get_now_playing(self, yamusic_token: str, client: yandex_music.Client):
+        device_id = ''.join(random.choices(string.ascii_lowercase, k=16))
         ws_proto = {
-            "Ynison-Device-Id": "wvpqyqihpxcqjdmf",
-            "Ynison-Device-Info": json.dumps(device_info)
+            "Ynison-Device-Id": device_id,
+            "Ynison-Device-Info": json.dumps({"app_name": "Chrome", "type": 1}),
+        }
+        data = await self.__create_ynison_ws(yamusic_token, ws_proto)
+
+        ws_proto["Ynison-Redirect-Ticket"] = data["redirect_ticket"]
+
+        payload = {
+            "update_full_state": {
+                "player_state": {
+                    "player_queue": {
+                        "current_playable_index": -1,
+                        "entity_id": "",
+                        "entity_type": "VARIOUS",
+                        "playable_list": [],
+                        "options": {"repeat_mode": "NONE"},
+                        "entity_context": "BASED_ON_ENTITY_BY_DEFAULT",
+                        "version": {"device_id": device_id, "version": 9021243204784341000, "timestamp_ms": 0},
+                        "from_optional": "",
+                    },
+                    "status": {
+                        "duration_ms": 0,
+                        "paused": True,
+                        "playback_speed": 1,
+                        "progress_ms": 0,
+                        "version": {"device_id": device_id, "version": 8321822175199937000, "timestamp_ms": 0},
+                    },
+                },
+                "device": {
+                    "capabilities": {"can_be_player": True, "can_be_remote_controller": False, "volume_granularity": 16},
+                    "info": {
+                        "device_id": device_id,
+                        "type": "WEB",
+                        "title": "Chrome Browser",
+                        "app_name": "Chrome",
+                    },
+                    "volume_info": {"volume": 0},
+                    "is_shadow": True,
+                },
+                "is_currently_active": False,
+            },
+            "rid": "ac281c26-a047-4419-ad00-e4fbfda1cba3",
+            "player_action_timestamp_ms": 0,
+            "activity_interception_type": "DO_NOT_INTERCEPT_BY_DEFAULT",
         }
 
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(
-                url="wss://ynison.music.yandex.ru/redirector.YnisonRedirectService/GetRedirectToYnison",
+                f"wss://{data['host']}/ynison_state.YnisonStateService/PutYnisonState",
                 headers={
                     "Sec-WebSocket-Protocol": f"Bearer, v2, {json.dumps(ws_proto)}",
                     "Origin": "http://music.yandex.ru",
-                    "Authorization": f"OAuth {token}",
-                },
+                    "Authorization": f"OAuth {yamusic_token}",
+                }
             ) as ws:
-                recv = await ws.receive()
-                data = json.loads(recv.data)
+                await ws.send_str(json.dumps(payload))
+                response = await ws.receive()
+                ynison: dict = json.loads(response.data)
 
-            new_ws_proto = ws_proto.copy()
-            new_ws_proto["Ynison-Redirect-Ticket"] = data["redirect_ticket"]
+        if len(ynison.get("player_state", {}).get("player_queue", {}).get("playable_list", [])) == 0:
+            return {}
+        raw_track = ynison["player_state"]["player_queue"]["playable_list"][
+            ynison["player_state"]["player_queue"]["current_playable_index"]
+        ]
+        track = client.tracks(raw_track["playable_id"])[0]
+        device = [
+            x for x in ynison['devices'] if x['info']['device_id'] == ynison.get('active_device_id_optional', "")
+        ]
 
-            to_send = {
-                "update_full_state": {
-                    "player_state": {
-                        "player_queue": {
-                            "current_playable_index": -1,
-                            "entity_id": "",
-                            "entity_type": "VARIOUS",
-                            "playable_list": [],
-                            "options": {
-                                "repeat_mode":"NONE"
-                            },
-                            "entity_context": "BASED_ON_ENTITY_BY_DEFAULT",
-                            "version": {
-                                "device_id": ws_proto["Ynison-Device-Id"],
-                                "version": "0",
-                                "timestamp_ms": "0"
-                            },
-                            "from_optional": ""
-                        },
-                        "status": {
-                            "duration_ms": 0,
-                            "paused": True,
-                            "playback_speed": 1,
-                            "progress_ms":0,
-                            "version": {
-                                "device_id": ws_proto["Ynison-Device-Id"],
-                                "version": "0",
-                                "timestamp_ms": "0"
-                            }
-                        }
-                    },
-                    "device": {
-                        "capabilities": {
-                            "can_be_player": False,
-                            "can_be_remote_controller": True,
-                            "volume_granularity": 0
-                        },
-                        "info": {
-                            "device_id": ws_proto["Ynison-Device-Id"],
-                            "type": "ANDROID",
-                            "app_version": "2024.05.1 #46gpr",
-                            "title": "Xiaomi",
-                            "app_name": "Yandex Music"
-                        },
-                        "volume_info": {
-                            "volume": 0
-                        },
-                        "is_shadow": False
-                    },
-                    "is_currently_active": False
-                },
-                "rid": str(uuid.uuid4()),
-                "player_action_timestamp_ms": 0,
-                "activity_interception_type": "DO_NOT_INTERCEPT_BY_DEFAULT"
+        return {
+            "paused": ynison["player_state"]["status"]["paused"],
+            "duration_ms": ynison["player_state"]["status"]["duration_ms"],
+            "progress_ms": ynison["player_state"]["status"]["progress_ms"],
+            "entity_id": ynison["player_state"]["player_queue"]["entity_id"],
+            "entity_type": ynison["player_state"]["player_queue"]["entity_type"],
+            "device": device[0] if len(device) > 0 else None,
+            "track": {
+                "track_id": int(track.track_id.split(":")[0]) if track.track_id.split(":")[0].isdigit() else track.track_id,
+                "album_id": track.albums[0].id,
+                "title": track.title,
+                "artist": track.artists_name(),
+                "img": f"https://{track.cover_uri[:-2]}1000x1000",
+                "duration": track.duration_ms // 1000,
+                "minutes": round(track.duration_ms / 1000) // 60,
+                "seconds": round(track.duration_ms / 1000) % 60,
+                "download_link": track.get_download_info(get_direct_links=True)[0].direct_link
             }
+        } if raw_track['playable_type'] != "LOCAL_TRACK" else {}
 
-            async with session.ws_connect(
-                url=f"wss://{data['host']}/ynison_state.YnisonStateService/PutYnisonState",
-                headers={
-                    "Sec-WebSocket-Protocol": f"Bearer, v2, {json.dumps(new_ws_proto)}",
-                    "Origin": "http://music.yandex.ru",
-                    "Authorization": f"OAuth {token}",
-                },
-                method="GET"
-            ) as ws:
-                await ws.send_str(json.dumps(to_send))
-                await asyncio.sleep(3)
 
-                async for message in ws:
-                    ynison = json.loads(message.data)
-                    player_info = {
-                        "update_playing_status": {
-                                "playing_status": {
-                                    "progress_ms": ynison['player_state']['status']['progress_ms'],
-                                    "duration_ms": ynison['player_state']['status']['duration_ms'],
-                                    "paused": not ynison["player_state"]["status"]["paused"],
-                                    "playback_speed": 1,
-                                    "version": {
-                                        "device_id": ws_proto["Ynison-Device-Id"],
-                                        "version": "0",
-                                        "timestamp_ms": "0"
-                                    }
-                                }
-                            },
-                            "rid": str(uuid.uuid4()),
-                    }
-                    await ws.send_str(json.dumps(player_info))
-                    recv = await ws.receive()
-                    return recv, ynison
+    def __create_banner(
+        self,
+        title: str, artists: list,
+        track_cover: bytes
+    ):
+        w, h = 1920, 768
+        title_font = ImageFont.truetype(io.BytesIO(requests.get(
+            "https://raw.githubusercontent.com/kamekuro/assets/master/fonts/Onest-Bold.ttf"
+        ).content), 80)
+        art_font = ImageFont.truetype(io.BytesIO(requests.get(
+            "https://raw.githubusercontent.com/kamekuro/assets/master/fonts/Onest-Regular.ttf"
+        ).content), 55)
+
+        # Gen banner (bg)
+        track_cov = Image.open(io.BytesIO(track_cover)).convert("RGBA")
+        banner = track_cov.resize((w, w)).crop(
+            (0, (w-h)//2, w, ((w-h)//2)+h)
+        ).filter(ImageFilter.GaussianBlur(radius=14))
+        banner = ImageEnhance.Brightness(banner).enhance(0.3)
+
+        # Gen track cover and put to bg
+        track_cov = track_cov.resize((banner.size[1]-150, banner.size[1]-150))
+        mask = Image.new("L", track_cov.size, 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, track_cov.size[0], track_cov.size[1]), radius=35, fill=255)
+        track_cov.putalpha(mask)
+        track_cov = track_cov.crop(track_cov.getbbox())
+        banner.paste(track_cov, (75, 75), mask)
+
+        # Editing text
+        title_lines = textwrap.wrap(title, 23)
+        if len(title_lines) > 1:
+            title_lines[1] = title_lines[1] + "..." if len(title_lines) > 2 else title_lines[1]
+        title_lines = title_lines[:2]
+        artists_lines = textwrap.wrap(" • ".join(artists), width=40)
+        if len(artists_lines) > 1:
+            for index, art in enumerate(artists_lines):
+                if "•" in art[-2:]:
+                    artists_lines[index] = art[:art.rfind("•") - 1]
+
+        # Put title and artists to banner
+        draw = ImageDraw.Draw(banner)
+        x, y = 150+track_cov.size[0], 110
+        for index, line in enumerate(title_lines):
+            draw.text((x, y), line, font=title_font, fill="#FFFFFF")
+            if index != len(title_lines)-1:
+                y += 70
+        x, y = 150+track_cov.size[0], 110*2
+        if len(title_lines) > 1: y += 70
+        for index, line in enumerate(artists_lines):
+            draw.text((x, y), line, font=art_font, fill="#A0A0A0")
+            if index != len(artists_lines)-1:
+                y += 50
+
+        by = io.BytesIO()
+        banner.save(by, format="PNG"); by.seek(0)
+        by.name = "banner.png"
+        return by
