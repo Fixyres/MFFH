@@ -337,7 +337,7 @@ class YaMusicMod(loader.Module):
         device_eid, volume, device = "6039404727542747508", "Unknown Device", "❓"
         if now['device']:
             device=now['device']['info']['title']
-            volume=now['device']['volume']*100
+            volume=round(now['device']['volume']*100, 2)
             if now['device']['info']['type'] == "ANDROID": device_eid = "5373266788970670174"
             if now['device']['info']['type'] == "IOS": device_eid = "5372908412604525258"
 
@@ -400,7 +400,7 @@ class YaMusicMod(loader.Module):
         device_eid, volume, device = "6039404727542747508", "Unknown Device", "❓"
         if now['device']:
             device=now['device']['info']['title']
-            volume=now['device']['volume']*100
+            volume=round(now['device']['volume']*100, 2)
             if now['device']['info']['type'] == "ANDROID": device_eid = "5373266788970670174"
             if now['device']['info']['type'] == "IOS": device_eid = "5372908412604525258"
 
