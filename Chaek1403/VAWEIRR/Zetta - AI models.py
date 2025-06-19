@@ -38,7 +38,7 @@ available_models = {
     "11": "gemini",
     "12": "gemini-1.5 Pro",
     "13": "gemini-flash",
-    "14": "gemini-2.5-flash-preview-04-17",
+    "14": "gemini-2.5-flash",
     "15": "gemini-2.5-pro-exp-03-25",
     "16": "llama-3.1",
     "17": "llama-3.3-8b",
@@ -83,7 +83,7 @@ class AIModule(loader.Module):
     """
 🧠 Модуль Zetta - AI Models
 >> Часть экосистемы Zetta - AI models <<
-🌒 Version: 11.5 | FastZetta Beta 1, delete aierror
+🌒 Version: 11.7 | FastZetta Beta 1, Gemini updated
 Основанно на базе инструментов API - @OnlySq
 
 📍Описание:
@@ -401,7 +401,7 @@ class AIModule(loader.Module):
         else:
             api_url = "http://109.172.94.236:5001/OnlySq-Zetta/v1/models"
             payload = {
-                "model": 'gemini-2.5-flash-preview-04-17',
+                "model": 'gemini-2.5-flash',
                 "request": {
                     "messages": [
                         {
@@ -784,10 +784,10 @@ class AIModule(loader.Module):
         """
         - Информация об обновлении✅
         """
-        await message.edit('''<b>Обновление 11.5:
+        await message.edit('''<b>Обновление 11.7:
 Изменения:
 - Бета версия FastZetta. Первая бета.
-- удален aierror.
+- Обновлены модели Gemini.
 
 советуем команду .moduleinfo для подробной информации о модуле.
 
