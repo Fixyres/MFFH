@@ -2,6 +2,7 @@
 
 from datetime import timedelta, datetime, timezone
 import os
+import re
 from .. import loader, utils
 from telethon.tl.functions.channels import (
     GetParticipantRequest,
@@ -35,7 +36,6 @@ class ChatModuleMod(loader.Module):
         "my_id": "<emoji document_id=5208454037531280484>💜</emoji> <b>My ID:</b> <code>{my_id}</code>",
         "chat_id": "<emoji document_id=5886436057091673541>💬</emoji> <b>Chat ID:</b> <code>{chat_id}</code>",
         "user_id": "<emoji document_id=6035084557378654059>👤</emoji> <b>User's ID:</b> <code>{user_id}</code>",
-        "user_not_found": "<emoji document_id=5019523782004441717>❌</emoji> <b>User not found.</b>",
         "user_not_participant": "<emoji document_id=5019523782004441717>❌</emoji> <b>User is not in this group.</b>",
         "rights_header": '<b><a href="tg://user?id={id}">{name}</a>\'s rights in this chat\n\n',
         "not_an_admin": "<emoji document_id=5019523782004441717>❌</emoji> {user} is not an admin.",
@@ -64,7 +64,6 @@ class ChatModuleMod(loader.Module):
         "no_ownerships": "<emoji document_id=5019523782004441717>❌</emoji> <b>No possessions.</b>",
         "not_a_chat": "<emoji document_id=5276240711795107620>⚠️</emoji> <b>It works only in groups!</b>",
         "successful_delete": "<emoji document_id=5021905410089550576>✅</emoji> {chat_type} successfully deleted",
-        "search_deleted_accounts": "<emoji document_id=5188311512791393083>🔎</emoji> <b>Searching for deleted accounts</b>",
         "no_deleted_accounts": "<emoji document_id=5341509066344637610>😎</emoji> <b>No deleted accounts found here</b>",
         "kicked_deleted_accounts": "<emoji document_id=5328302454226298081>🫥</emoji> <b>Removed {count} deleted accounts</b>",
         "admins_in_chat": "<emoji document_id=5276229330131772747>👑</emoji> <b>Admins in <code>{title}</code> ({count}):</b>\n\n",
@@ -82,9 +81,6 @@ class ChatModuleMod(loader.Module):
         "user_is_banned_with_reason": "⛔️ <b>{name} [<code>{id}</code>] has been banned for {time_info}.</b>\n<i>Reason: {reason}</i>",
         "user_is_banned_forever": "⛔️ <b>{name} [<code>{id}</code>] has been banned forever.</b>",
         "user_is_banned_forever_with_reason": "⛔️ <b>{name} [<code>{id}</code>] has been banned forever.</b>\n<i>Reason: {reason}</i>",
-        "minutes": "{time} minutes",
-        "hours": "{time} hours",
-        "days": "{time} days",
         "user_is_unbanned": "👋🏻 <b>{name} [<code>{id}</code>] has been unbanned.</b>",
         "user_is_kicked": "🍃 <b><code>{name}</code> [<code>{id}</code>] has been kicked.</b>",
         "user_is_kicked_with_reason": "🍃 <b><code>{name}</code> [<code>{id}</code>] has been kicked.</b>\n<i>Reason: {reason}</i>",
@@ -146,7 +142,7 @@ class ChatModuleMod(loader.Module):
                         args[0] if not args[0].strip().isdigit() else int(args[0])
                     )
                 else:
-                    return await utils.answer(message, self.strings("user_not_found"))
+                    return await utils.answer(message, self.strings("no_user"))
             try:
                 result = await self._client(
                     GetParticipantRequest(channel=chat, participant=participant_id)
@@ -233,6 +229,7 @@ class ChatModuleMod(loader.Module):
         """Shows the list of chats, channels and groups where you are an admin/owner"""
         count = 0
         msg = ""
+        await utils.answer(message, self.strings("loading"))
         async for dialog in self._client.iter_dialogs():
             if dialog.is_channel or dialog.is_group:
                 chat = await self._client.get_entity(dialog.id)
@@ -433,115 +430,69 @@ class ChatModuleMod(loader.Module):
 
     @loader.command(ru_doc="Забанить участника")
     async def ban(self, message):
-        """Ban a participant"""
+        """Ban a participant temporarily or permanently"""
         if message.is_private:
             return await utils.answer(message, self.strings("not_a_chat"))
-        args = utils.get_args(message)
-        reason = ""
-        chat = await message.get_chat()
-        reply = await message.get_reply_message()
-        until = 0
-        now = None
-        if not reply and args:
-            if args[0].startswith("@"):
-                id = "".join(args[0][1:])
-            elif args[1].startswith("@"):
-                time = int(args[0][:-1])
-                unit = args[0][-1]
-                now = datetime.now(timezone.utc)
-                id = "".join(args[1][1:])
-                if unit == "m":
-                    until = now + timedelta(minutes=time)
-                    time_info = self.strings("minutes").format(time=time)
-                elif unit == "h":
-                    until = now + timedelta(hours=time)
-                    time_info = self.strings("hours").format(time=time)
-                elif unit == "d":
-                    until = now + timedelta(days=time)
-                    time_info = self.strings("days").format(time=time)
-                else:
-                    return utils.answer(message, self.strings("invalid_args"))
-            user = await self._client.get_entity(id if not id.isdigit() else int(id))
-        elif reply and args:
-            if args[0][0].isdigit() and not args[0][-1].isdigit():
-                time = int(args[0][:-1])
-                unit = args[0][-1]
-                now = datetime.now(timezone.utc)
-                id = reply.sender_id
-                if unit == "m":
-                    until = now + timedelta(minutes=time)
-                    time_info = self.strings("minutes").format(time=time)
-                elif unit == "h":
-                    until = now + timedelta(hours=time)
-                    time_info = self.strings("hours").format(time=time)
-                elif unit == "d":
-                    until = now + timedelta(days=time)
-                    time_info = self.strings("days").format(time=time)
-                else:
-                    return utils.answer(message, self.strings("invalid_args"))
-            else:
-                id = reply.sender_id
-            user = await self._client.get_entity(id)
-        elif reply and not args:
-            user = await self._client.get_entity(reply.sender_id)
-        elif not reply and not args:
-            return await utils.answer(message, self.strings("invalid_args"))
-        if "\n" in message.text:
-            reason = message.text.split("\n", 1)[1]
 
-        if until != 0:
+        text = message.text.split("\n", 1)
+        first_line = text[0]
+        reason = text[1] if len(text) > 1 else ""
+        reply = await message.get_reply_message()
+        user = None
+        if reply:
+            user = await self._client.get_entity(reply.sender_id)
+        else:
+            user = await self._client.get_entity(await utils.get_target(message))
+        if not user:
+            return await utils.answer(message, self.strings("invalid_args"))
+
+        time_match = re.search(r"(\d+)\s*(mo|y|w|d|h|m)", first_line)
+        chat = await message.get_chat()
+        if time_match:
+            duration_str = time_match.group(0)
+            until_date = self.parse_time(duration_str)
+            time_info = self.parse_time_info(duration_str)
+
+            await self._client.edit_permissions(chat, user, until_date=until_date, view_messages=False)
+
             if reason:
-                ret = await utils.answer(
+                return await utils.answer(
                     message,
                     self.strings("user_is_banned_with_reason").format(
-                        id=user.id,
-                        name=user.first_name,
-                        reason=reason,
-                        time_info=time_info,
+                        id=user.id, name=user.first_name, reason=reason, time_info=time_info[0],
                     ),
                 )
-            else:
-                ret = await utils.answer(
-                    message,
-                    self.strings("user_is_banned").format(
-                        id=user.id, name=user.first_name, time_info=time_info
-                    ),
-                )
-        else:
-            if reason:
-                ret = await utils.answer(
-                    message,
-                    self.strings("user_is_banned_forever_with_reason").format(
-                        id=user.id, name=user.first_name, reason=reason
-                    ),
-                )
-            else:
-                ret = await utils.answer(
-                    message,
-                    self.strings("user_is_banned_forever").format(
-                        id=user.id, name=user.first_name
-                    ),
-                )
-        await self._client.edit_permissions(
-            chat, user, until_date=until, view_messages=False
+            return await utils.answer(
+                message,
+                self.strings("user_is_banned").format(id=user.id, name=user.first_name, time_info=time_info[0])
+            )
+
+        await self._client.edit_permissions(chat, user, view_messages=False)
+
+        if reason:
+            return await utils.answer(
+                message,
+                self.strings("user_is_banned_with_reason_forever").format(
+                    id=user.id, name=user.first_name, reason=reason,
+                ),
+            )
+        return await utils.answer(
+            message,
+            self.strings("user_is_banned_forever").format(id=user.id, name=user.first_name),
         )
-        return ret
 
     @loader.command(ru_doc="Разбанить пользователя")
     async def unban(self, message):
         """Unban a user"""
         if message.is_private:
             return await utils.answer(self.strings("not_a_chat"))
-        args = utils.get_args(message)
         reply = await message.get_reply_message()
         user = None
         if reply:
             user = await self._client.get_entity(reply.sender_id)
-        elif args:
-            user = await self._client.get_entity(
-                args[0] if not args[0].isdigit() else int(args[0])
-            )
         else:
+            user = await self._client.get_entity(await utils.get_target(message))
+        if not user:
             return await utils.answer(self.strings("no_user"))
         chat = await message.get_chat()
         await self._client.edit_permissions(chat, user, view_messages=True)
@@ -553,19 +504,17 @@ class ChatModuleMod(loader.Module):
     @loader.command(ru_doc="Кикнуть участника")
     async def kick(self, message):
         """Kick a participant"""
-        args = utils.get_args(message)
         reply = await message.get_reply_message()
         reason = ""
-        if reply:
-            user = await self._client.get_entity(reply.sender_id)
-        elif args:
-            user = await self._client.get_entity(
-                args[0] if not args[0].isdigit() else int(args[0])
-            )
-        else:
-            return await utils.answer(message, self.strings("no_user"))
+        user = None
         if "\n" in message.text:
             reason = message.text.split("\n", 1)[1]
+        if reply:
+            user = await self._client.get_entity(reply.sender_id)
+        else:
+            user = await self._client.get_entity(await utils.get_target(message))
+        if not user:
+            return await utils.answer(message, self.strings("no_user"))
         chat = await message.get_chat()
         await self._client.kick_participant(chat, user)
         return (
@@ -584,139 +533,74 @@ class ChatModuleMod(loader.Module):
 
     @loader.command(ru_doc="Замутить участника")
     async def mute(self, message):
-        """Mute a participant"""
+        """Mute a participant temporarily or permanently"""
         if message.is_private:
             return await utils.answer(message, self.strings("not_a_chat"))
-        args = utils.get_args(message)
-        reason = ""
-        chat = await message.get_chat()
+
+
+        text = message.text.split("\n", 1)
+        first_line = text[0]
+        reason = text[1] if len(text) > 1 else ""
         reply = await message.get_reply_message()
-        until = 0
-        now = None
-        if not reply and args:
-            if args[0].startswith("@"):
-                id = "".join(args[0][1:])
-            elif args[1].startswith("@"):
-                time = int(args[0][:-1])
-                unit = args[0][-1]
-                now = datetime.now(timezone.utc)
-                id = "".join(args[1][1:])
-                if unit == "m":
-                    until = now + timedelta(minutes=time)
-                    time_info = self.strings("minutes").format(time=time)
-                elif unit == "h":
-                    until = now + timedelta(hours=time)
-                    time_info = self.strings("hours").format(time=time)
-                elif unit == "d":
-                    until = now + timedelta(days=time)
-                    time_info = self.strings("days").format(time=time)
-                else:
-                    return utils.answer(message, self.strings("invalid_args"))
-            user = await self._client.get_entity(id if not id.isdigit() else int(id))
-        elif reply and args:
-            if args[0][0].isdigit() and not args[0][-1].isdigit():
-                time = int(args[0][:-1])
-                unit = args[0][-1]
-                now = datetime.now(timezone.utc)
-                id = reply.sender_id
-                if unit == "m":
-                    until = now + timedelta(minutes=time)
-                    time_info = self.strings("minutes").format(time=time)
-                elif unit == "h":
-                    until = now + timedelta(hours=time)
-                    time_info = self.strings("hours").format(time=time)
-                elif unit == "d":
-                    until = now + timedelta(days=time)
-                    time_info = self.strings("days").format(time=time)
-                else:
-                    return utils.answer(message, self.strings("invalid_args"))
-            else:
-                id = reply.sender_id
-            user = await self._client.get_entity(id)
-        elif reply and not args:
+        user = None
+        if reply:
             user = await self._client.get_entity(reply.sender_id)
-        elif not reply and not args:
+        else:
+            user = await self._client.get_entity(await utils.get_target(message))
+        if not user:
             return await utils.answer(message, self.strings("invalid_args"))
 
-        if "\n" in message.text:
-            reason = message.text.split("\n", 1)[1]
-        if until != 0:
+        time_match = re.search(r"(\d+)\s*(mo|y|w|d|h|m)", first_line)
+        chat = await message.get_chat()
+        if time_match:
+            duration_str = time_match.group(0)
+            until_date = self.parse_time(duration_str)
+            time_info = self.parse_time_info(duration_str)
+
+            await self._client.edit_permissions(chat, user, until_date=until_date, send_messages=False)
+
             if reason:
-                ret = await utils.answer(
+                return await utils.answer(
                     message,
                     self.strings("user_is_muted_with_reason").format(
-                        id=user.id,
-                        name=user.first_name,
-                        time_info=time_info,
-                        reason=reason,
+                        id=user.id, name=user.first_name, reason=reason, time_info=time_info[0],
                     ),
                 )
-            else:
-                ret = await utils.answer(
-                    message,
-                    self.strings("user_is_muted").format(
-                        id=user.id,
-                        name=user.first_name,
-                        time_info=time_info,
-                    ),
-                )
-        else:
-            if reason:
-                ret = await utils.answer(
-                    message,
-                    self.strings("user_is_muted_with_reason_forever").format(
-                        id=user.id, name=user.first_name, reason=reason
-                    ),
-                )
-            else:
-                ret = await utils.answer(
-                    message,
-                    self.strings("user_is_muted_forever").format(
-                        id=user.id, name=user.first_name
-                    ),
-                )
-        await self._client.edit_permissions(
-            chat,
-            user,
-            until_date=until,
-            send_messages=False,
-            send_media=False,
-            send_stickers=False,
-            send_gifs=False,
-            send_games=False,
-            send_inline=False,
-            send_polls=False,
+            return await utils.answer(
+                message,
+                self.strings("user_is_muted").format(id=user.id, name=user.first_name, time_info=time_info[0])
+            )
+
+        await self._client.edit_permissions(chat, user, send_messages=False)
+
+        if reason:
+            return await utils.answer(
+                message,
+                self.strings("user_is_muted_with_reason_forever").format(
+                    id=user.id, name=user.first_name, reason=reason,
+                ),
+            )
+        return await utils.answer(
+            message,
+            self.strings("user_is_muted_forever").format(id=user.id, name=user.first_name),
         )
-        return ret
 
     @loader.command(ru_doc="Размутить участника")
     async def unmute(self, message):
         """Unmute a participant"""
         if message.is_private:
             return await utils.answer(message, self.strings("not_a_chat"))
-        args = utils.get_args(message)
         reply = await message.get_reply_message()
-        chat = await message.get_chat()
         if reply:
             user = await self._client.get_entity(reply.sender_id)
-        elif args:
-            user = await self._client.get_entity(
-                args[0] if not args[0].isdigit() else int(args[0])
-            )
         else:
+            user = await self._client.get_entity(await utils.get_target(message))
+        if not user:
             return await utils.answer(message, "no_user")
 
-        await self._client.edit_permissions(
-            chat,
-            user,
-            send_messages=True,
-            send_media=True,
-            send_stickers=True,
-            send_gifs=True,
-            send_games=True,
-            send_inline=True,
-            send_polls=True,
-        )
+        chat = await message.get_chat()
+
+        await self._client.edit_permissions(chat, user, send_messages=True)
         return await utils.answer(
             message,
             self.strings("user_is_unmuted").format(id=user.id, name=user.first_name),
@@ -735,20 +619,7 @@ class ChatModuleMod(loader.Module):
                 chat,
                 ChatBannedRights(
                     until_date=0,
-                    send_messages=not is_muted,
-                    send_media=not is_muted,
-                    send_stickers=not is_muted,
-                    send_gifs=not is_muted,
-                    send_games=not is_muted,
-                    send_inline=not is_muted,
-                    send_polls=not is_muted,
-                    send_photos=not is_muted,
-                    send_videos=not is_muted,
-                    send_roundvideos=not is_muted,
-                    send_audios=not is_muted,
-                    send_voices=not is_muted,
-                    send_docs=not is_muted,
-                    send_plain=not is_muted,
+                    send_messages=not is_muted
                 ),
             )
         )
@@ -780,3 +651,49 @@ class ChatModuleMod(loader.Module):
                 old_title=old_title, new_title=new_title, type_of=type_of
             ),
         )
+
+    def parse_time(self, time: str) -> timedelta:
+        unit_to_days = {
+            "m": 1/1440,
+            "h": 1/24,
+            "d": 1,
+            "w": 7,
+            "mo": 30,
+            "y": 365,
+        }
+
+        pattern = r"(\d+)\s*(mo|y|w|d|h|m)"
+        matches = re.findall(pattern, time)
+        total_days = 0
+        for value, unit in matches:
+            val = int(value)
+            total_days += val * unit_to_days[unit]
+
+        return timedelta(days=total_days)
+
+    def parse_time_info(self, time: str):
+        unit_names = {
+            "y": ("year", "years"),
+            "mo": ("month", "months"),
+            "w": ("week", "weeks"),
+            "d": ("day", "days"),
+            "h": ("hour", "hours"),
+            "m": ("minute", "minutes"),
+        }
+        units_order = ["y", "mo", "w", "d", "h", "m"]
+        pattern = r"(\d+)\s*(mo|y|w|d|h|m)"
+        matches = re.findall(pattern, time)
+        time_parts = {}
+        for value, unit in matches:
+            value = int(value)
+            if unit in time_parts:
+                time_parts[unit] += value
+            else:
+                time_parts[unit] = value
+        result = []
+        for unit in units_order:
+            if unit in time_parts:
+                val = time_parts[unit]
+                name = unit_names[unit][1 if val != 1 else 0]
+                result.append(f"{val} {name}")
+        return result
