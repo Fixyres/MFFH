@@ -9,6 +9,8 @@ from telethon.tl.functions.channels import (
     LeaveChannelRequest,
     DeleteChannelRequest,
     EditTitleRequest,
+    EditPhotoRequest,
+    CreateChannelRequest
 )
 from telethon.errors import (
     UserNotParticipantError,
@@ -20,12 +22,13 @@ from telethon.tl.types import (
     Chat,
     ChannelParticipantsAdmins,
     ChannelParticipantsBots,
-    ChatBannedRights,
+    ChatBannedRights
 )
 from telethon.tl.functions.messages import (
     DeleteChatRequest,
     EditChatDefaultBannedRightsRequest,
     EditChatTitleRequest,
+    ExportChatInviteRequest
 )
 
 
@@ -92,6 +95,8 @@ class ChatModuleMod(loader.Module):
         "chat_muted": "🔇 <b>The chat is now muted for participants.</b>",
         "chat_unmuted": "✅ <b>The chat is now open to all participants.</b>",
         "title_changed": "<b>The {type_of} title was successfully changed from <code>{old_title}</code> to <code>{new_title}</code>.</b>",
+        "channel_created": "<emoji document_id=6296367896398399651>✅</emoji> <b>The channel <code>{title}</code> is created.\n</b><emoji document_id=5237918475254526196>🔗</emoji><b> Invite link: {link}</b>",
+        "group_created": "<emoji document_id=6296367896398399651>✅</emoji> <b>The group <code>{title}</code> is created.\n</b><emoji document_id=5237918475254526196>🔗</emoji><b> Invite link: {link}</b>"
     }
 
     @loader.command(ru_doc="[reply] - Узнать ID")
@@ -651,6 +656,24 @@ class ChatModuleMod(loader.Module):
                 old_title=old_title, new_title=new_title, type_of=type_of
             ),
         )
+
+    @loader.command(ru_doc="[g/c] [title] - Создать группу/канал")
+    async def create(self, message):
+        """[g/c] [title] - Create group/channel"""
+        args = utils.get_args(message)
+        type_of = args[0]
+        if type_of == "g":
+            result = await self._client(CreateChannelRequest(title=args[1], megagroup=True, about=""))
+            chat = result.chats[0]
+            invite_link = await self._client(ExportChatInviteRequest(peer=chat.id, title="Invite link"))
+            return await utils.answer(message, self.strings("group_created").format(link=invite_link.link, title=args[1]))
+        elif type_of == "c":
+            result = await self._client(CreateChannelRequest(title=args[1], broadcast=True, about=""))
+            chat = result.chats[0]
+            invite_link = await self._client(ExportChatInviteRequest(peer=chat.id, title="Invite link"))
+            return await utils.answer(message, self.strings("channel_created").format(link=invite_link.link, title=args[1]))
+        else:
+            return await utils.answer(message, self.strings("invalid_args"))
 
     def parse_time(self, time: str) -> timedelta:
         unit_to_days = {
