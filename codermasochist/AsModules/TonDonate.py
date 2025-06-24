@@ -70,6 +70,7 @@ class TonDonate(loader.Module):
             message=message,
             text=text,
             reply_markup=[
-                [{"text": "оплатить", "url": url}]
+                [{"text": "оплатить", "url": url}],
+                [{"text": "скопировать", "copy": wallet}]
             ]
           )
