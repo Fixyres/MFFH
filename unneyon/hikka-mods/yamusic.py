@@ -1,4 +1,4 @@
-__version__ = (1, 0, 2)
+__version__ = (1, 0, 3)
 #          █▄▀ ▄▀█ █▀▄▀█ █▀▀ █▄▀ █  █ █▀█ █▀█
 #          █ █ █▀█ █ ▀ █ ██▄ █ █ ▀▄▄▀ █▀▄ █▄█ ▄
 #                © Copyright 2025
@@ -317,7 +317,7 @@ class YaMusicMod(loader.Module):
             return await utils.answer(message, self.strings("no_token"))
         client = yandex_music.Client(self.config['token']).init()
         now = await self.__get_now_playing(self.config['token'], client)
-        if (not now) or now['paused']:
+        if not now:
             return await utils.answer(message, self.strings("there_is_no_playing"))
 
         playlist_name = ""
@@ -380,7 +380,7 @@ class YaMusicMod(loader.Module):
             return await utils.answer(message, self.strings("no_token"))
         client = yandex_music.Client(self.config['token']).init()
         now = await self.__get_now_playing(self.config['token'], client)
-        if (not now) or now['paused']:
+        if not now:
             return await utils.answer(message, self.strings("there_is_no_playing"))
 
         playlist_name = ""
@@ -419,6 +419,7 @@ class YaMusicMod(loader.Module):
 
         file = self.__create_banner(
             now['track']['title'], now['track']['artist'],
+            now['duration_ms'], now['progress_ms'],
             requests.get(now['track']['img']).content
         )
         await utils.answer_file(
@@ -436,7 +437,7 @@ class YaMusicMod(loader.Module):
             return await utils.answer(message, self.strings("no_token"))
         client = yandex_music.Client(self.config['token']).init()
         now = await self.__get_now_playing(self.config['token'], client)
-        if (not now) or now['paused']:
+        if not now:
             return await utils.answer(message, self.strings("there_is_no_playing"))
 
         client.users_likes_tracks_add(now['track']['track_id'])
@@ -457,7 +458,7 @@ class YaMusicMod(loader.Module):
             return await utils.answer(message, self.strings("no_token"))
         client = yandex_music.Client(self.config['token']).init()
         now = await self.__get_now_playing(self.config['token'], client)
-        if (not now) or now['paused']:
+        if not now:
             return await utils.answer(message, self.strings("there_is_no_playing"))
 
         client.users_likes_tracks_remove(now['track']['track_id'])
@@ -479,7 +480,7 @@ class YaMusicMod(loader.Module):
             return await utils.answer(message, self.strings("no_token"))
         client = yandex_music.Client(self.config['token']).init()
         now = await self.__get_now_playing(self.config['token'], client)
-        if (not now) or now['paused']:
+        if not now:
             return await utils.answer(message, self.strings("there_is_no_playing"))
 
         client.users_dislikes_tracks_add(now['track']['track_id'])
@@ -501,7 +502,7 @@ class YaMusicMod(loader.Module):
             return await utils.answer(message, self.strings("no_token"))
         client = yandex_music.Client(self.config['token']).init()
         now = await self.__get_now_playing(self.config['token'], client)
-        if (not now) or now['paused']:
+        if not now:
             return await utils.answer(message, self.strings("there_is_no_playing"))
 
         try:
@@ -662,8 +663,8 @@ class YaMusicMod(loader.Module):
 
         return {
             "paused": ynison["player_state"]["status"]["paused"],
-            "duration_ms": ynison["player_state"]["status"]["duration_ms"],
-            "progress_ms": ynison["player_state"]["status"]["progress_ms"],
+            "duration_ms": int(ynison["player_state"]["status"]["duration_ms"]),
+            "progress_ms": int(ynison["player_state"]["status"]["progress_ms"]),
             "entity_id": ynison["player_state"]["player_queue"]["entity_id"],
             "entity_type": ynison["player_state"]["player_queue"]["entity_type"],
             "device": device[0] if len(device) > 0 else None,
@@ -684,6 +685,7 @@ class YaMusicMod(loader.Module):
     def __create_banner(
         self,
         title: str, artists: list,
+        duration: int, progress: int,
         track_cover: bytes
     ):
         w, h = 1920, 768
@@ -693,6 +695,9 @@ class YaMusicMod(loader.Module):
         art_font = ImageFont.truetype(io.BytesIO(requests.get(
             "https://raw.githubusercontent.com/kamekuro/assets/master/fonts/Onest-Regular.ttf"
         ).content), 55)
+        time_font = ImageFont.truetype(io.BytesIO(requests.get(
+            "https://raw.githubusercontent.com/kamekuro/assets/master/fonts/Onest-Bold.ttf"
+        ).content), 36)
 
         # Gen banner (bg)
         track_cov = Image.open(io.BytesIO(track_cover)).convert("RGBA")
@@ -733,6 +738,12 @@ class YaMusicMod(loader.Module):
             draw.text((x, y), line, font=art_font, fill="#A0A0A0")
             if index != len(artists_lines)-1:
                 y += 50
+
+        # Drawing status bar
+        draw.rounded_rectangle([768, 650, 768+1072, 650+15], radius=15//2, fill="#A0A0A0")
+        draw.rounded_rectangle([768, 650, 768+int(1072*(progress/duration)), 650+15], radius=15//2, fill="#FFFFFF")
+        draw.text((768, 600), f"{(progress//1000//60):02}:{(progress//1000%60):02}", font=time_font, fill="#FFFFFF")
+        draw.text((1745, 600), f"{(duration//1000//60):02}:{(duration//1000%60):02}", font=time_font, fill="#FFFFFF")
 
         by = io.BytesIO()
         banner.save(by, format="PNG"); by.seek(0)
