@@ -7,6 +7,7 @@ import re
 from .. import loader, utils
 from telethon.tl.functions.channels import (
     GetParticipantRequest,
+    GetParticipantsRequest,
     LeaveChannelRequest,
     DeleteChannelRequest,
     EditTitleRequest,
@@ -29,6 +30,7 @@ from telethon.tl.types import (
     Channel,
     Chat,
     ChannelParticipantsAdmins,
+    ChannelParticipantCreator,
     ChannelParticipantsBots,
     ChatBannedRights,
 )
@@ -110,6 +112,8 @@ class ChatModuleMod(loader.Module):
         "user_not_mutual_contact": "<emoji document_id=5019523782004441717>❌</emoji> <b><a href=\"tg://user?id={user_id}\">{user}</a> is not a mutual contact.</b>",
         "user_kicked": "<emoji document_id=5019523782004441717>❌</emoji> <b><a href=\"tg://user?id={user_id}\">{user}</a> is kicked from the chat.</b>",
         "user_invited": "<emoji document_id=6296367896398399651>✅</emoji> <b>User <a href='tg://user?id={id}'>{user}</a> is invited to the chat.</b>",
+        "creator": "<emoji document_id=5433758796289685818>👑</emoji> <b>The creator is <a href='tg://user?id={id}'>{creator}</a>.</b>",
+        "no_creator": "<emoji document_id=5019523782004441717>❌</emoji> <b>No creator found.</b>",
     }
 
     strings_ru = {
@@ -179,6 +183,8 @@ class ChatModuleMod(loader.Module):
         "user_not_mutual_contact": "<emoji document_id=5019523782004441717>❌</emoji> <b><a href=\"tg://user?id={user_id}\">{user}</a> не является взаимным контактом.</b>",
         "user_kicked": "<emoji document_id=5019523782004441717>❌</emoji> <b><a href=\"tg://user?id={user_id}\">{user}</a> кикнут из чата.</b>",
         "user_invited": "<emoji document_id=6296367896398399651>✅</emoji> <b>Пользователь <a href='tg://user?id={id}'>{user}</a> приглашён в чат.</b>",
+        "creator": "<emoji document_id=5433758796289685818>👑</emoji> <b>Создатель: <a href='tg://user?id={id}'>{creator}</a>.</b>",
+        "no_creator": "<emoji document_id=5019523782004441717>❌</emoji> <b>Создатель не найден.</b>",
     }
 
     strings_jp = {
@@ -248,6 +254,8 @@ class ChatModuleMod(loader.Module):
         "user_not_mutual_contact": "<emoji document_id=5019523782004441717>❌</emoji> <b><a href=\"tg://user?id={user_id}\">{user}</a> は相互連絡先ではありません。</b>",
         "user_kicked": "<emoji document_id=5019523782004441717>❌</emoji> <b><a href=\"tg://user?id={user_id}\">{user}</a> をキックしました。</b>",
         "user_invited": "<emoji document_id=6296367896398399651>✅</emoji> <b>ユーザー <a href='tg://user?id={id}'>{user}</a> がチャットに招待されました。</b>",
+        "creator": "<emoji document_id=5433758796289685818>👑</emoji> <b>クリエイター: <a href='tg://user?id={id}'>{creator}</a>.</b>",
+        "no_creator": "<emoji document_id=5019523782004441717>❌</emoji> <b>クリエイターが見つかりません。</b>",
     }
 
     @loader.command(ru_doc="[reply] - Узнать ID", jp_doc="[reply] - IDを知る")
@@ -478,6 +486,31 @@ class ChatModuleMod(loader.Module):
                 message,
                 self.strings("kicked_deleted_accounts").format(count=removed_count),
             )
+
+    @loader.command(ru_doc="Показывает создателя группы/канала", jp_doc="グループ・チャンネルの管理者を表示する")
+    async def creator(self, message):
+        """Shows the creator of the chat/channel"""
+        if message.is_private:
+            return await utils.answer(message, self.strings("not_a_chat"))
+        participants = await self._client(GetParticipantsRequest(
+            channel=await message.get_chat(),
+            filter=ChannelParticipantsAdmins(),
+            offset=0,
+            limit=20,
+            hash=0,
+        ))
+        creator = None
+        for participant in participants.participants:
+            if isinstance(participant, ChannelParticipantCreator):
+                creator = participant
+                break
+        if not creator:
+            return await utils.answer(message, self.strings("no_creator"))
+        creator = await self._client.get_entity(creator.user_id)
+        return await utils.answer(
+            message,
+            self.strings("creator").format(id=creator.id, creator=creator.first_name),
+        )
 
     @loader.command(ru_doc="Показывает админов в группе/канале", jp_doc="グループ・チャンネルの管理者を表示する")
     async def admins(self, message):
