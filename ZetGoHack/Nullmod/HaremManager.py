@@ -1,4 +1,4 @@
-__version__ = (1,1,0)
+__version__ = (1,1,1)
 #░░░███░███░███░███░███
 #░░░░░█░█░░░░█░░█░░░█░█
 #░░░░█░░███░░█░░█░█░█░█
@@ -242,6 +242,7 @@ class HaremManager(loader.Module):
             except YouBlockedUserError:
                 await self.client(UnblockRequest(id))
                 await conv.send_message("/bonus")
+            r = None
             try:
                 r = await conv.get_response(timeout=5*60)
             except:
