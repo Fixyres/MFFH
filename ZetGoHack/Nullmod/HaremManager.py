@@ -1,4 +1,4 @@
-__version__ = (1,1,1)
+__version__ = (1,1,2)
 #░░░███░███░███░███░███
 #░░░░░█░█░░░░█░░█░░░█░█
 #░░░░█░░███░░█░░█░█░█░█
@@ -250,6 +250,7 @@ class HaremManager(loader.Module):
                 while tryings > 0:
                     tryings -= 1
                     try:
+                        await conv.send_message("/bonus")
                         r = await conv.get_response(5*60)
                         break
                     except:
