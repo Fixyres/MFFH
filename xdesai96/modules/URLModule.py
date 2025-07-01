@@ -4,43 +4,43 @@ from .. import loader, utils
 import socket
 import aiohttp
 import aiodns
-import os
+
 
 @loader.tds
 class URLMod(loader.Module):
     """A module for parsing URLs."""
-    strings = {"name": "URLModule"}
 
-    async def scrapecmd(self, message):
-        """Extracts and processes data from the specified URL asynchronously."""
-        args = utils.get_args_raw(message)
-        if not args:
-            await utils.answer(message, "<b>Please provide a URL to parse.</b>")
-            return
-        url = args.strip()
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    response.raise_for_status()
-                    response_text = await response.text()
-                    
-                    if len(response_text) > 4096:
-                        # Если длина ответа больше 4096 символов, сохраняем его в файл и отправляем.
-                        with open("response.txt", "w", encoding="utf-8") as file:
-                            file.write(response_text)
-                        await message.client.send_file(message.chat_id, "response.txt", caption="<b>Response is too long, sent as a file</b>")
-                        os.remove("response.txt")
-                        await message.delete()
-                    else:
-                        await utils.answer(message, f"<b>Response:</b>\n<pre>{response_text}</pre>")
-        except aiohttp.ClientError as e:
-            await utils.answer(message, f"<b>An error occurred:</b> {e}")
+    strings = {
+        "name": "URLModule",
+        "no_url": "<emoji document_id=5416076321442777828>❌</emoji> <b>Please provide a shortened URL to expand.</b>",
+        "err": '<emoji document_id=5416076321442777828>❌</emoji> <b>An error occurred:</b> <pre><code class="language-Error">{err}</code></pre>',
+        "expanded_url": "<emoji document_id=5816580359642421388>➡️</emoji> <b>Expanded URL:</b> <a href='{expanded_url}'>{expanded_url}</a>",
+        "ip_addr": "<emoji document_id=5447410659077661506>🌐</emoji> <b>The IP address of {url}:</b> <code>{ip_address}</code>",
+    }
 
+    strings_ru = {
+        "no_url": "<emoji document_id=5416076321442777828>❌</emoji> <b>Пожалуйста, предоставьте сокращённую URL для расширения.</b>",
+        "err": '<emoji document_id=5416076321442777828>❌</emoji> <b>Произошла ошибка:</b> <pre><code class="language-Error">{err}</code></pre>',
+        "expanded_url": "<emoji document_id=5816580359642421388>➡️</emoji> <b>Расширенный URL:</b> <a href='{expanded_url}'>{expanded_url}</a>",
+        "ip_addr": "<emoji document_id=5447410659077661506>🌐</emoji> <b>IP-адрес для {url}:</b> <code>{ip_address}</code>",
+    }
+
+    strings_jp = {
+        "no_url": "<emoji document_id=5416076321442777828>❌</emoji> <b>展開する短縮URLを入力してください。</b>",
+        "err": '<emoji document_id=5416076321442777828>❌</emoji> <b>エラーが発生しました：</b> <pre><code class="language-Error">{err}</code></pre>',
+        "expanded_url": "<emoji document_id=5816580359642421388>➡️</emoji> <b>展開されたURL：</b> <a href='{expanded_url}'>{expanded_url}</a>",
+        "ip_addr": "<emoji document_id=5447410659077661506>🌐</emoji> <b>{url} のIPアドレス：</b> <code>{ip_address}</code>",
+    }
+
+    @loader.command(
+        ru_doc="Показывает куда ведет сокращенная ссылка",
+        p_doc="指定された短縮URLを展開します",
+    )
     async def expandurlcmd(self, message):
-        """Expands the given shortened URL."""
+        """Expands the given shortened URL"""
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, "<b>Please provide a shortened URL to expand.</b>")
+            await utils.answer(message, self.strings("no_url"))
             return
         short_url = args.strip()
         try:
@@ -51,15 +51,21 @@ class URLMod(loader.Module):
                 async with session.get(short_url, allow_redirects=True) as response:
                     response.raise_for_status()
                     expanded_url = str(response.url)
-                    await utils.answer(message, f"<b>Expanded URL:</b> <a href='{expanded_url}'>{expanded_url}</a>")
+                    await utils.answer(
+                        message,
+                        self.strings("expanded_url").format(expanded_url=expanded_url),
+                    )
         except aiohttp.ClientError as e:
-            await utils.answer(message, f"<b>An error occurred:</b> {e}")
+            await utils.answer(message, self.strings("err").format(err=e))
 
+    @loader.command(
+        ru_doc="Получить IP адрес сайта", jp_doc="WebサイトのIPアドレスを取得する"
+    )
     async def ipurlcmd(self, message):
-        """Gets the IP address of the given URL asynchronously."""
+        """Gets the IP address of the given URL"""
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, "<b>Please provide a URL to get the IP address.</b>")
+            await utils.answer(message, self.strings("no_url"))
             return
         url = args.strip()
         resolver = aiodns.DNSResolver()
@@ -68,6 +74,8 @@ class URLMod(loader.Module):
             hostname = url.split("//")[-1].split("/")[0]
             response = await resolver.gethostbyname(hostname, socket.AF_INET)
             ip_address = response.addresses[0]
-            await utils.answer(message, f"<b>IP address of {url}:</b> <code>{ip_address}</code>")
+            await utils.answer(
+                message, self.strings("ip_addr").format(url=url, ip_address=ip_address)
+            )
         except aiodns.error.DNSError as e:
-            await utils.answer(message, f"<b>An error occurred:</b> {e}")
+            await utils.answer(message, self.strngs("err").format(err=e))
