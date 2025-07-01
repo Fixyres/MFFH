@@ -34,7 +34,7 @@ class URLMod(loader.Module):
 
     @loader.command(
         ru_doc="Показывает куда ведет сокращенная ссылка",
-        p_doc="指定された短縮URLを展開します",
+        jp_doc="指定された短縮URLを展開します",
     )
     async def expandurlcmd(self, message):
         """Expands the given shortened URL"""
