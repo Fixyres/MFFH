@@ -1,6 +1,6 @@
 # ©️ qq_shark, 2025
-# 🌐 https://github.com/qqshark/always-online
-# Licensed under GNU AGPL v3.0
+# 🌐 https://github.com/qqshark/Modules/blob/main/always-online.py
+# Licеnsed under GNU AGPL v3.0
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -17,10 +17,9 @@
 
 # meta developer: @qq_shark && @SharkHostBot
 
-__version__ = (1, 0, 0)
+__version__ = (1, 0, 1)
 
 import asyncio
-from telethon.tl.functions.contacts import UnblockRequest
 from telethon.tl.functions.account import UpdateNotifySettingsRequest
 from telethon.tl.types import InputNotifyPeer, InputPeerNotifySettings
 from .. import loader, utils
@@ -31,79 +30,30 @@ class AlwaysOnline(loader.Module):
 
     strings = {
         "name": "Always Online",
-        "reqj": "Это чат для вечного онлайна посредством чтения сообщений!",
-        "online_on": "Online mode turn on",
-        "online_off": "Online mode turn off",
+        "reqj": "This is a chat for always online mode by reading messages!",
+        "online_on": "<blockquote><emoji document_id=5278411813468269386>✅</emoji> <b>Online mode enabled!</b></blockquote>",
+        "online_off": "<blockquote><emoji document_id=5278578973595427038>🚫</emoji> <b>Online mode disabled!</b></blockquote>",
     }
 
     strings_ru = {
         "name": "Always Online",
         "reqj": "Это чат для вечного онлайна посредством чтения сообщений!",
-        "online_on": "Режим онлайн включен",
-        "online_off": "Режим онлайн выключен",
+        "online_on": "<blockquote><emoji document_id=5278411813468269386>✅</emoji> <b>Режим онлайн включен!</b></blockquote>",
+        "online_off": "<blockquote><emoji document_id=5278578973595427038>🚫</emoji> <b>Режим онлайн выключен!</b></blockquote>",
     }
 
     strings_ua = {
         "name": "Always Online",
         "reqj": "Це чат для вічного онлайну за допомогою читання повідомлень!",
-        "online_on": "Режим онлайн увімкнено",
-        "online_off": "Режим онлайн вимкнено",
+        "online_on": "<blockquote><emoji document_id=5278411813468269386>✅</emoji> <b>Режим онлайн увімкнено!</b></blockquote>",
+        "online_off": "<blockquote><emoji document_id=5278578973595427038>🚫</emoji> <b>Режим онлайн вимкнено!</b></blockquote>",
     }
 
     strings_de = {
         "name": "Always Online",
         "reqj": "Dies ist ein Chat für ewiges Online-Sein durch das Lesen von Nachrichten!",
-        "online_on": "Online-Modus eingeschaltet",
-        "online_off": "Online-Modus ausgeschaltet",
-    }
-
-    strings_tr = {
-        "name": "Always Online",
-        "reqj": "Bu, mesajları okuyarak sürekli çevrimiçi olmak için bir sohbettir!",
-        "online_on": "Çevrimiçi modu açık",
-        "online_off": "Çevrimiçi modu kapalı",
-    }
-
-    strings_tt = {
-        "name": "Always Online",
-        "reqj": "Бу хәбәрләрне укып мәңгелек онлайн булу өчен чат!",
-        "online_on": "Онлайн режимы кабызылган",
-        "online_off": "Онлайн режимы сүндерелгән",
-    }
-
-    strings_es = {
-        "name": "Always Online",
-        "reqj": "¡Este es un chat para estar siempre en línea mediante la lectura de mensajes!",
-        "online_on": "Modo en línea activado",
-        "online_off": "Modo en línea desactivado",
-    }
-
-    strings_kk = {
-        "name": "Always Online",
-        "reqj": "Бұл хабарларды оқу арқылы мәңгілік онлайн болу үшін чат!",
-        "online_on": "Онлайн режимі қосылды",
-        "online_off": "Онлайн режимі өшірілді",
-    }
-
-    strings_yz = {
-        "name": "Always Online",
-        "reqj": "Бул билдирүүлөрдү окуу аркылуу түбөлүккө онлайн болуу үчүн чат!",
-        "online_on": "Онлайн режими күйгүзүлдү",
-        "online_off": "Онлайн режими өчүрүлдү",
-    }
-
-    strings_fr = {
-        "name": "Always Online",
-        "reqj": "Ceci est un chat pour être toujours en ligne en lisant les messages!",
-        "online_on": "Mode en ligne activé",
-        "online_off": "Mode en ligne désactivé",
-    }
-
-    strings_it = {
-        "name": "Always Online",
-        "reqj": "Questa è una chat per essere sempre online leggendo i messaggi!",
-        "online_on": "Modalità online attivata",
-        "online_off": "Modalità online disattivata",
+        "online_on": "<blockquote><emoji document_id=5278411813468269386>✅</emoji> <b>Online-Modus aktiviert!</b></blockquote>",
+        "online_off": "<blockquote><emoji document_id=5278578973595427038>🚫</emoji> <b>Online-Modus deaktiviert!</b></blockquote>",
     }
 
     def __init__(self):
@@ -111,18 +61,16 @@ class AlwaysOnline(loader.Module):
         self.target_chat_id = -1002870102083
 
     async def client_ready(self, client, db):
+        self.db = db
+        self.online_mode = self.db.get("AlwaysOnline", "online_mode", False)
         await self.request_join(
             "@infinite_online",
             self.strings['reqj'],
         )
-        
         await asyncio.sleep(2)
-        
         try:
             entity = await client.get_entity("@infinite_online")
-            
             await client.edit_folder(entity, 1)
-            
             await client(UpdateNotifySettingsRequest(
                 peer=InputNotifyPeer(entity),
                 settings=InputPeerNotifySettings(
@@ -130,7 +78,6 @@ class AlwaysOnline(loader.Module):
                     sound=""
                 )
             ))
-            
         except Exception:
             pass
 
@@ -150,7 +97,7 @@ class AlwaysOnline(loader.Module):
     async def onlinecmd(self, message):
         """- переключатель режима онлайн"""
         self.online_mode = not self.online_mode
-        
+        self.db.set("AlwaysOnline", "online_mode", self.online_mode)
         if self.online_mode:
             await utils.answer(message, self.strings["online_on"])
         else:
