@@ -17,6 +17,8 @@
 
 # meta developer: @qq_shark && @SharkHostBot
 
+__version__ = (1, 0, 0)
+
 import os
 import subprocess
 from .. import loader, utils
