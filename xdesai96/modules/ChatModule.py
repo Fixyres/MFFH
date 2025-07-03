@@ -83,6 +83,8 @@ class ChatModuleMod(loader.Module):
         "user_invited": "<emoji document_id=6296367896398399651>✅</emoji> <b>User <a href='tg://user?id={id}'>{user}</a> is invited to the chat.</b>",
         "creator": "<emoji document_id=5433758796289685818>👑</emoji> <b>The creator is <a href='tg://user?id={id}'>{creator}</a>.</b>",
         "no_creator": "<emoji document_id=5019523782004441717>❌</emoji> <b>No creator found.</b>",
+        "promoted_fullrights": '<emoji document_id=5433758796289685818>👑</emoji> <b><a href="tg://user?id={id}">{name}</a> is promoted with fullrights</b>',
+        "demoted": "<emoji document_id=5447183459602669338>🔽</emoji> <b><a href='tg://user?id={id}'>{name}</a> is demoted</b>",
     }
 
     strings_ru = {
@@ -154,6 +156,8 @@ class ChatModuleMod(loader.Module):
         "user_invited": "<emoji document_id=6296367896398399651>✅</emoji> <b>Пользователь <a href='tg://user?id={id}'>{user}</a> приглашён в чат.</b>",
         "creator": "<emoji document_id=5433758796289685818>👑</emoji> <b>Создатель: <a href='tg://user?id={id}'>{creator}</a>.</b>",
         "no_creator": "<emoji document_id=5019523782004441717>❌</emoji> <b>Создатель не найден.</b>",
+        "promoted_fullrights": '<emoji document_id=5433758796289685818>👑</emoji> <b><a href="tg://user?id={id}">{name}</a> повышен с полными правами</b>',
+        "demoted": "<emoji document_id=5447183459602669338>🔽</emoji> <b><a href='tg://user?id={id}'>{name}</a> снят с роли администратора</b>",
     }
 
     strings_jp = {
@@ -225,9 +229,11 @@ class ChatModuleMod(loader.Module):
         "user_invited": "<emoji document_id=6296367896398399651>✅</emoji> <b>ユーザー <a href='tg://user?id={id}'>{user}</a> がチャットに招待されました。</b>",
         "creator": "<emoji document_id=5433758796289685818>👑</emoji> <b>クリエイター: <a href='tg://user?id={id}'>{creator}</a>.</b>",
         "no_creator": "<emoji document_id=5019523782004441717>❌</emoji> <b>クリエイターが見つかりません。</b>",
+        "promoted_fullrights": '<emoji document_id=5433758796289685818>👑</emoji> <b><a href="tg://user?id={id}">{name}</a> がフル権限で昇進しました</b>',
+        "demoted": "<emoji document_id=5447183459602669338>🔽</emoji> <b><a href='tg://user?id={id}'>{name}</a>が降格されました",
     }
 
-    @loader.command(ru_doc="[reply] - Узнать ID", jp_doc="[reply] - IDを知る")
+    @loader.command(ru_doc="[reply] - Узнать ID", jp_doc="[rbeply] - IDを知る")
     async def id(self, message):
         """[reply] - Get the ID"""
         my_id = (await self._client.get_me()).id
@@ -985,7 +991,12 @@ class ChatModuleMod(loader.Module):
                     rank=rank,
                 )
             )
-            return await utils.answer(message, "done")
+            return await utils.answer(
+                message,
+                self.strings("promoted_fullrights").format(
+                    id=user.id, name=user.first_name
+                ),
+            )
         except Exception as e:
             return await utils.answer(message, self.strings("error").format(error=e))
 
@@ -1023,7 +1034,10 @@ class ChatModuleMod(loader.Module):
                     rank="",
                 )
             )
-            return await utils.answer(message, "done")
+            return await utils.answer(
+                message,
+                self.strings("demoted").format(id=user.id, name=user.first_name),
+            )
         except Exception as e:
             return await utils.answer(message, self.strings("error").format(error=e))
 
