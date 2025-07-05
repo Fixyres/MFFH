@@ -289,14 +289,9 @@ class ChatModuleMod(loader.Module):
                         channel=chat, participant=participant_id
                     )
                 )
-            except errors.UserNotParticipantError:
+            except Exception as e:
                 return await utils.answer(
-                    message,
-                    self.strings("user_not_participant").format(user=participant_id),
-                )
-            except (errors.UserIdInvalidError, ValueError):
-                return await utils.answer(
-                    message, self.strings("no_user").format(user=participant_id)
+                    message, self.strings("error").format(error=str(e))
                 )
             user = await self._client.get_entity(participant_id)
             participant = result.participant
@@ -359,7 +354,9 @@ class ChatModuleMod(loader.Module):
                 try:
                     await self._client.delete_messages(reply.chat_id, ids)
                 except Exception as e:
-                    await utils.answer(message, self.strings("error").format(error=e))
+                    await utils.answer(
+                        message, self.strings("error").format(error=str(e))
+                    )
         else:
             if reply:
                 try:
@@ -456,8 +453,6 @@ class ChatModuleMod(loader.Module):
                 try:
                     await self._client.kick_participant(chat, user)
                     removed_count += 1
-                except errors.ChatAdminRequiredError:
-                    return await utils.answer(message, self.strings("no_rights"))
                 except Exception as e:
                     return await utils.answer(
                         message, self.strings("error").format(error=str(e))
@@ -512,7 +507,7 @@ class ChatModuleMod(loader.Module):
         chat = await message.get_chat()
         title = chat.title
         admins = await self._client.get_participants(
-            message.chat_id, filter=ChannelParticipantsAdmins()
+            message.chat_id, filter=types.ChannelParticipantsAdmins()
         )
         real_members = [
             member for member in admins if not member.bot and not member.deleted
@@ -542,6 +537,8 @@ class ChatModuleMod(loader.Module):
             )
             os.remove("adminlist.md")
             await message.delete()
+        except Exception as e:
+            return await utils.answer(message, self.strings("error").format(str(e)))
 
     @loader.command(
         ru_doc="Показывает ботов в группе/канале",
@@ -578,6 +575,10 @@ class ChatModuleMod(loader.Module):
             )
             os.remove("botlist.md")
             await message.delete()
+        except Exception as e:
+            return await utils.answer(
+                message, self.strings("error").format(error=str(e))
+            )
 
     @loader.command(
         ru_doc="Показывает простых участников чата/канала",
@@ -620,6 +621,10 @@ class ChatModuleMod(loader.Module):
             os.remove("userslist.md")
             await message.delete()
             return
+        except Exception as e:
+            return await utils.answer(
+                message, self.strings("error").format(error=str(e))
+            )
 
     @loader.command(
         ru_doc="Забанить участника", jp_doc="ユーザーを一時的または永久に禁止する"
@@ -637,7 +642,12 @@ class ChatModuleMod(loader.Module):
         if reply:
             user = await self._client.get_entity(reply.sender_id)
         else:
-            user = await self._client.get_entity(await utils.get_target(message))
+            try:
+                user = await self._client.get_entity(await utils.get_target(message))
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=str(e))
+                )
         if not user:
             return await utils.answer(message, self.strings("invalid_args"))
 
@@ -648,9 +658,14 @@ class ChatModuleMod(loader.Module):
             until_date = self.parse_time(duration_str)
             time_info = self.parse_time_info(duration_str)
 
-            await self._client.edit_permissions(
-                chat, user, until_date=until_date, view_messages=False
-            )
+            try:
+                await self._client.edit_permissions(
+                    chat, user, until_date=until_date, view_messages=False
+                )
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=str(e))
+                )
 
             if reason:
                 return await utils.answer(
@@ -697,11 +712,21 @@ class ChatModuleMod(loader.Module):
         if reply:
             user = await self._client.get_entity(reply.sender_id)
         else:
-            user = await self._client.get_entity(await utils.get_target(message))
+            try:
+                user = await self._client.get_entity(await utils.get_target(message))
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=str(e))
+                )
         if not user:
             return await utils.answer(message, self.strings("no_user"))
         chat = await message.get_chat()
-        await self._client.edit_permissions(chat, user, view_messages=True)
+        try:
+            await self._client.edit_permissions(chat, user, view_messages=True)
+        except Exception as e:
+            return await utils.answer(
+                message, self.strings("error").format(error=str(e))
+            )
         return await utils.answer(
             message,
             self.strings("user_is_unbanned").format(id=user.id, name=user.first_name),
@@ -720,11 +745,21 @@ class ChatModuleMod(loader.Module):
         if reply:
             user = await self._client.get_entity(reply.sender_id)
         else:
-            user = await self._client.get_entity(await utils.get_target(message))
+            try:
+                user = await self._client.get_entity(await utils.get_target(message))
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=str(e))
+                )
         if not user:
             return await utils.answer(message, self.strings("no_user"))
         chat = await message.get_chat()
-        await self._client.kick_participant(chat, user)
+        try:
+            await self._client.kick_participant(chat, user)
+        except Exception as e:
+            return await utils.answer(
+                message, self.strings("error").format(error=str(e))
+            )
         return (
             await utils.answer(
                 message,
@@ -754,7 +789,12 @@ class ChatModuleMod(loader.Module):
         if reply:
             user = await self._client.get_entity(reply.sender_id)
         else:
-            user = await self._client.get_entity(await utils.get_target(message))
+            try:
+                user = await self._client.get_entity(await utils.get_target(message))
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=str(e))
+                )
         if not user:
             return await utils.answer(message, self.strings("invalid_args"))
 
@@ -765,9 +805,14 @@ class ChatModuleMod(loader.Module):
             until_date = self.parse_time(duration_str)
             time_info = self.parse_time_info(duration_str)
 
-            await self._client.edit_permissions(
-                chat, user, until_date=until_date, send_messages=False
-            )
+            try:
+                await self._client.edit_permissions(
+                    chat, user, until_date=until_date, send_messages=False
+                )
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=str(e))
+                )
 
             if reason:
                 return await utils.answer(
@@ -813,13 +858,23 @@ class ChatModuleMod(loader.Module):
         if reply:
             user = await self._client.get_entity(reply.sender_id)
         else:
-            user = await self._client.get_entity(await utils.get_target(message))
+            try:
+                user = await self._client.get_entity(await utils.get_target(message))
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=str(e))
+                )
         if not user:
             return await utils.answer(message, "no_user")
 
         chat = await message.get_chat()
 
-        await self._client.edit_permissions(chat, user, send_messages=True)
+        try:
+            await self._client.edit_permissions(chat, user, send_messages=True)
+        except Exception as e:
+            return await utils.answer(
+                message, self.strings("error").format(error=str(e))
+            )
         return await utils.answer(
             message,
             self.strings("user_is_unmuted").format(id=user.id, name=user.first_name),
@@ -836,12 +891,17 @@ class ChatModuleMod(loader.Module):
         chat = await message.get_chat()
         current = chat.default_banned_rights
         is_muted = current.send_messages is True
-        await self._client(
-            messages.EditChatDefaultBannedRightsRequest(
-                chat,
-                types.ChatBannedRights(until_date=0, send_messages=not is_muted),
+        try:
+            await self._client(
+                messages.EditChatDefaultBannedRightsRequest(
+                    chat,
+                    types.ChatBannedRights(until_date=0, send_messages=not is_muted),
+                )
             )
-        )
+        except Exception as e:
+            return await utils.answer(
+                message, self.strings("error").format(error=str(e))
+            )
         if is_muted:
             return await utils.answer(message, self.strings("chat_unmuted"))
         else:
@@ -863,12 +923,24 @@ class ChatModuleMod(loader.Module):
                 type_of = self.strings("of_chat")
             else:
                 type_of = self.strings("of_channel")
-            await self._client(channels.EditTitleRequest(channel=chat, title=new_title))
+            try:
+                await self._client(
+                    channels.EditTitleRequest(channel=chat, title=new_title)
+                )
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=str(e))
+                )
         else:
             type_of = self.strings("of_chat")
-            await self._client(
-                messages.EditChatTitleRequest(chat_id=chat.id, title=new_title)
-            )
+            try:
+                await self._client(
+                    messages.EditChatTitleRequest(chat_id=chat.id, title=new_title)
+                )
+            except Exception as e:
+                return await utils.answer(
+                    message, self.strings("error").format(error=e)
+                )
         return await utils.answer(
             message,
             self.strings("title_changed").format(
@@ -927,21 +999,15 @@ class ChatModuleMod(loader.Module):
         chat = await message.get_chat()
         reply = await message.get_reply_message()
         args = utils.get_args(message)
-        exceptions_map = {
-            errors.ChatAdminRequiredError: "no_rights",
-            errors.UserBlockedError: "user_blocked",
-            errors.UserPrivacyRestrictedError: "user_privacy_restricted",
-            errors.UserNotMutualContactError: "user_not_mutual_contact",
-        }
         if reply:
             user = await self._client.get_entity(reply.sender_id)
-            result = await self.invite_user(message, chat, user, exceptions_map)
+            result = await self.invite_user(message, chat, user)
             if result:
                 return result
         elif args:
             for user in args:
                 entity = await self._client.get_entity(user)
-                result = await self.invite_user(message, chat, entity, exceptions_map)
+                result = await self.invite_user(message, chat, entity)
                 if result:
                     return result
         else:
@@ -1041,17 +1107,15 @@ class ChatModuleMod(loader.Module):
         except Exception as e:
             return await utils.answer(message, self.strings("error").format(error=e))
 
-    async def invite_user(self, message, chat, user, exceptions_map):
+    async def invite_user(self, message, chat, user):
         try:
             await self._client(
                 channels.InviteToChannelRequest(channel=chat, users=[user])
             )
-        except tuple(exceptions_map.keys()) as e:
+        except Exception as e:
             return await utils.answer(
                 message,
-                self.strings(exceptions_map[type(e)]).format(
-                    user=user.first_name, user_id=user.id
-                ),
+                self.strings("error").format(error=str(e)),
             )
         await utils.answer(
             message,
