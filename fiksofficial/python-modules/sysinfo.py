@@ -5,7 +5,7 @@
 # | | (_| | |  | |_| | |  | | (_) | (_| | |_| | |  __/
 #  \ \__,_\_|   \__, \_|  |_/\___/ \__,_|\__,_|_|\___|
 #   \____/       __/ |                                
-#               |___/                                 
+#               |___/                                  
 
 # На модуль распространяется лицензия "GNU General Public License v3.0"
 # https://github.com/all-licenses/GNU-General-Public-License-v3.0
@@ -53,10 +53,7 @@ class SysInfoMod(loader.Module):
     """System information."""
     strings = {"name": "SysInfo"}
 
-    @loader.command(
-        doc="🔧 Shows information about the system.",
-        ru_doc="🔧 Показывает информацию о системе.",
-    )
+    @loader.command(doc="🔧 Shows information about the system.", ru_doc="🔧 Показывает информацию о системе.")
     async def sysinfo(self, message):
         me = await message.client.get_me()
         is_saved = message.chat_id == me.id
@@ -92,7 +89,7 @@ class SysInfoMod(loader.Module):
         freq_str = f"{freq.current:.0f} MHz" if freq else "N/A"
 
         text = (
-f"<emoji document_id=5776118099812028333>📟</emoji> <b>System Info</b>\n\n"
+f"<blockquote><emoji document_id=5776118099812028333>📟</emoji> <b>System Info</b>\n\n"
 
 f"<emoji document_id=5215186239853964761>🖥️</emoji> <u><b>ОС и система:</b></u>\n"
 f"<b>OS:</b> <code>{uname.system} {uname.release}</code>\n"
@@ -126,7 +123,7 @@ f"<b>Uptime:</b> <code>{format_uptime(uptime)}</code>\n\n"
 
 f"<emoji document_id=5854908544712707500>📦</emoji> <u><b>Версии:</b></u>\n"
 f"<b>Python:</b> <code>{platform.python_version()}</code>\n"
-f"<b>Telethon:</b> <code>{telethon.__version__}</code>\n"
+f"<b>Telethon:</b> <code>{telethon.__version__}</code></blockquote>"
         )
 
         await utils.answer(message, text)
