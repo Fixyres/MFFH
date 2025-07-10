@@ -94,6 +94,7 @@ class GitHubInfoMod(loader.Module):
 
     @loader.command(doc="Show GitHub user info", ru_doc="Информация о пользователе GitHub")
     async def gh(self, message):
+        """Show GitHub user info"""
         username = self.get_username(message)
         if not username:
             return await message.edit(self.strings("no_username"))
@@ -117,6 +118,7 @@ class GitHubInfoMod(loader.Module):
 
     @loader.command(doc="Show recent GitHub activity", ru_doc="Последняя активность GitHub")
     async def gha(self, message):
+        """Show recent GitHub activity"""
         username = self.get_username(message)
         if not username:
             return await message.edit(self.strings("no_username"))
@@ -154,6 +156,7 @@ class GitHubInfoMod(loader.Module):
 
     @loader.command(doc="Show GitHub contribution graph", ru_doc="Показать график контрибов GitHub")
     async def ghc(self, message):
+        """Show GitHub contribution graph"""
         username = self.get_username(message)
         if not username:
             return await message.edit(self.strings("no_username"))
