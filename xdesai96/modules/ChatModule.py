@@ -1006,7 +1006,9 @@ class ChatModuleMod(loader.Module):
                 return result
         elif args:
             for user in args:
-                entity = await self._client.get_entity(user)
+                entity = await self._client.get_entity(
+                    int(user) if user.isdigit() else user
+                )
                 result = await self.invite_user(message, chat, entity)
                 if result:
                     return result
