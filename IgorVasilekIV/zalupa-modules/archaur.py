@@ -3,7 +3,7 @@ Some description:
 Search pkgs on https://aur.archlinux.org (i dont know why)
 """
 
-__version__ = (1.1)
+__version__ = (1, 2)
 
 # meta banner: https://files.catbox.moe/u91fwo.jpg
 # meta developer: @HikkaZPM
@@ -30,7 +30,19 @@ logger = logging.getLogger(__name__)
 @loader.tds
 class ArchAURMod(loader.Module):
     """Поиск aur пакетов в aur.archlinux.org"""
+    
+    strings = {"name": "ArchAUR"}
 
+    def __init__(self):
+        self.config = loader.ModuleConfig(
+            loader.ConfigValue(
+                "pkgs",
+                10,
+                lambda: "Количество пакетов для отображения",
+                validator=loader.validators.Integer(minimum=1, maximum=35)
+            )
+        )
+        
     async def client_ready(self, client, db):
         self._client = client
 
@@ -42,6 +54,8 @@ class ArchAURMod(loader.Module):
             return
 
         url = f"https://aur.archlinux.org/rpc/?v=5&type=search&arg={args}"
+
+        pkgs = self.config["pkgs"] # da
         
         try:
             async with aiohttp.ClientSession() as session:
@@ -56,7 +70,7 @@ class ArchAURMod(loader.Module):
                 await utils.answer(message, f"<emoji document_id=5210956306952758910>👀</emoji> По запросу <code>{args}</code> ничего не найдено")
                 return
                 
-            packages = data["results"][:10]
+            packages = data["results"][:pkgs]
             response_text = f"<emoji document_id=5397674675796985688>🔍</emoji> Результаты поиска в AUR для <code>{args}</code>:\n\n"
             
             for pkg in packages:
@@ -67,7 +81,7 @@ class ArchAURMod(loader.Module):
                 )
             
             if data["resultcount"] > 0:
-                response_text += f"</blockquote><emoji document_id=5210956306952758910>👀</emoji> Показано 10 из {data['resultcount']} результатов"
+                response_text += f"</blockquote><emoji document_id=5210956306952758910>👀</emoji> Показано {self.config['pkgs']} из {data['resultcount']} результатов"
 
         except aiohttp.ClientError:
             await utils.answer(message, "⚠️ Ошибка сети при подключении к AUR")
