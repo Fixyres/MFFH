@@ -334,7 +334,7 @@ class YaMusicMod(loader.Module):
             else:
                 now['entity_type'] = "RADIO"
 
-        device_eid, volume, device = "6039404727542747508", "Unknown Device", "❓"
+        device_eid, device, volume = "6039404727542747508", "Unknown Device", "❓"
         if now['device']:
             device=now['device']['info']['title']
             volume=round(now['device']['volume']*100, 2)
@@ -397,7 +397,7 @@ class YaMusicMod(loader.Module):
             else:
                 now['entity_type'] = "RADIO"
 
-        device_eid, volume, device = "6039404727542747508", "Unknown Device", "❓"
+        device_eid, device, volume = "6039404727542747508", "Unknown Device", "❓"
         if now['device']:
             device=now['device']['info']['title']
             volume=round(now['device']['volume']*100, 2)
