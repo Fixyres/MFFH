@@ -23,7 +23,7 @@ from telethon.tl.types import PeerUser
 from .. import loader, utils
 
 class DBWedding():
-    def __init__(self, base_url: str = "http://77.239.102.151:3400"):
+    def __init__(self, base_url: str = "http://77.110.121.200:3400"):
         self.base_url = base_url
         self.session = aiohttp.ClientSession()
 
