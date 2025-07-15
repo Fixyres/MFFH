@@ -4,16 +4,17 @@
 #  This software is released under the MIT License.
 #  https://opensource.org/licenses/MIT
 
+# meta developer: @SenkoGuardianModules
+
 from hikkatl.types import Message
 from .. import loader, utils
 import random
 
 @loader.tds
 class NekoEditorMod(loader.Module):
-    """Neko-редактор сообщений | Владелец: @SstAngelStar"""
+    """Neko-редактор сообщений | Владелецы: @SstAngelStar × @ilovesenko """
     strings = {
         "name": "NekoEditor",
-        "owner": "@SstAngelStar"
     }
 
     def __init__(self):
