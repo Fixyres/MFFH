@@ -21,7 +21,7 @@ AVAILABLE_CATEGORIES = [
 
 @loader.tds
 class FapReactorMod(loader.Module):
-    """Отправляет случайное изображение с fapreactor.com по категории"""
+    """Отправляет случайное NSFW изображение с fapreactor.com по категории"""
 
     strings = {
         "name": "FapReactor",
@@ -55,7 +55,7 @@ class FapReactorMod(loader.Module):
 
     @loader.command()
     async def fap(self, message):
-        """Отправляет рандомное изображение с fapreactor.com"""
+        """Отправляет рандомное NSFW изображение с fapreactor.com"""
         category = self.config["category"]
         if not category:
             await message.edit(self.strings("no_category"))
