@@ -1,6 +1,6 @@
 # scope: user
 # meta developer: @Hikimuro
-# ver: 2.0.1
+# ver: 2.0.2
 
 from .. import loader, utils
 import cloudscraper
@@ -24,9 +24,6 @@ class FapReactorMod(loader.Module):
     """
 FapReactor:
  Отправляет случайное NSFW изображение с fapreactor.com по категории
-
-▫️ -fap Отправляет рандомное NSFW изображение с fapreactor.com  
-▫️ -setfapcategory Устанавливает категорию (раздел)
     """
 
     strings = {
@@ -42,38 +39,57 @@ FapReactor:
                 "category",
                 "Porn",
                 lambda: "Категория с fapreactor.com (доступные: {})".format(", ".join(AVAILABLE_CATEGORIES))
+            ),
+            loader.ConfigValue(
+                "proxy",
+                None,
+                lambda: "Прокси в формате http://user:pass@ip:port или http://ip:port"
             )
         )
-        self.scraper = cloudscraper.create_scraper()
+
+    def _init_scraper(self):
+        scraper = cloudscraper.create_scraper(
+            browser={'custom': 'ScraperBot/1.0'},
+            interpreter='nodejs',
+            delay=10
+        )
+        proxy = self.config.get("proxy")
+        if proxy:
+            scraper.proxies.update({
+                "http": proxy,
+                "https": proxy
+            })
+        return scraper
 
     @loader.command()
     async def setfapcategory(self, message):
         """Устанавливает категорию (раздел)"""
         args = utils.get_args_raw(message)
         if not args:
-            await message.edit("⚠️ Укажи категорию.\nДоступные: " + ", ".join(AVAILABLE_CATEGORIES))
+            await utils.answer(message, "⚠️ Укажи категорию.\nДоступные: " + ", ".join(AVAILABLE_CATEGORIES))
             return
         if args not in AVAILABLE_CATEGORIES:
-            await message.edit(f"❌ Категория `{args}` недоступна.\nДоступные: {', '.join(AVAILABLE_CATEGORIES)}")
+            await utils.answer(message, f"❌ Категория `{args}` недоступна.\nДоступные: {', '.join(AVAILABLE_CATEGORIES)}")
             return
         self.config["category"] = args
-        await message.edit(f"✅ Категория установлена на: `{args}`")
+        await utils.answer(message, f"✅ Категория установлена на: `{args}`")
 
     @loader.command()
     async def fap(self, message):
         """Отправляет рандомное изображение с fapreactor.com"""
         category = self.config["category"]
         if not category:
-            await message.edit(self.strings("no_category"))
+            await utils.answer(message, self.strings("no_category"))
             return
 
-        await message.edit(self.strings("downloading"))
+        await utils.answer(message, self.strings("downloading"))
 
         try:
+            scraper = self._init_scraper()
             for _ in range(5):
                 page = random.randint(1, 1000)
                 url = f"https://fapreactor.com/tag/{category}/all/{page}"
-                r = self.scraper.get(url, timeout=10)
+                r = scraper.get(url, timeout=10)
                 r.raise_for_status()
                 soup = BeautifulSoup(r.text, "html.parser")
                 posts = soup.select("div.image > a > img")
@@ -94,21 +110,20 @@ FapReactor:
                 "Referer": "https://fapreactor.com/"
             }
 
+            proxy = self.config.get("proxy")
+
             async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.get(image_url) as resp:
+                async with session.get(image_url, proxy=proxy) as resp:
                     if resp.status != 200:
                         raise ValueError(f"Ошибка загрузки изображения: {resp.status}")
                     data = await resp.read()
                     with open(temp_file, "wb") as f:
                         f.write(data)
 
-            await message.client.send_file(
-                message.chat_id,
-                temp_file
-            )
+            await message.client.send_file(message.chat_id, temp_file)
             await message.delete()
             os.remove(temp_file)
 
         except Exception as e:
             logger.exception("Ошибка при получении изображения с fapreactor")
-            await message.edit(self.strings("not_found").format(str(e)))
+            await utils.answer(message, self.strings("not_found").format(str(e)))
