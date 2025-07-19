@@ -1,6 +1,6 @@
 # scope: user
 # meta developer: @Hikimuro
-# ver: 2.0.0
+# ver: 2.0.1
 
 from .. import loader, utils
 import cloudscraper
@@ -21,7 +21,13 @@ AVAILABLE_CATEGORIES = [
 
 @loader.tds
 class FapReactorMod(loader.Module):
-    """Отправляет случайное NSFW изображение с fapreactor.com по категории"""
+    """
+FapReactor:
+ Отправляет случайное NSFW изображение с fapreactor.com по категории
+
+▫️ -fap Отправляет рандомное NSFW изображение с fapreactor.com  
+▫️ -setfapcategory Устанавливает категорию (раздел)
+    """
 
     strings = {
         "name": "FapReactor",
@@ -55,7 +61,7 @@ class FapReactorMod(loader.Module):
 
     @loader.command()
     async def fap(self, message):
-        """Отправляет рандомное NSFW изображение с fapreactor.com"""
+        """Отправляет рандомное изображение с fapreactor.com"""
         category = self.config["category"]
         if not category:
             await message.edit(self.strings("no_category"))
@@ -96,7 +102,10 @@ class FapReactorMod(loader.Module):
                     with open(temp_file, "wb") as f:
                         f.write(data)
 
-            await message.client.send_file(message.chat_id, temp_file)
+            await message.client.send_file(
+                message.chat_id,
+                temp_file
+            )
             await message.delete()
             os.remove(temp_file)
 
