@@ -1,10 +1,9 @@
-# meta developer: @FMHbJ
+# meta developer: @Hikimuro
 # ver. 1.0.5
 # scope: hikka_only
 
 from .. import loader, utils
 from telethon.events import ChatAction
-from telethon.tl.types import User
 import time
 
 @loader.tds
@@ -34,12 +33,8 @@ class WelcomeModule(loader.Module):
             if time.time() - self._last_sent < 120:
                 return
 
-            user: User = await e.get_user()
-            name = f"@{user.username}" if user.username else user.first_name
-            msg = f"{name}, {self._text}"
-
             try:
-                await self._client.send_message(int(self._chat_id), msg)
+                await self._client.send_message(int(self._chat_id), self._text)
                 self._last_sent = time.time()
             except Exception as err:
                 await utils.answer(e, f"Ошибка отправки: {err}")
