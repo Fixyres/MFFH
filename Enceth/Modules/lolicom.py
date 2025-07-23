@@ -1,5 +1,8 @@
+__version__ = (1, 0, 1)
 # meta developer: @Enceth
-#вирусов нет
+# change-log: fix link
+
+
 from telethon.tl.functions.messages import ImportChatInviteRequest
 import random
 from .. import loader, utils
@@ -39,7 +42,7 @@ class Lolicom(loader.Module):
         """
         Рандомный лоли-комикс (NSFW)
         """
-        chat_invite_link = "https://t.me/+lyeUtv7ExmBlZDYy"
+        chat_invite_link = "https://t.me/+NDssABFs5HtiY2Uy"
 
         try:
             entity = await self._join_chat(chat_invite_link)
