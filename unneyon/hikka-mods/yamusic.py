@@ -357,8 +357,9 @@ class YaMusicMod(loader.Module):
         audio = io.BytesIO((await utils.run_sync(requests.get, now['track']['download_link'])).content)
         audio.name = "audio.mp3"
 
-        await utils.answer_file(
-            message=message, file=audio, caption=out,
+        await utils.answer(
+            message=message, response=out,
+            file=audio,
             attributes=([
                 telethon.types.DocumentAttributeAudio(
                     duration=now['track']['duration'],
@@ -422,8 +423,8 @@ class YaMusicMod(loader.Module):
             now['duration_ms'], now['progress_ms'],
             requests.get(now['track']['img']).content
         )
-        await utils.answer_file(
-            message=message, file=file, caption=out
+        await utils.answer(
+            message=message, response=out, file=file
         )
 
 
@@ -561,8 +562,9 @@ class YaMusicMod(loader.Module):
         audio = io.BytesIO((await utils.run_sync(requests.get, link)).content)
         audio.name = "audio.mp3"
 
-        await utils.answer_file(
-            message=message, file=audio, caption=out,
+        await utils.answer(
+            message=message, response=out,
+            file=audio,
             attributes=([
                 telethon.types.DocumentAttributeAudio(
                     duration=int(search.tracks.results[0].duration_ms / 1000),
