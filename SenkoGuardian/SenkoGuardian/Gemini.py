@@ -3,7 +3,7 @@
 #  This software is released under the MIT License.
 #  https://opensource.org/licenses/MIT
 
-__version__ = (4, 5, 0)
+__version__ = (4, 6, 0) # асаламалейкум тем кто код смотрит от меня (кста для чего смотрите?)
 
 #meta developer: @SenkoGuardianModules
 
@@ -22,11 +22,17 @@ import os
 import socket
 import aiohttp
 import tempfile
+from markdown_it import MarkdownIt
+import pytz
 from telethon import types
 from telethon.tl import types as tl_types
 from telethon.tl.types import Message
 from telethon.utils import get_display_name, get_peer_id
-
+from telethon.errors.rpcerrorlist import MessageTooLongError
+try:
+    from aiogram.exceptions import TelegramBadRequest
+except ImportError:
+    class TelegramBadRequest(Exception): pass
 import google.ai.generativelanguage as glm
 import google.api_core.exceptions as google_exceptions
 import google.generativeai as genai
@@ -34,7 +40,7 @@ import google.generativeai as genai
 from .. import loader, utils
 from ..inline.types import InlineCall
 
-# requires: google-generativeai google-api-core 
+# requires: google-generativeai google-api-core pytz
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +59,12 @@ class Gemini(loader.Module):
         "cfg_system_instruction_doc": "Системная инструкция (промпт) для Gemini.",
         "cfg_max_history_length_doc": "Макс. кол-во пар 'вопрос-ответ' в памяти (0 - без лимита).",
         "cfg_proxy_doc": "Прокси для обхода блокировок.",
+        "cfg_timezone_doc": "Ваш часовой пояс. Список: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
         "no_api_key": '❗️ <b>Ключ Api не настроен.</b>\nПолучить Api ключ можно <a href="https://aistudio.google.com/app/apikey">здесь</a>.',
         "no_prompt_or_media": "⚠️ <i>Нужен текст или ответ на медиа/файл.</i>",
         "processing": "<emoji document_id=5386367538735104399>⌛️</emoji> <b>Обработка...</b>",
         "api_error": "❗️ <b>Ошибка API Google Gemini:</b>\n<code>{}</code>",
-        "api_timeout": "❗️ <b>Таймаут ответа от Gemini API ({} сек).</b>".format(GEMINI_TIMEOUT),
+        "api_timeout": f"❗️ <b>Таймаут ответа от Gemini API ({GEMINI_TIMEOUT} сек).</b>",
         "blocked_error": "🚫 <b>Запрос/ответ заблокирован.</b>\n<code>{}</code>",
         "generic_error": "❗️ <b>Ошибка:</b>\n<code>{}</code>",
         "question_prefix": "💬 <b>Запрос:</b>",
@@ -77,6 +84,7 @@ class Gemini(loader.Module):
         "no_last_request": "Последний запрос не найден для повторной генерации.",
         "memory_fully_cleared": "🧹 <b>Вся память Gemini полностью очищена (затронуто {} чатов).</b>",
         "no_memory_to_fully_clear": "ℹ️ <b>Память Gemini и так пуста.</b>",
+        "response_too_long": "Ответ Gemini был слишком длинным и отправлен в виде файла.",
     }
     MODEL_MEDIA_SUPPORT = {
         "gemini-1.5-pro": {"text", "image", "audio", "video"},
@@ -84,23 +92,27 @@ class Gemini(loader.Module):
         "gemini-2.0-flash": {"text", "image", "audio", "video"},
         "gemini-2.5-flash-preview-05-20": {"text", "image", "audio", "video"},
         "gemini-2.5-pro-preview-06-05": {"text", "image", "audio", "video"},
-        "gemini-2.5-flash-preview-tts": {"text"},  # только text->audio
-        "gemini-2.5-pro-preview-tts": {"text"},    # только text->audio
+        "gemini-2.5-flash-preview-tts": {"text"},
+        "gemini-2.5-pro-preview-tts": {"text"},
         "gemini-embedding-exp": {"text"},
-        "imagen-3.0-generate-002": {"text"},       # только text->image
-        "veo-2.0-generate-001": {"text", "image"}, # text+image->video
+        "imagen-3.0-generate-002": {"text"},
+        "veo-2.0-generate-001": {"text", "image"},
         "gemini-2.0-flash-preview-image-generation": {"text", "image", "audio", "video"},
         "gemini-2.0-flash-live-001": {"text", "audio", "video"},
     }
-
     def __init__(self):
         self.config = loader.ModuleConfig(
             loader.ConfigValue("api_key", "", self.strings["cfg_api_key_doc"], validator=loader.validators.Hidden()),
-            loader.ConfigValue("model_name", "gemini-2.5-flash-preview-05-20", self.strings["cfg_model_name_doc"]),
+            loader.ConfigValue("model_name", "gemini-2.5-flash", self.strings["cfg_model_name_doc"]),
             loader.ConfigValue("interactive_buttons", True, self.strings["cfg_buttons_doc"], validator=loader.validators.Boolean()),
             loader.ConfigValue("system_instruction", "", self.strings["cfg_system_instruction_doc"]),
             loader.ConfigValue("max_history_length", 800, self.strings["cfg_max_history_length_doc"], validator=loader.validators.Integer(minimum=0)),
             loader.ConfigValue("proxy", "", self.strings["cfg_proxy_doc"]),
+            loader.ConfigValue(
+                "timezone",
+                "Europe/Moscow", 
+                "Ваш часовой пояс. Список: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
+            ),
         )
         self.conversations = {}
         self.last_requests = {}
@@ -252,7 +264,7 @@ class Gemini(loader.Module):
         message_id = None
         if message is not None:
             peer = getattr(message, "from_id", None)
-            user_id = get_peer_id(peer) if peer else None 
+            user_id = get_peer_id(peer) if peer else None
             message_id = getattr(message, "id", None)
         user_text = " ".join([p.text for p in user_parts if hasattr(p, 'text') and p.text]) or "[ответ на медиа]"
         if regeneration:
@@ -298,19 +310,17 @@ class Gemini(loader.Module):
             if "500 An internal error has occurred" in msg:
                 return (
                     "❗️ <b>Ошибка 500 от Google API.</b>\n"
-                    "Это значит, что формат медиа (файл, анимированный стикер) "
+                    "Это значит, что формат медиа (файл или еще что то) "
                     "который ты отправил, не поддерживается.\n"
-                    "Такое случается, по таким причинам:\n"
-                    "  • Если это <b>анимированный стикер (.tgs)</b>.\n"
-                    "  • Если формат файла в принципе не поддерживается Gemini."
+                    "Такое случается, по такой причине:\n"
+                    "  • Если формат файла в принципе не поддерживается Gemini/Гуглом."
                 )
             if "User location is not supported for the API use" in msg or "location is not supported" in msg:
                 return (
                     "❗️ <b>В данном регионе Gemini API не доступен.</b>\n"
                     "Скачайте VPN или поставьте прокси (платный/бесплатный).\n"
-                    "Или воспользуйтесь инструкцией <a href=\"https://t.me/SenkoGuardianModules/23\">тут</a> если у вас локалхост.\n"
+                    "Или воспользуйтесь инструкцией <a href=\"https://t.me/SenkoGuardianModules/23\">тут</a> если у вас локалхост/сервер.\n"
                     "Для тех у кого UserLand инструкция <a href=\"https://t.me/SenkoGuardianModules/35\">тут</a>\n"
-                    "Для серверов (ххост, джамхост и прочих) инструкций нет."
                 )
             if "API key not valid" in msg:
                 return self.strings["no_api_key"]
@@ -439,42 +449,42 @@ class Gemini(loader.Module):
         return final_parts, warnings
 
     def _markdown_to_html(self, text: str) -> str:
-        text = re.sub(r"````\s*(```[\s\S]+?```)\s*````", r"\1", text, flags=re.DOTALL)
-        text = re.sub(r"``\s*(`.+?`)\s*``", r"\1", text)
-        placeholders = {}
-        placeholder_id = 0
+        def heading_replacer(match):
+            level = len(match.group(1))
+            title = match.group(2).strip()
+            indent = "   " * (level - 1)
+            return f"{indent}<b>{title}</b>"
+        text = re.sub(r"^(#+)\s+(.*)", heading_replacer, text, flags=re.MULTILINE)
 
-        def fenced_code_repl(match):
-            nonlocal placeholder_id
-            key = f"@@@FENCED_CODE_{placeholder_id}@@@"
-            placeholder_id += 1
+        def list_replacer(match):
+            indent = match.group(1)
+            return f"{indent}• "
+        text = re.sub(r"^([ \t]*)[-*+]\s+", list_replacer, text, flags=re.MULTILINE)
+        md = MarkdownIt("commonmark", {"html": True, "linkify": True})
+        md.enable("strikethrough")
+        md.disable("hr")
+        md.disable("heading")
+        md.disable("list")
+        html_text = md.render(text)
+
+        def format_code(match):
             lang = utils.escape_html(match.group(1).strip())
             code = utils.escape_html(match.group(2).strip())
             if lang:
-                placeholders[key] = f'<pre language="{lang}"><code>{code}</code></pre>'
+                return f'<pre><code class="language-{lang}">{code}</code></pre>'
             else:
-                placeholders[key] = f'<pre><code>{code}</code></pre>'
-            return key
-        def inline_code_repl(match):
-            nonlocal placeholder_id
-            key = f"@@@INLINE_CODE_{placeholder_id}@@@"
-            placeholder_id += 1
-            code = utils.escape_html(match.group(1).strip())
-            placeholders[key] = f'<code>{code}</code>'
-            return key
-        text = re.sub(r"```(.*?)\n([\s\S]+?)\n```", fenced_code_repl, text)
-        text = re.sub(r"`(.+?)`", inline_code_repl, text)
-        text = utils.escape_html(text)
-        text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
-        text = re.sub(r"__(.*?)__", r"<u>\1</u>", text)
-        text = re.sub(r"\*(.*?)\*", r"<i>\1</i>", text)
-        text = re.sub(r"~~(.*?)~~", r"<s>\1</s>", text)
-        for key, value in placeholders.items():
-            text = text.replace(key, value)
-        return text.strip()
+                return f'<pre><code>{code}</code></pre>'
+        html_text = re.sub(
+            r"```(.*?)\n([\s\S]+?)\n```",
+            format_code,
+            html_text
+        )
+        html_text = re.sub(r"<p>(<pre>[\s\S]*?</pre>)</p>", r"\1", html_text, flags=re.DOTALL)
+        html_text = html_text.replace("<p>", "").replace("</p>", "\n").strip()
+        return html_text
 
     def _format_response_with_smart_separation(self, text: str) -> str:
-        pattern = r"(<pre.*?>.*?</pre>)"
+        pattern = r"(<pre.*?>[\s\S]*?</pre>)" 
         parts = re.split(pattern, text, flags=re.DOTALL)
         result_parts = []
         for i, part in enumerate(parts):
@@ -483,7 +493,9 @@ class Gemini(loader.Module):
             if i % 2 == 1:
                 result_parts.append(part.strip())
             else:
-                result_parts.append(f'<blockquote expandable="true">{part.strip()}</blockquote>')
+                stripped_part = part.strip()
+                if stripped_part:
+                     result_parts.append(f'<blockquote expandable="true">{stripped_part}</blockquote>')
         return "\n".join(result_parts)
 
     def _get_inline_buttons(self, chat_id, base_message_id):
@@ -526,9 +538,9 @@ class Gemini(loader.Module):
             chat_id = chat_id_override
             base_message_id = message
             try:
-                msgs = await self.client.get_messages(chat_id, ids=base_message_id)
-                if msgs: msg_obj = msgs[0]
-            except Exception: msg_obj = None
+                msg_obj = await self.client.get_messages(chat_id, ids=base_message_id)
+            except Exception:
+                msg_obj = None
         else:
             chat_id = utils.get_chat_id(message)
             base_message_id = message.id
@@ -544,10 +556,27 @@ class Gemini(loader.Module):
                 safety_settings=self.safety_settings,
                 system_instruction=self.config["system_instruction"].strip() or None
             )
+            
             raw_history = self._get_structured_history(chat_id)
             if regeneration: raw_history = raw_history[:-2]
+            
             api_history_content = [glm.Content(role=e["role"], parts=[glm.Part(text=e['content'])]) for e in raw_history]
-            full_request_content = api_history_content
+            full_request_content = []
+            from datetime import datetime
+            try:
+                user_timezone = pytz.timezone(self.config["timezone"])
+                now = datetime.now(user_timezone)
+            except pytz.UnknownTimeZoneError:
+                now = datetime.now(pytz.utc)
+            time_str = now.strftime("%Y-%m-%d %H:%M:%S %Z")
+            time_context = f"[System note: Current time is {time_str}]"
+            full_request_content.append(
+                glm.Content(role="user", parts=[glm.Part(text=time_context)])
+            )
+            full_request_content.append(
+                glm.Content(role="model", parts=[glm.Part(text="[Acknowledged]")])
+            )
+            full_request_content.extend(api_history_content)
             if regeneration:
                 current_turn_parts, request_text_for_display = self.last_requests.get(f"{chat_id}:{base_message_id}", (parts, "[регенерация]"))
             else:
@@ -587,24 +616,34 @@ class Gemini(loader.Module):
             hist_len_pairs = len(self._get_structured_history(chat_id)) // 2
             limit = self.config["max_history_length"]
             mem_indicator = self.strings["memory_status_unlimited"].format(hist_len_pairs) if limit <= 0 else self.strings["memory_status"].format(hist_len_pairs, limit)
-            question_html = f"{utils.escape_html(request_text_for_display[:200])}"
+            question_html = f"<blockquote>{utils.escape_html(request_text_for_display[:200])}</blockquote>"
             response_html = self._markdown_to_html(result_text)
-            text_to_send = (f"{mem_indicator}\n\n{self.strings['question_prefix']}\n{question_html}\n\n{self.strings['response_prefix']}\n<blockquote expandable=\"true\">{response_html}</blockquote>")
+            formatted_body = self._format_response_with_smart_separation(response_html)
+            header = f"{mem_indicator}\n\n{self.strings['question_prefix']}\n{question_html}\n\n{self.strings['response_prefix']}\n"
+            text_to_send = f"{header}{formatted_body}"
             buttons = self._get_inline_buttons(chat_id, base_message_id) if self.config["interactive_buttons"] else None
-            if call:
-                await call.edit(text_to_send, reply_markup=buttons)
-            elif status_msg:
-                if self.config["interactive_buttons"]:
-                    await utils.answer(status_msg, text_to_send, reply_markup=buttons)
-                    if message.out and not regeneration:
-                        await message.delete()
-                else:
+            TELEGRAM_MAX_MESSAGE_LENGTH = 4096
+            if len(text_to_send) > TELEGRAM_MAX_MESSAGE_LENGTH:
+                logger.warning("Message is too long, sending as a file.")
+                file_content = (
+                    f"Вопрос: {request_text_for_display}\n\n"
+                    f"════════════════════\n\n"
+                    f"Ответ Gemini:\n{result_text}"
+                )
+                file = io.BytesIO(file_content.encode("utf-8"))
+                file.name = "Gemini_response.txt"
+                if call:
+                    await call.answer("Ответ слишком длинный, отправляю файлом...", show_alert=False)
+                    await self.client.send_file(call.chat_id, file, caption=self.strings["response_too_long"], reply_to=call.message_id)
+                    await call.edit(f"✅ {self.strings['response_too_long']}", reply_markup=None)
+                elif status_msg:
                     await status_msg.delete()
-                    await self.client.send_message(
-                        chat_id,
-                        text_to_send,
-                        parse_mode="HTML"
-                    )
+                    await self.client.send_file(chat_id, file, caption=self.strings["response_too_long"], reply_to=base_message_id)
+            else:
+                if call:
+                    await call.edit(text_to_send, reply_markup=buttons)
+                elif status_msg:
+                    await utils.answer(status_msg, text_to_send, reply_markup=buttons)
         except Exception as e:
             error_text = self._handle_error(e)
             if call:
@@ -621,7 +660,7 @@ class Gemini(loader.Module):
         await self._send_to_gemini(
             message=original_message_id,
             parts=last_parts,
-            regeneration=True,  
+            regeneration=True,
             call=call,
             chat_id_override=chat_id
         )
@@ -708,7 +747,6 @@ class Gemini(loader.Module):
             user_id = entry.get("user_id")
             if user_id:
                 entry["user_name"] = user_names.get(user_id)
-
             if hasattr(user_id, "user_id"):
                 entry["user_id"] = user_id.user_id
             elif isinstance(user_id, (int, str)):
@@ -740,7 +778,7 @@ class Gemini(loader.Module):
         file = io.BytesIO()
         await self.client.download_media(reply, file)
         file.seek(0)
-        MAX_IMPORT_SIZE = 4 * 1024 * 1024 
+        MAX_IMPORT_SIZE = 4 * 1024 * 1024
         if file.getbuffer().nbytes > MAX_IMPORT_SIZE:
             await utils.answer(message, f"Файл слишком большой (>{MAX_IMPORT_SIZE // (1024*1024)} МБ).")
             return
