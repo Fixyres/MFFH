@@ -37,7 +37,7 @@ import google.generativeai as genai
 from .. import loader, utils
 from ..inline.types import InlineCall
 
-# requires: google-generativeai google-api-core pytz
+# requires: google-generativeai google-api-core pytz markdown_it_py
 
 logger = logging.getLogger(__name__)
 
