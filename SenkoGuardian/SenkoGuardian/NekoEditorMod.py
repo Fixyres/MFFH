@@ -45,7 +45,7 @@ class NekoEditorMod(loader.Module):
             if is_premium:
                 await utils.answer(message, '<emoji document_id="5377309873614627829">👌</emoji> Режим выключен... >_<')
             else:
-                await utils.answer(message, "🌀 Режим выключен... >_<")
+                await utils.answer(message, "🌀 Режим выключен... &gt;_&lt;")
         self.db.set("NekoEditor", "enabled", self.config["enabled"])
 
     async def watcher(self, message: Message):
