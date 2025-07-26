@@ -43,9 +43,10 @@ class NekoEditorMod(loader.Module):
         elif args.lower() in ["off", "выкл", "0"]:
             self.config["enabled"] = False
             if is_premium:
-                await utils.answer(message, '<emoji document_id="5377309873614627829">👌</emoji> Режим выключен... >_<')
+                await utils.answer(message, '<emoji document_id="5377309873614627829">👌</emoji> Режим выключен... ＞_＜')
             else:
-                await utils.answer(message, "🌀 Режим выключен... &gt;_&lt;")
+                await utils.answer(message, "🌀 Режим выключен... >_<", parse_mode=None)
+        
         self.db.set("NekoEditor", "enabled", self.config["enabled"])
 
     async def watcher(self, message: Message):
@@ -55,10 +56,16 @@ class NekoEditorMod(loader.Module):
             or getattr(message, "fwd_from", None)
             or getattr(message, "forward", None)
             or not message.text
-            or "nekoed" in message.raw_text.lower()
+            or "nekoed" in message.raw_text.lower() 
         ):
             return
+        neko_words = ["Nya~", "UwU", "OwO", "＞_＜", "^^", "(≧▽≦)"]
         modified_text = message.text
+        neko_word = random.choice(neko_words)
+        if random.random() < 0.5:
+            modified_text = f"{neko_word} {modified_text}"
+        else:
+            modified_text = f"{modified_text} {neko_word}"
         replacements = {
             "р": "w",
             "л": "w",
@@ -67,14 +74,8 @@ class NekoEditorMod(loader.Module):
         }
         for old, new in replacements.items():
             modified_text = modified_text.replace(old, new)
-        neko_words = ["Nya~", "UwU", "OwO", ">_<", "^^", "(≧▽≦)"]
-        neko_word = random.choice(neko_words)
-        escaped_neko_word = utils.escape_html(neko_word)
-        if random.random() < 0.5:
-            modified_text = f"{escaped_neko_word} {modified_text}"
-        else:
-            modified_text = f"{modified_text} {escaped_neko_word}"
         try:
-            await message.edit(modified_text, parse_mode="html")
+            if message.text != modified_text:
+                await message.edit(modified_text)
         except Exception:
             pass
