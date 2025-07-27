@@ -1,4 +1,4 @@
-__version__ = (3, 0, 0)
+__version__ = (3, 0, 1)
 
 """
 888    d8P   .d8888b.  888    888     888b     d888  .d88888b.  8888888b.   .d8888b.  
@@ -61,7 +61,7 @@ class UploaderMod(loader.Module):
       self.config = loader.ModuleConfig(
           loader.ConfigValue(
               "token",
-              "None",
+              "kshmods-ve7t71",
               lambda: self.strings("_cfg_token"),
               validator=loader.validators.Hidden(),
               ),
@@ -121,7 +121,7 @@ class UploaderMod(loader.Module):
             async with aiohttp.ClientSession() as session:
                 form_data = aiohttp.FormData() 
                 form_data.add_field("file", file)
-                async with session.post("https://upload.kshteam.top/upload", headers=headers, data=form_data) as response:
+                async with session.post("https://files.nloveuser.ru/upload", headers=headers, data=form_data) as response:
                     response_text = await response.text()
 
                     if response.status == 403:
