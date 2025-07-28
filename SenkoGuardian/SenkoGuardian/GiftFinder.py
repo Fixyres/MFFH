@@ -8,12 +8,12 @@
 import asyncio
 import random
 import re
-from hikkatl.types import Message, StarGiftUnique
+
 from .. import loader, utils
-from hikkatl.tl.functions.payments import GetSavedStarGiftsRequest
-from hikkatl.tl.functions.channels import GetFullChannelRequest
-from hikkatl.errors.rpcerrorlist import DocumentInvalidError, FloodWaitError, ChatAdminRequiredError
-from telethon.tl.types import Channel
+from herokutl.tl.functions.payments import GetSavedStarGiftsRequest
+from herokutl.tl.functions.channels import GetFullChannelRequest
+from herokutl.tl.types import Message, StarGiftUnique, Channel
+from herokutl.errors.rpcerrorlist import DocumentInvalidError, FloodWaitError, ChatAdminRequiredError
 from telethon.utils import get_display_name
 
 @loader.tds
@@ -35,12 +35,13 @@ class GiftFinderMod(loader.Module):
         "no_users_found": "🚫 <b>В этом чате не найдено пользователей с NFT-подарками.</b>",
     }
 
-    async def _safe_edit(self, msg, text_premium, text_safe):
-        """Пытается отредактировать сообщение с премиум-эмодзи, откатываясь на безопасное.""" # хз, падает а то часто
+    async def _safe_edit(self, msg: Message, text_premium: str, text_safe: str):
         try:
             await msg.edit(text_premium)
         except DocumentInvalidError:
             await msg.edit(text_safe)
+        except Exception:
+            pass
 
     async def giftscancmd(self, message: Message):
         """
@@ -52,20 +53,25 @@ class GiftFinderMod(loader.Module):
         msgs_limit = 3000
         if args:
             parts = args.split()
-            if parts[0].isdigit() and len(parts) == 1:
-                msgs_limit = int(parts[0])
-            else:
-                chat_arg = parts[0]
+            first_arg = parts[0]
+            if first_arg.lstrip('-').isdigit():
+                chat_arg = int(first_arg)
                 if len(parts) > 1 and parts[1].isdigit():
                     msgs_limit = int(parts[1])
+            else:
+                chat_arg = first_arg
+                if len(parts) > 1 and parts[1].isdigit():
+                    msgs_limit = int(parts[1])
+        if not chat_arg and args and args.isdigit():
+            msgs_limit = int(args)
         try:
             msg = await utils.answer(message, self.strings("scanning"))
         except DocumentInvalidError:
             msg = await utils.answer(message, self.strings("scanning_safe"))
         try:
-            chat = await self.client.get_entity(chat_arg) if chat_arg else await message.get_chat()
+            chat = await self.client.get_entity(chat_arg) if chat_arg is not None else await message.get_chat()
         except Exception:
-            await msg.edit(self.strings("not_a_chat"))
+            await self._safe_edit(msg, self.strings("not_a_chat"), self.strings("not_a_chat"))
             return
         user_ids = set()
         scan_messages_mode = False
@@ -75,7 +81,7 @@ class GiftFinderMod(loader.Module):
                 total_participants = full_chat.full_chat.participants_count
             else:
                 total_participants = chat.participants_count
-            participants = await self.client.get_participants(chat)
+            participants = await self.client.get_participants(chat, limit=None)
             user_ids.update(user.id for user in participants)
             if len(participants) < total_participants:
                 scan_messages_mode = True
@@ -107,21 +113,22 @@ class GiftFinderMod(loader.Module):
                         found_users.append(f"• {p_icon} {link}  -  {len(gifts)}")
                     break
                 except FloodWaitError as e:
-                    premium_text = self.strings("scanning") + self.strings("flood_wait").format(e.seconds)
-                    safe_text = self.strings("scanning_safe") + self.strings("flood_wait_safe").format(e.seconds)
+                    current_text = (await self.client.get_messages(msg.chat_id, ids=msg.id)).text
+                    premium_text = current_text + self.strings("flood_wait").format(e.seconds)
+                    safe_text = current_text + self.strings("flood_wait_safe").format(e.seconds)
                     await self._safe_edit(msg, premium_text, safe_text)
                     flood_penalty += 0.2
                     await asyncio.sleep(e.seconds)
                     continue
                 except Exception: break
         if not found_users:
-            await msg.edit(self.strings("no_users_found"))
+            await self._safe_edit(msg, self.strings("no_users_found"), self.strings("no_users_found"))
             return
         user_list = "\n".join(found_users)
-        # ну тут все ясно
         response_text = f"{self.strings('header')}\n<blockquote expandable>{user_list}</blockquote>"
         safe_header = "🔖 " + self.strings("header").split("</emoji>")[1]
         safe_list = [line.replace(self.strings("premium_star"), "⭐️") for line in found_users]
         safe_user_list = '\n'.join(safe_list)
         response_text_safe = f"{safe_header}\n<blockquote expandable>{safe_user_list}</blockquote>"
         await self._safe_edit(msg, response_text, response_text_safe)
+        # горе кодер
