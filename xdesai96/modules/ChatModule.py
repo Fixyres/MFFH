@@ -21,7 +21,7 @@ class ChatModuleMod(loader.Module):
         "user_not_participant": "<emoji document_id=5019523782004441717>❌</emoji> <b>User is not in this group.</b>",
         "rights_header": '<b><a href="tg://user?id={id}">{name}</a>\'s rights in this chat\n\n',
         "not_an_admin": "<emoji document_id=5019523782004441717>❌</emoji> {user} is not an admin.",
-        "no_rights": '<emoji document_id=5019523782004441717>❌</emoji> <b><a href="tg://user?id={user_id}">{user}</a> doesn\'t have enough rights :(</b>',
+        "no_rights": "<emoji document_id=5019523782004441717>❌</emoji> <b>I don't have enough rights :(</b>",
         "no_user": "<emoji document_id=5019523782004441717>❌</emoji> <b>User not found.</b>",
         "change_info": "Change Info",
         "delete_messages": "Delete Messages",
@@ -94,7 +94,7 @@ class ChatModuleMod(loader.Module):
         "user_not_participant": "<emoji document_id=5019523782004441717>❌</emoji> <b>Пользователь не состоит в этой группе.</b>",
         "rights_header": '<b><a href="tg://user?id={id}">{name}</a> — права в этом чате\n\n',
         "not_an_admin": "<emoji document_id=5019523782004441717>❌</emoji> {user} не является админом.",
-        "no_rights": '<emoji document_id=5019523782004441717>❌</emoji> <b>У <a href="tg://user?id={user_id}">{user}</a> недостаточно прав :(</b>',
+        "no_rights": "<emoji document_id=5019523782004441717>❌</emoji> <b>У меня недостаточно прав :(</b>",
         "no_user": "<emoji document_id=5019523782004441717>❌</emoji> <b>Пользователь не найден.</b>",
         "change_info": "Изменение информации",
         "delete_messages": "Удаление сообщений",
@@ -167,7 +167,7 @@ class ChatModuleMod(loader.Module):
         "user_not_participant": "<emoji document_id=5019523782004441717>❌</emoji> <b>このグループにユーザーはいません。</b>",
         "rights_header": '<b><a href="tg://user?id={id}">{name}</a>のこのチャットでの権限\n\n',
         "not_an_admin": "<emoji document_id=5019523782004441717>❌</emoji> {user} は管理者ではありません。",
-        "no_rights": '<emoji document_id=5019523782004441717>❌</emoji> <b><a href="tg://user?id={user_id}">{user}</a> の権限が十分ではありません :(</b>',
+        "no_rights": "<emoji document_id=5019523782004441717>❌</emoji> <b>私の権限が十分ではありません :(</b>",
         "no_user": "<emoji document_id=5019523782004441717>❌</emoji> <b>ユーザーが見つかりません。</b>",
         "change_info": "Change Info",
         "delete_messages": "Delete Messages",
@@ -243,9 +243,9 @@ class ChatModuleMod(loader.Module):
         user_id = None
         if reply and not message.is_private:
             user_id = reply.sender_id
-        output = f"{self.strings('my_id').format(my_id=my_id)}\n{self.strings('chat_id').format(chat_id=chat_id)}"
+        output = f"{self.strings['my_id'].format(my_id=my_id)}\n{self.strings['chat_id'].format(chat_id=chat_id)}"
         if user_id:
-            output += f"\n{self.strings('user_id').format(user_id=user_id)}"
+            output += f"\n{self.strings['user_id'].format(user_id=user_id)}"
         return await utils.answer(message, output)
 
     @loader.command(
@@ -255,7 +255,7 @@ class ChatModuleMod(loader.Module):
     async def rights(self, message):
         """[reply/username/id] - Check user's admin rights"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         chat = await message.get_chat()
         reply = await message.get_reply_message()
         args = utils.get_args(message)
@@ -282,7 +282,7 @@ class ChatModuleMod(loader.Module):
                 if args:
                     participant_id = await utils.get_target(message)
                 else:
-                    return await utils.answer(message, self.strings("no_user"))
+                    return await utils.answer(message, self.strings["no_user"])
             try:
                 result = await self._client(
                     channels.GetParticipantRequest(
@@ -291,19 +291,19 @@ class ChatModuleMod(loader.Module):
                 )
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
             user = await self._client.get_entity(participant_id)
             participant = result.participant
-            output = f"{self.strings('not_an_admin').format(user=user.first_name)}"
+            output = f"{self.strings['not_an_admin'].format(user=user.first_name)}"
             if hasattr(participant, "admin_rights") and participant.admin_rights:
-                output = self.strings("rights_header").format(
+                output = self.strings["rights_header"].format(
                     name=user.first_name, id=user.id
                 )
                 can_do = ""
                 for right in rights:
                     if getattr(participant.admin_rights, right):
-                        can_do += f"<emoji document_id=6296367896398399651>✅</emoji> {self.strings(right)}\n"
+                        can_do += f"<emoji document_id=6296367896398399651>✅</emoji> {self.strings[right]}\n"
                 if not can_do:
                     can_do += "No rights"
                 output += can_do
@@ -316,7 +316,7 @@ class ChatModuleMod(loader.Module):
     async def leave(self, message):
         """Leave chat"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         await message.delete()
         await self._client(channels.LeaveChannelRequest((await message.get_chat()).id))
 
@@ -334,7 +334,7 @@ class ChatModuleMod(loader.Module):
             try:
                 count = int(args[0][1:])
                 if count < 1 or count > 99:
-                    return await utils.answer(message, self.strings("invalid_args"))
+                    return await utils.answer(message, self.strings["invalid_args"])
             except:
                 count = 99
             if reply:
@@ -350,12 +350,12 @@ class ChatModuleMod(loader.Module):
                     )
                     ids.extend([msg.id for msg in messages])
                 else:
-                    return await utils.answer(message, self.strings("invalid_args"))
+                    return await utils.answer(message, self.strings["invalid_args"])
                 try:
                     await self._client.delete_messages(reply.chat_id, ids)
                 except Exception as e:
                     await utils.answer(
-                        message, self.strings("error").format(error=str(e))
+                        message, self.strings["error"].format(error=str(e))
                     )
         else:
             if reply:
@@ -374,27 +374,27 @@ class ChatModuleMod(loader.Module):
         """Shows the list of chats, channels and groups where you are an admin/owner"""
         count = 0
         msg = ""
-        await utils.answer(message, self.strings("loading"))
+        await utils.answer(message, self.strings["loading"])
         async for dialog in self._client.iter_dialogs():
             if dialog.is_channel or dialog.is_group:
                 chat = await self._client.get_entity(dialog.id)
                 if chat.admin_rights or chat.creator:
                     count += 1
                     chat_type = (
-                        self.strings("of_chat")
+                        self.strings["of_chat"]
                         if dialog.is_group
-                        else self.strings("of_channel")
+                        else self.strings["of_channel"]
                     )
                     msg += f"• {chat.title} <b>({chat_type})</b> | <code>{chat.id}</code>\n"
 
         if msg:
             await utils.answer(
                 message,
-                f"<blockquote expandable><b>{self.strings('own_list').format(count=count, msg=msg)}</b></blockquote>",
+                f"<blockquote expandable><b>{self.strings['own_list'].format(count=count, msg=msg)}</b></blockquote>",
                 parse_mode="html",
             )
         else:
-            await utils.answer(message, self.strings("no_ownerships", message))
+            await utils.answer(message, self.strings["no_ownerships"])
 
     @loader.command(
         ru_doc="[link/id] Удаляет группу/канал",
@@ -405,13 +405,13 @@ class ChatModuleMod(loader.Module):
         args = utils.get_args(message)
         if not args:
             if message.is_private:
-                return await utils.answer(message, self.strings("not_a_chat"))
+                return await utils.answer(message, self.strings["not_a_chat"])
             chat = await self._client.get_entity(message.chat_id)
             if message.is_channel:
-                chat_type = self.strings("of_channel")
+                chat_type = self.strings["of_channel"]
                 await self._client(channels.DeleteChannelRequest(chat.id))
             else:
-                chat_type = self.strings("of_chat")
+                chat_type = self.strings["of_chat"]
                 await self._client(messages.DeleteChatRequest(chat.id))
             return
         else:
@@ -421,15 +421,15 @@ class ChatModuleMod(loader.Module):
                 else await self._client.get_entity(args[0])
             )
             if isinstance(link, types.Channel):
-                chat_type = self.strings("of_channel")
+                chat_type = self.strings["of_channel"]
                 await self._client(channels.DeleteChannelRequest(link.id))
             elif isinstance(link, types.Chat):
-                chat_type = self.strings("of_chat")
+                chat_type = self.strings["of_chat"]
                 await self._client(messages.DeleteChatRequest(link.id))
             else:
-                return await utils.answer(message, self.strings("invalid_args"))
+                return await utils.answer(message, self.strings["invalid_args"])
         return await utils.answer(
-            message, self.strings("successful_delete").format(chat_type=chat_type)
+            message, self.strings["successful_delete"].format(chat_type=chat_type)
         )
 
     @loader.command(
@@ -439,12 +439,12 @@ class ChatModuleMod(loader.Module):
     async def flush(self, message):
         """Removes deleted accounts from the chat/channel"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
 
         chat = await message.get_chat()
 
         if not chat.admin_rights and not chat.creator:
-            return await utils.answer(message, self.strings("no_rights"))
+            return await utils.answer(message, self.strings["no_rights"])
 
         removed_count = 0
 
@@ -455,15 +455,15 @@ class ChatModuleMod(loader.Module):
                     removed_count += 1
                 except Exception as e:
                     return await utils.answer(
-                        message, self.strings("error").format(error=str(e))
+                        message, self.strings["error"].format(error=str(e))
                     )
 
         if removed_count == 0:
-            await utils.answer(message, self.strings("no_deleted_accounts"))
+            await utils.answer(message, self.strings["no_deleted_accounts"])
         else:
             await utils.answer(
                 message,
-                self.strings("kicked_deleted_accounts").format(count=removed_count),
+                self.strings["kicked_deleted_accounts"].format(count=removed_count),
             )
 
     @loader.command(
@@ -473,7 +473,7 @@ class ChatModuleMod(loader.Module):
     async def creator(self, message):
         """Shows the creator of the chat/channel"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         participants = await self._client(
             channels.GetParticipantsRequest(
                 channel=await message.get_chat(),
@@ -489,11 +489,11 @@ class ChatModuleMod(loader.Module):
                 creator = participant
                 break
         if not creator:
-            return await utils.answer(message, self.strings("no_creator"))
+            return await utils.answer(message, self.strings["no_creator"])
         creator = await self._client.get_entity(creator.user_id)
         return await utils.answer(
             message,
-            self.strings("creator").format(id=creator.id, creator=creator.first_name),
+            self.strings["creator"].format(id=creator.id, creator=creator.first_name),
         )
 
     @loader.command(
@@ -503,7 +503,7 @@ class ChatModuleMod(loader.Module):
     async def admins(self, message):
         """Shows the admins in the chat/channel"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         chat = await message.get_chat()
         title = chat.title
         admins = await self._client.get_participants(
@@ -512,7 +512,7 @@ class ChatModuleMod(loader.Module):
         real_members = [
             member for member in admins if not member.bot and not member.deleted
         ]
-        admins_header = self.strings("admins_in_chat").format(
+        admins_header = self.strings["admins_in_chat"].format(
             title=title, count=len(real_members)
         )
         if len(real_members) == 0:
@@ -526,19 +526,19 @@ class ChatModuleMod(loader.Module):
                 f"<blockquote expandable><b>{admins_header}</b></blockquote>",
             )
         except errors.MessageTooLongError:
-            await utils.answer(message, self.strings("too_many_admins"))
+            await utils.answer(message, self.strings["too_many_admins"])
             with open("adminlist.md", "w+") as file:
                 file.write(admins_header)
             await message.client.send_file(
                 message.chat_id,
                 "adminlist.md",
-                caption=self.strings("admins_in_chat_caption").format(title),
+                caption=self.strings["admins_in_chat_caption"].format(title),
                 reply_to=message.id,
             )
             os.remove("adminlist.md")
             await message.delete()
         except Exception as e:
-            return await utils.answer(message, self.strings("error").format(str(e)))
+            return await utils.answer(message, self.strings["error"].format(str(e)))
 
     @loader.command(
         ru_doc="Показывает ботов в группе/канале",
@@ -547,15 +547,15 @@ class ChatModuleMod(loader.Module):
     async def bots(self, message):
         """Shows the bots in the chat/channel"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         chat = await message.get_chat()
         title = chat.title
         bots = await self._client.get_participants(
             message.chat_id, filter=types.ChannelParticipantsBots()
         )
-        bots_header = self.strings("bots_in_chat").format(title=title, count=len(bots))
+        bots_header = self.strings["bots_in_chat"].format(title=title, count=len(bots))
         if len(bots) == 0:
-            return await utils.answer(message, self.strings("no_bots_in_chat"))
+            return await utils.answer(message, self.strings["no_bots_in_chat"])
         for user in bots:
             if not user.deleted:
                 bots_header += f'<emoji document_id=5316712579467321913>🔴</emoji> <a href="tg://user?id={user.id}">{user.first_name}</a> | <code>{user.id}</code>\n'
@@ -564,20 +564,20 @@ class ChatModuleMod(loader.Module):
                 message, f"<blockquote expandable><b>{bots_header}</b></blockquote>"
             )
         except errors.MessageTooLongError:
-            await utils.answer(message, self.strings("too_many_bots"))
+            await utils.answer(message, self.strings["too_many_bots"])
             with open("botlist.md", "w+") as file:
                 file.write(bots_header)
             await message.client.send_file(
                 message.chat_id,
                 "adminlist.md",
-                caption=self.strings("bots_in_chat_caption").format(title),
+                caption=self.strings["bots_in_chat_caption"].format(title),
                 reply_to=message.id,
             )
             os.remove("botlist.md")
             await message.delete()
         except Exception as e:
             return await utils.answer(
-                message, self.strings("error").format(error=str(e))
+                message, self.strings["error"].format(error=str(e))
             )
 
     @loader.command(
@@ -587,18 +587,18 @@ class ChatModuleMod(loader.Module):
     async def users(self, message):
         """Shows the users in the chat/channel"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         chat = await message.get_chat()
         title = chat.title
         users = await self._client.get_participants(message.chat_id)
         real_users = [
             member for member in users if not member.bot and not member.deleted
         ]
-        users_header = self.strings("users_in_chat").format(
+        users_header = self.strings["users_in_chat"].format(
             title=title, count=len(real_users)
         )
         if len(real_users) == 0:
-            return await utils.answer(message, self.strings("no_user_in_chat"))
+            return await utils.answer(message, self.strings["no_user_in_chat"])
         for user in users:
             if not user.bot and not user.deleted:
                 users_header += f'<emoji document_id=5314378500965145730>🔵</emoji> <a href ="tg://user?id={user.id}">{user.first_name}</a> | <code>{user.id}</code>\n'
@@ -608,14 +608,14 @@ class ChatModuleMod(loader.Module):
             )
             return
         except errors.MessageTooLongError:
-            await utils.answer(message, self.strings("large_chat_loading"))
+            await utils.answer(message, self.strings["large_chat_loading"])
             file = open("userslist.md", "w+")
             file.write(users_header)
             file.close()
             await message.client.send_file(
                 message.chat_id,
                 "userslist.md",
-                caption=self.strings("users_in_chat_caption").format(title),
+                caption=self.strings["users_in_chat_caption"].format(title),
                 reply_to=message.id,
             )
             os.remove("userslist.md")
@@ -623,7 +623,7 @@ class ChatModuleMod(loader.Module):
             return
         except Exception as e:
             return await utils.answer(
-                message, self.strings("error").format(error=str(e))
+                message, self.strings["error"].format(error=str(e))
             )
 
     @loader.command(
@@ -632,7 +632,7 @@ class ChatModuleMod(loader.Module):
     async def ban(self, message):
         """Ban a participant temporarily or permanently"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
 
         text = message.text.split("\n", 1)
         reason = text[1] if len(text) > 1 else ""
@@ -646,10 +646,10 @@ class ChatModuleMod(loader.Module):
                 user = await self._client.get_entity(await utils.get_target(message))
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
         if not user:
-            return await utils.answer(message, self.strings("invalid_args"))
+            return await utils.answer(message, self.strings["invalid_args"])
 
         time_match = re.search(r"(\d+)\s*(mo|y|w|d|h|m)", args)
         chat = await message.get_chat()
@@ -664,13 +664,13 @@ class ChatModuleMod(loader.Module):
                 )
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
 
             if reason:
                 return await utils.answer(
                     message,
-                    self.strings("user_is_banned_with_reason").format(
+                    self.strings["user_is_banned_with_reason"].format(
                         id=user.id,
                         name=user.first_name,
                         reason=reason,
@@ -679,7 +679,7 @@ class ChatModuleMod(loader.Module):
                 )
             return await utils.answer(
                 message,
-                self.strings("user_is_banned").format(
+                self.strings["user_is_banned"].format(
                     id=user.id, name=user.first_name, time_info=time_info[0]
                 ),
             )
@@ -689,7 +689,7 @@ class ChatModuleMod(loader.Module):
         if reason:
             return await utils.answer(
                 message,
-                self.strings("user_is_banned_forever_with_reason").format(
+                self.strings["user_is_banned_forever_with_reason"].format(
                     id=user.id,
                     name=user.first_name,
                     reason=reason,
@@ -697,7 +697,7 @@ class ChatModuleMod(loader.Module):
             )
         return await utils.answer(
             message,
-            self.strings("user_is_banned_forever").format(
+            self.strings["user_is_banned_forever"].format(
                 id=user.id, name=user.first_name
             ),
         )
@@ -706,7 +706,7 @@ class ChatModuleMod(loader.Module):
     async def unban(self, message):
         """Unban a user"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         reply = await message.get_reply_message()
         user = None
         if reply:
@@ -716,27 +716,27 @@ class ChatModuleMod(loader.Module):
                 user = await self._client.get_entity(await utils.get_target(message))
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
         if not user:
-            return await utils.answer(message, self.strings("no_user"))
+            return await utils.answer(message, self.strings["no_user"])
         chat = await message.get_chat()
         try:
             await self._client.edit_permissions(chat, user, view_messages=True)
         except Exception as e:
             return await utils.answer(
-                message, self.strings("error").format(error=str(e))
+                message, self.strings["error"].format(error=str(e))
             )
         return await utils.answer(
             message,
-            self.strings("user_is_unbanned").format(id=user.id, name=user.first_name),
+            self.strings["user_is_unbanned"].format(id=user.id, name=user.first_name),
         )
 
     @loader.command(ru_doc="Кикнуть участника", jp_doc="ユーザーをキックする")
     async def kick(self, message):
         """Kick a participant"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         reply = await message.get_reply_message()
         reason = ""
         user = None
@@ -749,26 +749,26 @@ class ChatModuleMod(loader.Module):
                 user = await self._client.get_entity(await utils.get_target(message))
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
         if not user:
-            return await utils.answer(message, self.strings("no_user"))
+            return await utils.answer(message, self.strings["no_user"])
         chat = await message.get_chat()
         try:
             await self._client.kick_participant(chat, user)
         except Exception as e:
             return await utils.answer(
-                message, self.strings("error").format(error=str(e))
+                message, self.strings["error"].format(error=str(e))
             )
         return (
             await utils.answer(
                 message,
-                self.strings("user_is_kicked").format(id=user.id, name=user.first_name),
+                self.strings["user_is_kicked"].format(id=user.id, name=user.first_name),
             )
             if not reason
             else await utils.answer(
                 message,
-                self.strings("user_is_kicked_with_reason").format(
+                self.strings["user_is_kicked_with_reason"].format(
                     id=user.id, name=user.first_name, reason=reason
                 ),
             )
@@ -780,7 +780,7 @@ class ChatModuleMod(loader.Module):
     async def mute(self, message):
         """Mute a participant temporarily or permanently"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         text = message.text.split("\n", 1)
         args = utils.get_args_raw(message)
         reason = text[1] if len(text) > 1 else ""
@@ -793,10 +793,10 @@ class ChatModuleMod(loader.Module):
                 user = await self._client.get_entity(await utils.get_target(message))
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
         if not user:
-            return await utils.answer(message, self.strings("invalid_args"))
+            return await utils.answer(message, self.strings["invalid_args"])
 
         time_match = re.search(r"(\d+)\s*(mo|y|w|d|h|m)", args)
         chat = await message.get_chat()
@@ -811,13 +811,13 @@ class ChatModuleMod(loader.Module):
                 )
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
 
             if reason:
                 return await utils.answer(
                     message,
-                    self.strings("user_is_muted_with_reason").format(
+                    self.strings["user_is_muted_with_reason"].format(
                         id=user.id,
                         name=user.first_name,
                         reason=reason,
@@ -826,7 +826,7 @@ class ChatModuleMod(loader.Module):
                 )
             return await utils.answer(
                 message,
-                self.strings("user_is_muted").format(
+                self.strings["user_is_muted"].format(
                     id=user.id, name=user.first_name, time_info=time_info[0]
                 ),
             )
@@ -836,7 +836,7 @@ class ChatModuleMod(loader.Module):
         if reason:
             return await utils.answer(
                 message,
-                self.strings("user_is_muted_with_reason_forever").format(
+                self.strings["user_is_muted_with_reason_forever"].format(
                     id=user.id,
                     name=user.first_name,
                     reason=reason,
@@ -844,7 +844,7 @@ class ChatModuleMod(loader.Module):
             )
         return await utils.answer(
             message,
-            self.strings("user_is_muted_forever").format(
+            self.strings["user_is_muted_forever"].format(
                 id=user.id, name=user.first_name
             ),
         )
@@ -853,7 +853,7 @@ class ChatModuleMod(loader.Module):
     async def unmute(self, message):
         """Unmute a participant"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         reply = await message.get_reply_message()
         if reply:
             user = await self._client.get_entity(reply.sender_id)
@@ -862,7 +862,7 @@ class ChatModuleMod(loader.Module):
                 user = await self._client.get_entity(await utils.get_target(message))
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
         if not user:
             return await utils.answer(message, "no_user")
@@ -873,11 +873,11 @@ class ChatModuleMod(loader.Module):
             await self._client.edit_permissions(chat, user, send_messages=True)
         except Exception as e:
             return await utils.answer(
-                message, self.strings("error").format(error=str(e))
+                message, self.strings["error"].format(error=str(e))
             )
         return await utils.answer(
             message,
-            self.strings("user_is_unmuted").format(id=user.id, name=user.first_name),
+            self.strings["user_is_unmuted"].format(id=user.id, name=user.first_name),
         )
 
     @loader.command(
@@ -887,7 +887,7 @@ class ChatModuleMod(loader.Module):
     async def mc(self, message):
         """Mute the chat for everyone except admins"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         chat = await message.get_chat()
         current = chat.default_banned_rights
         is_muted = current.send_messages is True
@@ -900,12 +900,12 @@ class ChatModuleMod(loader.Module):
             )
         except Exception as e:
             return await utils.answer(
-                message, self.strings("error").format(error=str(e))
+                message, self.strings["error"].format(error=str(e))
             )
         if is_muted:
-            return await utils.answer(message, self.strings("chat_unmuted"))
+            return await utils.answer(message, self.strings["chat_unmuted"])
         else:
-            return await utils.answer(message, self.strings("chat_muted"))
+            return await utils.answer(message, self.strings["chat_muted"])
 
     @loader.command(
         ru_doc="Переименовать группу/канал",
@@ -914,36 +914,36 @@ class ChatModuleMod(loader.Module):
     async def rename(self, message):
         """Rename the chat/channel"""
         if message.is_private:
-            return await utils.answer(message, self.strings("not_a_chat"))
+            return await utils.answer(message, self.strings["not_a_chat"])
         chat = await message.get_chat()
         old_title = chat.title
         new_title = utils.get_args_raw(message)
         if message.is_channel:
             if message.is_group:
-                type_of = self.strings("of_chat")
+                type_of = self.strings["of_chat"]
             else:
-                type_of = self.strings("of_channel")
+                type_of = self.strings["of_channel"]
             try:
                 await self._client(
                     channels.EditTitleRequest(channel=chat, title=new_title)
                 )
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=str(e))
+                    message, self.strings["error"].format(error=str(e))
                 )
         else:
-            type_of = self.strings("of_chat")
+            type_of = self.strings["of_chat"]
             try:
                 await self._client(
                     messages.EditChatTitleRequest(chat_id=chat.id, title=new_title)
                 )
             except Exception as e:
                 return await utils.answer(
-                    message, self.strings("error").format(error=e)
+                    message, self.strings["error"].format(error=e)
                 )
         return await utils.answer(
             message,
-            self.strings("title_changed").format(
+            self.strings["title_changed"].format(
                 old_title=old_title, new_title=new_title, type_of=type_of
             ),
         )
@@ -968,7 +968,7 @@ class ChatModuleMod(loader.Module):
             )
             return await utils.answer(
                 message,
-                self.strings("group_created").format(
+                self.strings["group_created"].format(
                     link=invite_link.link, title=" ".join(args[1:])
                 ),
             )
@@ -984,12 +984,12 @@ class ChatModuleMod(loader.Module):
             )
             return await utils.answer(
                 message,
-                self.strings("channel_created").format(
+                self.strings["channel_created"].format(
                     link=invite_link.link, title=" ".join(args[1:])
                 ),
             )
         else:
-            return await utils.answer(message, self.strings("invalid_args"))
+            return await utils.answer(message, self.strings["invalid_args"])
 
     @loader.command(
         ru_doc="Пригласить пользователя в чат", jp_doc="ユーザーをチャットに招待する"
@@ -1013,7 +1013,7 @@ class ChatModuleMod(loader.Module):
                 if result:
                     return result
         else:
-            return await utils.answer(message, self.strings("no_user"))
+            return await utils.answer(message, self.strings["no_user"])
 
     @loader.command(
         ru_doc="Выдать полные права", jp_doc="完全な権限を持つ参加者を昇格させる"
@@ -1036,7 +1036,7 @@ class ChatModuleMod(loader.Module):
             else:
                 rank = "admin" if not user.bot else "bot"
         else:
-            return await utils.answer(message, self.strings("no_user"))
+            return await utils.answer(message, self.strings["no_user"])
         try:
             await self._client(
                 channels.EditAdminRequest(
@@ -1061,12 +1061,12 @@ class ChatModuleMod(loader.Module):
             )
             return await utils.answer(
                 message,
-                self.strings("promoted_fullrights").format(
+                self.strings["promoted_fullrights"].format(
                     id=user.id, name=user.first_name
                 ),
             )
         except Exception as e:
-            return await utils.answer(message, self.strings("error").format(error=e))
+            return await utils.answer(message, self.strings["error"].format(error=e))
 
     @loader.command(ru_doc="Снять с админки", jp_doc="参加者の降格")
     async def demote(self, message):
@@ -1079,7 +1079,7 @@ class ChatModuleMod(loader.Module):
         elif args:
             user = await self._client.get_entity(await utils.get_target(message))
         else:
-            return await utils.answer(message, self.strings("no_user"))
+            return await utils.answer(message, self.strings["no_user"])
         try:
             await self._client(
                 channels.EditAdminRequest(
@@ -1104,10 +1104,10 @@ class ChatModuleMod(loader.Module):
             )
             return await utils.answer(
                 message,
-                self.strings("demoted").format(id=user.id, name=user.first_name),
+                self.strings["demoted"].format(id=user.id, name=user.first_name),
             )
         except Exception as e:
-            return await utils.answer(message, self.strings("error").format(error=e))
+            return await utils.answer(message, self.strings["error"].format(error=e))
 
     async def invite_user(self, message, chat, user):
         try:
@@ -1117,11 +1117,11 @@ class ChatModuleMod(loader.Module):
         except Exception as e:
             return await utils.answer(
                 message,
-                self.strings("error").format(error=str(e)),
+                self.strings["error"].format(error=str(e)),
             )
         await utils.answer(
             message,
-            self.strings("user_invited").format(user=user.first_name, id=user.id),
+            self.strings["user_invited"].format(user=user.first_name, id=user.id),
         )
         await asyncio.sleep(3)
         return None
