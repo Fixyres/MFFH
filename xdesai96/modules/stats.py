@@ -3,14 +3,14 @@
 from .. import loader, utils
 from telethon.tl.functions.contacts import GetBlockedRequest
 
+
 @loader.tds
 class Stats(loader.Module):
     """Показывает статистику твоего аккаунта"""
 
     strings = {
-"name": "Stats",
-
-"stats": """
+        "name": "Stats",
+        "stats": """
 <emoji document_id=5774022692642492953>✅</emoji><b> Account Statistics</b>
 
 </b><emoji document_id=5208454037531280484>💜</emoji><b> Total chats: </b><code>{all_chats}</code><b>
@@ -23,14 +23,12 @@ class Stats(loader.Module):
 </b><emoji document_id=5870948572526022116>✋</emoji><b> Total blocked: </b><code>{blocked}</code>
   <b>Ͱ</b><emoji document_id=6035084557378654059>👤</emoji><b> Users: </b><code>{blocked_users}</code>
   <b>Ͱ</b><emoji document_id=6030400221232501136>🤖</emoji><b> Bots: </b><code>{blocked_bots}</code>""",
-
-"loading_stats": "<b><emoji document_id=5309893756244206277>🫥</emoji> Loading statistics...</b>",
+        "loading_stats": "<b><emoji document_id=5309893756244206277>🫥</emoji> Loading statistics...</b>",
     }
 
     strings_ru = {
-"name": "Stats",
-
-"stats": """
+        "name": "Stats",
+        "stats": """
 <emoji document_id=5774022692642492953>✅</emoji><b> Статистика аккаунта
 
 </b><emoji document_id=5208454037531280484>💜</emoji><b> Всего чатов: </b><code>{all_chats}</code><b>
@@ -43,8 +41,7 @@ class Stats(loader.Module):
 </b><emoji document_id=5870948572526022116>✋</emoji><b> Всего заблокированных: </b><code>{blocked}</code>
   <b>Ͱ</b><emoji document_id=6035084557378654059>👤</emoji><b> Пользователи: </b><code>{blocked_users}</code>
   <b>Ͱ</b><emoji document_id=6030400221232501136>🤖</emoji><b> Боты: </b><code>{blocked_bots}</code>""",
-
-"loading_stats": "<b><emoji document_id=5309893756244206277>🫥</emoji> Загрузка статистики...</b>",
+        "loading_stats": "<b><emoji document_id=5309893756244206277>🫥</emoji> Загрузка статистики...</b>",
     }
 
     async def client_ready(self, client, db):
@@ -54,7 +51,7 @@ class Stats(loader.Module):
     @loader.command()
     async def stats(self, message):
         """Получить статистику"""
-        await utils.answer(message, self.strings['loading_stats'])
+        await utils.answer(message, self.strings["loading_stats"])
         users = 0
         bots = 0
         groups = 0
@@ -68,7 +65,9 @@ class Stats(loader.Module):
         offset = 0
         total_blocked = 0
         while True:
-            blocked_chats = await self._client(GetBlockedRequest(offset=offset, limit=limit))
+            blocked_chats = await self._client(
+                GetBlockedRequest(offset=offset, limit=limit)
+            )
             for user in blocked_chats.users:
                 if user.bot:
                     blocked_bots += 1
@@ -96,14 +95,26 @@ class Stats(loader.Module):
                 groups += 1
                 all_chats += 1
             elif dialog.is_channel:
-                if getattr(dialog.entity, "megagroup", False) or getattr(dialog.entity, "gigagroup", False):
+                if getattr(dialog.entity, "megagroup", False) or getattr(
+                    dialog.entity, "gigagroup", False
+                ):
                     groups += 1
                     all_chats += 1
                 elif getattr(dialog.entity, "broadcast", False):
                     channels += 1
                     all_chats += 1
 
-        await utils.answer(message, self.strings("stats", message).format(users=users, bots=bots, channels=channels,
-                                                                          groups=groups, all_chats=all_chats,
-                                                                          blocked=total_blocked, archived=archived, blocked_users=blocked_users,
-                                                                          blocked_bots=blocked_bots))
+        await utils.answer(
+            message,
+            self.strings["stats"].format(
+                users=users,
+                bots=bots,
+                channels=channels,
+                groups=groups,
+                all_chats=all_chats,
+                blocked=total_blocked,
+                archived=archived,
+                blocked_users=blocked_users,
+                blocked_bots=blocked_bots,
+            ),
+        )
