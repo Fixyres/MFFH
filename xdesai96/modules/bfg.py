@@ -6,6 +6,7 @@ import time
 from telethon import functions
 from .. import loader, utils
 
+
 class Farm:
     async def automining(self, conv):
         check_mine = "моя шахта"
@@ -17,17 +18,17 @@ class Farm:
         energy_count = int(mine_info.split("\n")[2].split(": ")[1])
 
         ores = [
-            ('железо', 'железо'),
-            ('золото', 'золото'),
-            ('алмаз', 'алмазы'),
-            ('аметист', 'аметисты'),
-            ('аквамарин', 'аквамарин'),
-            ('изумруд', 'изумруды'),
-            ('материя', 'материю'),
-            ('плазма', 'плазму'),
-            ('никель', 'никель'),
-            ('титан', 'титан'),
-            ('эктоплазма', 'эктоплазму'),
+            ("железо", "железо"),
+            ("золото", "золото"),
+            ("алмаз", "алмазы"),
+            ("аметист", "аметисты"),
+            ("аквамарин", "аквамарин"),
+            ("изумруд", "изумруды"),
+            ("материя", "материю"),
+            ("плазма", "плазму"),
+            ("никель", "никель"),
+            ("титан", "титан"),
+            ("эктоплазма", "эктоплазму"),
         ]
         mine_ore = ""
 
@@ -44,8 +45,8 @@ class Farm:
 
     async def everyday_bonus(self, conv):
         commands = [
-            'испытать удачу',
-            'ежедневный бонус',
+            "испытать удачу",
+            "ежедневный бонус",
         ]
         for command in commands:
             await conv.send_message(command)
@@ -53,12 +54,12 @@ class Farm:
 
     async def autofarm(self, conv):
         commands = [
-            ('моя ферма', [0, 1]),
-            ('мой бизнес', [0, 1]),
-            ('мой сад', [0, 1, 3]),
-            ('мое дерево', [0, 1]),
-            ('мой генератор', [0, 1]),
-            ('мой карьер', [0, 1]),
+            ("моя ферма", [0, 1]),
+            ("мой бизнес", [0, 1]),
+            ("мой сад", [0, 1, 3]),
+            ("мое дерево", [0, 1]),
+            ("мой генератор", [0, 1]),
+            ("мой карьер", [0, 1]),
         ]
         for command, clicks in commands:
             try:
@@ -79,15 +80,18 @@ class Farm:
         if self.config["SaleBTC"]:
             await conv.send_message("продать биткоины")
 
+
 class BfgMod(loader.Module, Farm):
-    strings = {"name": "BFG",
-               "bfgstart": "<blockquote><b>Autofarm is turned on</b></blockquote>",
-               "bfgstop": "<blockquote><b>Autofarm is turned off</b></blockquote>"
-               }
-    
-    strings_ru = {"bfgstart": "<blockquote><b>Автоматическая фарма включена</b></blockquote>",
-               "bfgstop": "<blockquote><b>Автоматическая фарма остановлена</b></blockquote>"
-               }
+    strings = {
+        "name": "BFG",
+        "bfgstart": "<blockquote><b>Autofarm is turned on</b></blockquote>",
+        "bfgstop": "<blockquote><b>Autofarm is turned off</b></blockquote>",
+    }
+
+    strings_ru = {
+        "bfgstart": "<blockquote><b>Автоматическая фарма включена</b></blockquote>",
+        "bfgstop": "<blockquote><b>Автоматическая фарма остановлена</b></blockquote>",
+    }
 
     _bot = "@bforgame_bot"
 
@@ -122,16 +126,22 @@ class BfgMod(loader.Module, Farm):
                 True,
                 "Автоматически собирать бонус",
                 validator=loader.validators.Boolean(),
-            )
+            ),
         )
 
     @loader.loop(interval=30, autostart=True)
     async def main_loop(self):
         try:
             now = time.time()
-            need_farm = self.config["AutoFarm"] and (not self.get("Tree_time") or now - self.get("Tree_time") >= 3600)
-            need_mine = self.config["AutoMining"] and (not self.get("Mining_time") or now - self.get("Mining_time") >= 7260)
-            need_bonus = self.config["EveryDayBonus"] and (not self.get("Bonus_time") or now - self.get("Bonus_time") >= 86410)
+            need_farm = self.config["AutoFarm"] and (
+                not self.get("Tree_time") or now - self.get("Tree_time") >= 3600
+            )
+            need_mine = self.config["AutoMining"] and (
+                not self.get("Mining_time") or now - self.get("Mining_time") >= 7260
+            )
+            need_bonus = self.config["EveryDayBonus"] and (
+                not self.get("Bonus_time") or now - self.get("Bonus_time") >= 86410
+            )
 
             if not any([need_farm, need_mine, need_bonus]):
                 return
@@ -150,20 +160,16 @@ class BfgMod(loader.Module, Farm):
         except Exception as e:
             logging.exception(f"[B  FG] Ошибка в main_loop: {e}")
 
-    @loader.command(
-        ru_doc="Начать автоматическую фарму."
-    )
+    @loader.command(ru_doc="Начать автоматическую фарму.")
     async def bfg(self, message):
         """Start autofarming."""
         self.config["AutoFarm"] = True
         self.main_loop.start()
-        await utils.answer(message, self.strings("bfgstart"))
-        
-    @loader.command(
-        ru_doc="Остановить автоматическую фарму."
-    )
+        await utils.answer(message, self.strings["bfgstart"])
+
+    @loader.command(ru_doc="Остановить автоматическую фарму.")
     async def bfgstop(self, message):
         """Stop autofarming."""
         self.config["AutoFarm"] = False
         self.main_loop.stop()
-        await utils.answer(message, self.strings("bfgstop"))
+        await utils.answer(message, self.strings["bfgstop"])
