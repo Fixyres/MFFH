@@ -6,40 +6,40 @@ import os, subprocess
 from .. import loader, utils
 from PIL import Image
 
+
 @loader.tds
 class P2G(loader.Module):
     """Модуль для преобразования изображения в GIF"""
+
     strings = {
         "name": "ImageToGif",
         "processing": "📤 Image Processing...",
         "no_image": "❌ No image found!",
-        "gif_ready": "✅ GIF is ready!"
+        "gif_ready": "✅ GIF is ready!",
     }
 
-    strings_ru = { 
+    strings_ru = {
         "name": "ImageToGif",
         "processing": "📤 Обработка изображения...",
         "no_image": "❌ Изображение не найдено!",
-        "gif_ready": "✅ GIF готов!"
+        "gif_ready": "✅ GIF готов!",
     }
 
-    @loader.command(
-        doc_ru = "Создает GIF из изображения."
-    )
+    @loader.command(doc_ru="Создает GIF из изображения.")
     async def p2g(self, message: Message):
         """Creates a GIF from an image."""
         reply = await message.get_reply_message()
         if not reply or not reply.media:
-            await utils.answer(message, self.strings("no_image", message))
+            await utils.answer(message, self.strings["no_image"])
             return
 
         await utils.answer(message, self.strings["processing"])
 
         file = await reply.download_media()
         if not file or not file.endswith((".jpg", ".jpeg", ".png")):
-            await utils.answer(message, self.strings("no_image", message))
+            await utils.answer(message, self.strings["no_image"])
             return
-        
+
         try:
             img = Image.open(file)
             if img.format.lower() == "webp":
@@ -65,12 +65,17 @@ class P2G(loader.Module):
             ffmpeg_command = [
                 "ffmpeg",
                 "-y",
-                "-framerate", "10",
-                "-i", os.path.join(temp_dir, "frame_%03d.png"),
-                "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                "-c:v", "libx264",
-                "-pix_fmt", "yuv420p",
-                mp4_path
+                "-framerate",
+                "10",
+                "-i",
+                os.path.join(temp_dir, "frame_%03d.png"),
+                "-vf",
+                "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                mp4_path,
             ]
 
             subprocess.run(ffmpeg_command, check=True)
