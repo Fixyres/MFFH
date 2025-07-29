@@ -40,7 +40,7 @@ class URLMod(loader.Module):
         """Expands the given shortened URL"""
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, self.strings("no_url"))
+            await utils.answer(message, self.strings["no_url"])
             return
         short_url = args.strip()
         try:
@@ -53,10 +53,10 @@ class URLMod(loader.Module):
                     expanded_url = str(response.url)
                     await utils.answer(
                         message,
-                        self.strings("expanded_url").format(expanded_url=expanded_url),
+                        self.strings["expanded_url"].format(expanded_url=expanded_url),
                     )
         except aiohttp.ClientError as e:
-            await utils.answer(message, self.strings("err").format(err=e))
+            await utils.answer(message, self.strings["err"].format(err=e))
 
     @loader.command(
         ru_doc="Получить IP адрес сайта", jp_doc="WebサイトのIPアドレスを取得する"
@@ -65,7 +65,7 @@ class URLMod(loader.Module):
         """Gets the IP address of the given URL"""
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, self.strings("no_url"))
+            await utils.answer(message, self.strings["no_url"])
             return
         url = args.strip()
         resolver = aiodns.DNSResolver()
@@ -75,7 +75,7 @@ class URLMod(loader.Module):
             response = await resolver.gethostbyname(hostname, socket.AF_INET)
             ip_address = response.addresses[0]
             await utils.answer(
-                message, self.strings("ip_addr").format(url=url, ip_address=ip_address)
+                message, self.strings["ip_addr"].format(url=url, ip_address=ip_address)
             )
         except aiodns.error.DNSError as e:
             await utils.answer(message, self.strngs("err").format(err=e))
