@@ -59,7 +59,7 @@ class FancyFontsMod(loader.Module):
         """<text> - Create the fancy version of text"""
         args = utils.get_args_raw(message)
         if not args:
-            await utils.answer(message, self.strings("no_args"))
+            await utils.answer(message, self.strings["no_args"])
             return
 
         await self.inline.list(
