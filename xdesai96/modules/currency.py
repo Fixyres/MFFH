@@ -52,19 +52,19 @@ class Currency(loader.Module):
         """<amount> <currency> - Show Exchange Rates"""
         args = utils.get_args(message)
         if len(args) < 2:
-            return await utils.answer(message, self.strings("invalid_args"))
+            return await utils.answer(message, self.strings["invalid_args"])
 
         try:
             amount = float(args[0])
             base_currency = args[1].upper()
         except Exception as e:
-            return await utils.answer(message, self.strings("err").format(error=str(e)))
+            return await utils.answer(message, self.strings["err"].format(error=str(e)))
 
         async with aiohttp.ClientSession() as session:
             rates = await self.fetch_rates(session, base_currency)
             if not rates:
                 return await utils.answer(
-                    message, self.strings("err").format(error="Failed to get rates")
+                    message, self.strings["err"].format(error="Failed to get rates")
                 )
 
         result_lines = []
@@ -85,10 +85,10 @@ class Currency(loader.Module):
                 converted_str = str(converted)
 
             result_lines.append(
-                self.strings("currency").format(cur=cur_up, converted=converted_str)
+                self.strings["currency"].format(cur=cur_up, converted=converted_str)
             )
 
-        text = self.strings("rate").format(
+        text = self.strings["rate"].format(
             amount=amount, currency=base_currency, rates="\n".join(result_lines)
         )
         await utils.answer(message, text)
