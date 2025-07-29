@@ -78,7 +78,7 @@ class TodoMod(loader.Module):
         self.set("todo", self.todolist)
         await utils.answer(
             message,
-            self.strings("new_task").format(
+            self.strings["new_task"].format(
                 random_id,
                 task,
                 self.imp_levels[importance],
@@ -113,9 +113,9 @@ class TodoMod(loader.Module):
             args = args[1:]
 
         if args not in self.todolist:
-            await utils.answer(message, self.strings("task_not_found"))
+            await utils.answer(message, self.strings["task_not_found"])
             return
 
         del self.todolist[args]
         self.set("todo", self.todolist)
-        await utils.answer(message, self.strings("task_removed"))
+        await utils.answer(message, self.strings["task_removed"])
