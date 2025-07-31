@@ -1,4 +1,4 @@
-__version__ = (0, 1, 4)
+__version__ = (0, 1, 5)
 # meta developer: @Kovalsky_modules
 # requires: kobalt
 
@@ -8,6 +8,8 @@ from .. import loader, utils
 from pydub import AudioSegment
 from Kobalt import CobaltAPI
 import mimetypes
+
+API_URL="https://cobalt.devkovalsky.ru"
 
 @loader.tds
 class Kobalt(loader.Module):
@@ -43,13 +45,13 @@ class Kobalt(loader.Module):
         
     @loader.command(ru_doc='Поддерживаемые сервисы')
     async def kservicescmd(self, message: Message):
-        cobalt = CobaltAPI()
+        cobalt = CobaltAPI(api_url=API_URL)
         services = cobalt.services()
         await utils.answer(message, self.strings["services"].format('\n'.join(services)))
         
     @loader.command(ru_doc='Скачать Аудио')
     async def kacmd(self, message: Message):
-        cobalt = CobaltAPI()
+        cobalt = CobaltAPI(api_url=API_URL)
         cobalt.mode("audio")
         args = utils.get_args_raw(message).split()
         await utils.answer(message, self.strings["audio_load"].format(args[0]))
@@ -80,7 +82,7 @@ class Kobalt(loader.Module):
 
     @loader.command(ru_doc='{url} {quality} - Скачать Медиа')
     async def kmcmd(self, message: Message):
-        cobalt = CobaltAPI()
+        cobalt = CobaltAPI(api_url=API_URL)
         args = utils.get_args_raw(message).split()
         quality_list = ["max", "4320", "2160", "1440", "1080", "720", "480", "360", "240", "144"]
         
@@ -114,7 +116,7 @@ class Kobalt(loader.Module):
     @loader.command(ru_doc='{url} {quality} - Скачать Видео без звука')
     async def kmvcmd(self, message: Message):
         args = utils.get_args_raw(message).split()
-        cobalt = CobaltAPI()
+        cobalt = CobaltAPI(api_url=API_URL)
         cobalt.mode("mute")
         quality_list = ["max", "4320", "2160", "1440", "1080", "720", "480", "360", "240", "144"]
         
