@@ -2,8 +2,6 @@
 # https://github.com/all-licenses/GNU-General-Public-License-v3.0
 
 # meta developer: @PyModule
-import json
-import os
 from telethon.tl.types import Message
 from .. import loader
 
@@ -12,27 +10,19 @@ class ChannelAdapterMod(loader.Module):
     """Модуль для добавления переходника в сообщения каналов"""
     strings = {"name": "ChannelAdapter"}
 
-    def __init__(self):
-        self.adapters_file = "adapters.json"
-        self.adapters = self.load_adapters()
-
-    def load_adapters(self):
-        """Загружает адаптеры из файла, если он существует."""
-        if os.path.exists(self.adapters_file):
-            with open(self.adapters_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        return {}
-
-    def save_adapters(self):
-        """Сохраняет адаптеры в файл."""
-        with open(self.adapters_file, "w", encoding="utf-8") as f:
-            json.dump(self.adapters, f, ensure_ascii=False, indent=4)
-
     async def client_ready(self, client, db):
         self.client = client
         self.db = db
-        if not self.adapters:
-            self.adapters = {}
+        if not self.db.get(__name__, "adapters"):
+            self.db.set(__name__, "adapters", {})
+
+    def get_adapters(self):
+        """Получает адаптеры из базы данных"""
+        return self.db.get(__name__, "adapters", {})
+
+    def save_adapters(self, adapters):
+        """Сохраняет адаптеры в базу данных"""
+        self.db.set(__name__, "adapters", adapters)
 
     @loader.command()
     async def addadaptercmd(self, message: Message):
@@ -49,11 +39,13 @@ class ChannelAdapterMod(loader.Module):
             await message.edit("<emoji document_id=6030563507299160824>❗️</emoji> <b>Укажите текст переходника.</b>")
             return
 
-        self.adapters[chat_id] = adapter_text
-        self.save_adapters()
+        adapters = self.get_adapters()
+        adapters[chat_id] = adapter_text
+        self.save_adapters(adapters)
 
         await message.edit(f"<emoji document_id=5774022692642492953>✅</emoji> <b>Переходник добавлен для канала:</b> <code>{chat_id}</code> - {adapter_text}")
 
+    @loader.command()
     async def deladaptercmd(self, message: Message):
         """[CHANNEL ID] - Удалить переходник для канала."""
         args = message.raw_text.split()
@@ -62,37 +54,40 @@ class ChannelAdapterMod(loader.Module):
             return
 
         chat_id = args[1]
+        adapters = self.get_adapters()
 
-        if chat_id not in self.adapters:
+        if chat_id not in adapters:
             await message.edit("<emoji document_id=5774077015388852135>❌</emoji> <b>Этот канал не найден в списке.</b>")
             return
 
-        del self.adapters[chat_id]
-        self.save_adapters() 
+        del adapters[chat_id]
+        self.save_adapters(adapters)
 
         await message.edit(f"<emoji document_id=5774022692642492953>✅</emoji> <b>Переходник для канала <code>{chat_id}</code> удалён.</b>")
 
+    @loader.command()
     async def listadapterscmd(self, message: Message):
         """- Показать список всех переходников."""
-        if not self.adapters:
+        adapters = self.get_adapters()
+        if not adapters:
             await message.edit("<emoji document_id=5774077015388852135>❌</emoji> <b>Нет сохранённых переходников.</b>")
             return
 
         text = "<blockquote><emoji document_id=5253959125838090076>👁</emoji> <b>Список сохранённых переходников</b></blockquote>\n\n\n"
-        for chat_id, adapter_text in self.adapters.items():
+        for chat_id, adapter_text in adapters.items():
             text += f"<emoji document_id=6032924188828767321>➕</emoji> <b><code>{chat_id}</code>:</b> {adapter_text}\n\n"
 
         await message.edit(text)
 
+    @loader.command()
     async def clearadapterscmd(self, message: Message):
         """- Удалить все переходники."""
-        if not self.adapters:
+        adapters = self.get_adapters()
+        if not adapters:
             await message.edit("<emoji document_id=5774077015388852135>❌</emoji> <b>Нет переходников для удаления.</b>")
             return
 
-        self.adapters = {}
-        self.save_adapters()
-
+        self.db.set(__name__, "adapters", {})
         await message.edit("<emoji document_id=5774022692642492953>✅</emoji> <b>Все адаптеры были удалены.</b>")
 
     async def watcher(self, message: Message):
@@ -100,7 +95,8 @@ class ChannelAdapterMod(loader.Module):
         if not message or not message.out:
             return
         
-        adapter_text = self.adapters.get(str(message.chat_id), None)
+        adapters = self.get_adapters()
+        adapter_text = adapters.get(str(message.chat_id), None)
 
         if not adapter_text:
             return
