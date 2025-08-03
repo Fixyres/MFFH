@@ -35,7 +35,7 @@ class femboy(loader.Module):
         self.db = db
         self._client = client
 
-    @loader.command()
+    @loader.command(no_stickers=True)
     async def femboy(self, message):
         """Включить/выключить режим фембоя"""
 
@@ -48,6 +48,7 @@ class femboy(loader.Module):
 
         await utils.answer(message, self.strings["f_on"])
 
+    @loader.watcher(only_messages=True, no_commands=True, no_stickers=True, no_forwards=True,)
     async def watcher(self, event):
         try:
             if event.sender_id != self.tg_id:
