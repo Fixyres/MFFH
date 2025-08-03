@@ -3,7 +3,7 @@
 #  This software is released under the MIT License.
 #  https://opensource.org/licenses/MIT
 
-__version__ = (5, 0, 0) # асаламалейкум тем кто код смотрит от меня (кста для чего смотрите?) (я заебался, ошибок было дохуище)
+__version__ = (5, 0, 1) # асаламалейкум тем кто код смотрит от меня (кста для чего смотрите?) (я заебался, ошибок было дохуище)
 
 # meta developer: @SenkoGuardianModules
 
@@ -207,9 +207,10 @@ class Gemini(loader.Module):
             if not self.config["api_key"]:
                 await utils.answer(status_msg, self.strings['no_api_key']); return
             genai.configure(api_key=self.config["api_key"])
-            model=genai.GenerativeModel(self.config["model_name"], safety_settings=self.safety_settings)
+            sanitized_model_name = self.config["model_name"].lower().replace(" ", "-")
+            model=genai.GenerativeModel(sanitized_model_name, safety_settings=self.safety_settings)
             response=await asyncio.wait_for(model.generate_content_async(full_prompt), timeout=GEMINI_TIMEOUT)
-            result_text=response.text
+            result_text = re.sub(r"</?emoji[^>]*>", "", response.text)
             header = self.strings["gch_result_caption_from_chat"].format(count, chat_name) if target_chat_id != utils.get_chat_id(message) else self.strings["gch_result_caption"].format(count)
             question_html=f"<blockquote expandable>{utils.escape_html(user_prompt)}</blockquote>"
             response_html=self._markdown_to_html(result_text)
@@ -433,10 +434,12 @@ class Gemini(loader.Module):
     @loader.command()
     async def gmodel(self, message: Message):
         """[model или пусто] — Узнать/сменить модель"""
-        args=utils.get_args_raw(message)
-        if not args: await utils.answer(message, f"Текущая модель: <code>{self.config['model_name']}</code>"); return
-        args_str=str(args).strip()
-        self.config["model_name"]=args_str
+        args = utils.get_args_raw(message)
+        if not args:
+            await utils.answer(message, f"Текущая модель: <code>{self.config['model_name']}</code>")
+            return
+        args_str = str(args).strip()
+        self.config["model_name"] = args_str
         await utils.answer(message, f"Модель Gemini установлена: <code>{args_str}</code>")
 
     @loader.command()
@@ -457,6 +460,7 @@ class Gemini(loader.Module):
             await utils.answer(message, self.strings["memory_fully_cleared"].format(num_chats))
         else:
             await utils.answer(message, self.strings["gres_usage"])
+
     def _configure_proxy(self):
         for var in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]: os.environ.pop(var, None)
         if self.config["proxy"]:
@@ -490,6 +494,7 @@ class Gemini(loader.Module):
         if response_text and response_text.strip():
             await asyncio.sleep(random.uniform(1.0, 2.5))
             await message.reply(response_text.strip())
+
     def _load_history_from_db(self, db_key: str) -> dict:
         raw_conversations=self.db.get(self.strings["name"], db_key, {})
         if not isinstance(raw_conversations, dict):
@@ -510,6 +515,7 @@ class Gemini(loader.Module):
                 raw_conversations[k]=filtered
         if chats_with_bad_history: logger.warning(f"Gemini ({db_key}): Некорректная структура памяти в {len(chats_with_bad_history)} чатах. Некорректные записи пропущены.")
         return raw_conversations
+
     def _save_history_sync(self, gauto: bool=False):
         if getattr(self, "_db_broken", False): return
         conversations_to_save, db_key=(self.gauto_conversations, DB_GAUTO_HISTORY_KEY) if gauto else (self.conversations, DB_HISTORY_KEY)
@@ -517,6 +523,7 @@ class Gemini(loader.Module):
         except Exception as e:
             logger.error(f"Ошибка сохранения истории Gemini (gauto={gauto}): {e}")
             self._db_broken=True
+
     def _get_structured_history(self, chat_id: int, gauto: bool=False) -> list:
         conversations=self.gauto_conversations if gauto else self.conversations
         hist=conversations.get(str(chat_id), [])
@@ -526,75 +533,101 @@ class Gemini(loader.Module):
             conversations[str(chat_id)]=hist
             self._save_history_sync(gauto)
         return hist
-    def _update_history(self, chat_id: int, user_parts: list, model_response: str, regeneration: bool=False, message: Message=None, gauto: bool=False):
-        if not self._is_memory_enabled(str(chat_id)): return
-        history=self._get_structured_history(chat_id, gauto)
-        now=int(asyncio.get_event_loop().time())
-        user_id=get_peer_id(getattr(message, "from_id", None)) if message else self.me.id
-        message_id=getattr(message, "id", None)
-        user_text=" ".join([p.text for p in user_parts if hasattr(p, 'text') and p.text]) or "[ответ на медиа]"
+
+    def _update_history(self, chat_id: int, user_parts: list, model_response: str, regeneration: bool = False, message: Message = None, gauto: bool = False):
+        if not self._is_memory_enabled(str(chat_id)):
+            return
+        history = self._get_structured_history(chat_id, gauto)
+        now = int(asyncio.get_event_loop().time())
+        user_id = self.me.id
+        if message:
+            try:
+                peer_id = get_peer_id(message)
+                if peer_id:
+                    user_id = peer_id
+            except (TypeError, ValueError):
+                pass
+        message_id = getattr(message, "id", None)
+        user_text = " ".join([p.text for p in user_parts if hasattr(p, "text") and p.text]) or "[ответ на медиа]"
         if regeneration:
             for i in range(len(history) - 1, -1, -1):
-                if history[i].get("role")=="model":
-                    history[i].update({"content": model_response, "date": now}); break
+                if history[i].get("role") == "model":
+                    history[i].update({"content": model_response, "date": now})
+                    break
         else:
-            history.extend([{"role": "user", "type": "text", "content": user_text, "date": now, "user_id": user_id, "message_id": message_id}, {"role": "model", "type": "text", "content": model_response, "date": now}])
-        max_len=self.config["max_history_length"]
-        if max_len > 0 and len(history) > max_len*2: history=history[-(max_len*2):]
-        conversations=self.gauto_conversations if gauto else self.conversations
-        conversations[str(chat_id)]=history
+            history.extend([
+                {"role": "user", "type": "text", "content": user_text, "date": now, "user_id": user_id, "message_id": message_id},
+                {"role": "model", "type": "text", "content": model_response, "date": now},
+            ])
+        max_len = self.config["max_history_length"]
+        if max_len > 0 and len(history) > max_len * 2:
+            history = history[-(max_len * 2):]
+        conversations = self.gauto_conversations if gauto else self.conversations
+        conversations[str(chat_id)] = history
         self._save_history_sync(gauto)
+
     def _clear_history(self, chat_id: int, gauto: bool=False):
         conversations=self.gauto_conversations if gauto else self.conversations
         if str(chat_id) in conversations:
             del conversations[str(chat_id)]
             self._save_history_sync(gauto)
+
     def _handle_error(self, e: Exception) -> str:
         logger.exception("Gemini execution error")
-        if isinstance(e, asyncio.TimeoutError): return self.strings["api_timeout"]
+        if isinstance(e, asyncio.TimeoutError):
+            return self.strings["api_timeout"]
         if isinstance(e, google_exceptions.GoogleAPIError):
-            msg=str(e)
+            msg = str(e)
             if "quota" in msg.lower() or "exceeded" in msg.lower():
-                model_name_match=re.search(r'key: "model"\s+value: "([^"]+)"', msg)
-                model_name=model_name_match.group(1) if model_name_match else self.config['model_name']
-                return 
-            (
-            f"❗️ <b>Превышен лимит Google Gemini API для модели <code>{utils.escape_html(model_name)}</code>.",
-            "</b>\n\nЧаще всего это происходит на бесплатном тарифе. Вы можете:\n ",
-            "• Подождать, пока лимит сбросится (обычно раз в сутки).\n ",
-            "• Проверить свой тарифный план в <a href='https://aistudio.google.com/app/billing'>Google AI Studio</a>.\n ",
-            "• Узнать больше о лимитах <a href='https://ai.google.dev/gemini-api/docs/rate-limits'>здесь</a>.\n\n",
-            "<b>Детали ошибки:</b>\n<code>{utils.escape_html(msg)}</code>"
-            )
-        
-            if "500 An internal error has occurred" in msg: return 
-            (
-            "❗️ <b>Ошибка 500 от Google API.</b>\n"
-            "Это значит, что формат медиа (файл или еще что то) который ты отправил, не поддерживается.\n"
-            "Такое случается, по такой причине:\n  "
-            "• Если формат файла в принципе не поддерживается Gemini/Гуглом.\n  "
-            "• Временный сбой на серверах Google. Попробуйте повторить запрос позже."
-            )
-        
-            if "User location is not supported for the API use" in msg or "location is not supported" in msg: return (
-            "❗️ <b>В данном регионе Gemini API не доступен.</b>\n",
-            "Скачайте VPN (для пк/тел) или поставьте прокси (платный/бесплатный).\n",
-            "Или воспользуйтесь инструкцией <a href=\"https://t.me/SenkoGuardianModules/23\">вот тут</a>\n",
-            "А для тех у кого UserLand инструкция <a href=\"https://t.me/SenkoGuardianModules/35\">тут</a>\n"
-            )
-        
-            if "API key not valid" in msg: return self.strings["no_api_key"]
-            if "blocked" in msg.lower(): return self.strings["blocked_error"].format(utils.escape_html(msg))
+                model_name = self.config.get("model_name", "unknown")
+                model_name_match = re.search(r'key: "model"\s+value: "([^"]+)"', msg)
+                if model_name_match:
+                    model_name = model_name_match.group(1)
+                return (
+                    f"❗️ <b>Превышен лимит Google Gemini API для модели <code>{utils.escape_html(model_name)}</code>.</b>"
+                    "\n\nЧаще всего это происходит на бесплатном тарифе. Вы можете:\n"
+                    "• Подождать, пока лимит сбросится (обычно раз в сутки).\n"
+                    "• Проверить свой тарифный план в <a href='https://aistudio.google.com/app/billing'>Google AI Studio</a>.\n"
+                    "• Узнать больше о лимитах <a href='https://ai.google.dev/gemini-api/docs/rate-limits'>здесь</a>.\n\n"
+                    f"<b>Детали ошибки:</b>\n<code>{utils.escape_html(msg)}</code>"
+                )
+
+            if "500 An internal error has occurred" in msg:
+                return (
+                    "❗️ <b>Ошибка 500 от Google API.</b>\n"
+                    "Это значит, что формат медиа (файл или еще что то) который ты отправил, не поддерживается.\n"
+                    "Такое случается, по такой причине:\n  "
+                    "• Если формат файла в принципе не поддерживается Gemini/Гуглом.\n  "
+                    "• Временный сбой на серверах Google. Попробуйте повторить запрос позже."
+                )
+
+            if "User location is not supported for the API use" in msg or "location is not supported" in msg:
+                return (
+                    '❗️ <b>В данном регионе Gemini API не доступен.</b>\n'
+                    'Скачайте VPN (для пк/тел) или поставьте прокси (платный/бесплатный).\n'
+                    'Или воспользуйтесь инструкцией <a href="https://t.me/SenkoGuardianModules/23">вот тут</a>\n'
+                    'А для тех у кого UserLand инструкция <a href="https://t.me/SenkoGuardianModules/35">тут</a>'
+                )
+
+            if "API key not valid" in msg:
+                return self.strings["no_api_key"]
+            if "blocked" in msg.lower():
+                return self.strings["blocked_error"].format(utils.escape_html(msg))
+            
             return self.strings["api_error"].format(utils.escape_html(msg))
-        if isinstance(e, (OSError, aiohttp.ClientError, socket.timeout)): return "❗️ <b>Сетевая ошибка:</b>\n<code>{}</code>".format(utils.escape_html(str(e)))
-        msg=str(e)
-        if "No API_KEY or ADC found" in msg or "GOOGLE_API_KEY environment variable" in msg or "genai.configure(api_key" in msg: return
-        (
-        "❗️ <b>API ключ не найден.</b>\n "
-        "Получить ключ можно тут: <a href=\"https://aistudio.google.com/apikey\">https://aistudio.google.com/apikey</a>\n "
-        "<b>Поставить API ключ сюда</b>: <code>.cfg gemini api_key</code>"
-        )
+
+        if isinstance(e, (OSError, aiohttp.ClientError, socket.timeout)):
+            return "❗️ <b>Сетевая ошибка:</b>\n<code>{}</code>".format(utils.escape_html(str(e)))
+        
+        msg = str(e)
+        if "No API_KEY or ADC found" in msg or "GOOGLE_API_KEY environment variable" in msg or "genai.configure(api_key" in msg:
+            return (
+                '❗️ <b>API ключ не найден.</b>\n'
+                'Получить ключ можно тут: <a href="https://aistudio.google.com/apikey">https://aistudio.google.com/apikey</a>\n'
+                '<b>Поставить API ключ сюда</b>: <code>.cfg gemini api_key</code>'
+            )
         return self.strings["generic_error"].format(utils.escape_html(str(e)))
+
 
     async def _prepare_parts(self, message: Message, custom_text: str=None):
         final_parts, warnings=[], []
@@ -675,6 +708,7 @@ class Gemini(loader.Module):
         full_prompt_text="\n".join(chunk for chunk in prompt_text_chunks if chunk and chunk.strip()).strip()
         if full_prompt_text: final_parts.insert(0, glm.Part(text=full_prompt_text))
         return final_parts, warnings
+
     def _markdown_to_html(self, text: str) -> str:
         def heading_replacer(match): level=len(match.group(1)); title=match.group(2).strip(); indent="   " * (level - 1); return f"{indent}<b>{title}</b>"
         text=re.sub(r"^(#+)\s+(.*)", heading_replacer, text, flags=re.MULTILINE)
@@ -689,6 +723,7 @@ class Gemini(loader.Module):
         html_text=re.sub(r"<p>(<pre>[\s\S]*?</pre>)</p>", r"\1", html_text, flags=re.DOTALL)
         html_text=html_text.replace("<p>", "").replace("</p>", "\n").strip()
         return html_text
+
     def _format_response_with_smart_separation(self, text: str) -> str:
         pattern=r"(<pre.*?>[\s\S]*?</pre>)"; parts=re.split(pattern, text, flags=re.DOTALL); result_parts=[]
         for i, part in enumerate(parts):
@@ -698,6 +733,7 @@ class Gemini(loader.Module):
                 stripped_part=part.strip()
                 if stripped_part: result_parts.append(f'<blockquote expandable="true">{stripped_part}</blockquote>')
         return "\n".join(result_parts)
+
     def _get_inline_buttons(self, chat_id, base_message_id): return [[{"text": self.strings["btn_clear"], "callback": self._clear_callback, "args": (chat_id,)}, {"text": self.strings["btn_regenerate"], "callback": self._regenerate_callback, "args": (base_message_id, chat_id)}]]
 
     async def _safe_del_msg(self, msg, delay=1):
@@ -734,7 +770,8 @@ class Gemini(loader.Module):
                 raw_history=self._get_structured_history(chat_id, gauto=False)
                 if regeneration: raw_history=raw_history[:-2]
                 api_history_content=[glm.Content(role=e["role"], parts=[glm.Part(text=e['content'])]) for e in raw_history]
-            model=genai.GenerativeModel(self.config["model_name"],safety_settings=self.safety_settings,system_instruction=system_instruction_to_use)
+            sanitized_model_name = self.config["model_name"].lower().replace(" ", "-")
+            model=genai.GenerativeModel(sanitized_model_name, safety_settings=self.safety_settings, system_instruction=system_instruction_to_use)
             full_request_content=list(api_history_content)
             if not impersonation_mode:
                 from datetime import datetime
@@ -760,7 +797,8 @@ class Gemini(loader.Module):
             except AttributeError: pass
             if not result_text:
                 try:
-                    result_text=response.text; was_successful=True
+                    result_text = re.sub(r"</?emoji[^>]*>", "", response.text)
+                    was_successful=True
                 except ValueError:
                     reason="Неизвестная причина"
                     try:
@@ -802,20 +840,31 @@ class Gemini(loader.Module):
         last_parts, display_prompt=last_request_tuple; use_url_context=bool(re.search(r'https?://\S+', display_prompt))
         await self._send_to_gemini(message=original_message_id, parts=last_parts, regeneration=True, call=call, chat_id_override=chat_id, use_url_context=use_url_context, display_prompt=display_prompt)
 
-    async def _get_recent_chat_text(self, chat_id: int, count: int=None, skip_last: bool=False) -> str:
-        history_limit=count or self.config["impersonation_history_limit"]; fetch_limit=history_limit + 1 if skip_last else history_limit; chat_history_lines=[]
+    async def _get_recent_chat_text(self, chat_id: int, count: int = None, skip_last: bool = False) -> str:
+        history_limit = count or self.config["impersonation_history_limit"]
+        fetch_limit = history_limit + 1 if skip_last else history_limit
+        chat_history_lines = []
         try:
-            messages=await self.client.get_messages(chat_id, limit=fetch_limit)
-            if skip_last and messages: messages=messages[1:]
+            messages = await self.client.get_messages(chat_id, limit=fetch_limit)
+            if skip_last and messages:
+                messages = messages[1:]
             for msg in messages:
-                if not msg.text and not msg.sticker and not msg.photo and not (msg.media and not hasattr(msg.media, "webpage")): continue
-                sender=await msg.get_sender(); sender_name=get_display_name(sender) if sender else "Unknown"; text_content=msg.text or ""
+                if not msg:
+                    continue
+                if not msg.text and not msg.sticker and not msg.photo and not (msg.media and not hasattr(msg.media, "webpage")):
+                    continue
+                sender = await msg.get_sender()
+                sender_name = get_display_name(sender) if sender else "Unknown"
+                text_content = msg.text or ""
                 if msg.sticker and hasattr(msg.sticker, 'attributes'):
-                    alt_text=next((attr.alt for attr in msg.sticker.attributes if isinstance(attr, types.DocumentAttributeSticker)), None)
-                    text_content+=f" [Стикер: {alt_text or '?'}]"
-                elif msg.photo: text_content+=" [Фото]"
-                elif msg.document and not hasattr(msg.media, "webpage"): text_content+=" [Файл]"
-                if text_content.strip(): chat_history_lines.append(f"{sender_name}: {text_content.strip()}")
+                    alt_text = next((attr.alt for attr in msg.sticker.attributes if isinstance(attr, types.DocumentAttributeSticker)), None)
+                    text_content += f" [Стикер: {alt_text or '?'}]"
+                elif msg.photo:
+                    text_content += " [Фото]"
+                elif msg.document and not hasattr(msg.media, "webpage"):
+                    text_content += " [Файл]"
+                if text_content.strip():
+                    chat_history_lines.append(f"{sender_name}: {text_content.strip()}")
         except Exception as e:
             logger.warning(f"Не удалось получить историю для авто-ответа: {e}")
         return "\n".join(reversed(chat_history_lines))
