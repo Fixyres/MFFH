@@ -1,13 +1,17 @@
 from .. import loader, utils
 #Удаляет все сообщения
-#Удаляет все сообщения
 # dhdhrj
 #ncjjcjf
+# djxjjrjfjf
 
+
+# jdjdjrm
+# xyi
 # dhxjdnd
 class DelmeMod(loader.Module):
     """Удаляет все сообщения"""
     strings = {'name': 'DelMe'}
+    
     @loader.sudo
     async def delmecmd(self, message):
         chat = message.chat
@@ -17,5 +21,4 @@ class DelmeMod(loader.Module):
                 await message.edit(f"<b>Если ты точно хочешь это сделать, то напиши:</b>\n<code>.delme {message.chat.id+message.sender_id}</code>")
                 return
             await delete(chat, message, True)
-        else:
-            await message.edit("<b>В лс не чищу!</b>")
+        
