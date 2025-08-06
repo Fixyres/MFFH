@@ -1,10 +1,14 @@
-__version__ = (1, 3, 3, 7)
+__version__ = (1, 3, 3, 6)
 from .. import loader, utils
 #Удаляет все сообщения
 
 # jdjdjrm
+# алалкл
+# ,ллалал
 # xyi
-# dhxjdnd
+
+
+
 class DelmeMod(loader.Module):
     """Удаляет все сообщения"""
     strings = {'name': 'DelMe'}
