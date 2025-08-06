@@ -1,11 +1,15 @@
 from .. import loader, utils
+#Удаляет все сообщения
+#Удаляет все сообщения
+# dhdhrj
+#ncjjcjf
 
+# dhxjdnd
 class DelmeMod(loader.Module):
     """Удаляет все сообщения"""
     strings = {'name': 'DelMe'}
     @loader.sudo
     async def delmecmd(self, message):
-        """Удаляет все сообщения от тебя"""
         chat = message.chat
         if chat:
             args = utils.get_args_raw(message)
