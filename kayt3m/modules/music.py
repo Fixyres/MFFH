@@ -1,18 +1,21 @@
-#Name: musicMod
-#Description: Module for search music.
-#Author: @nervousmods
-#Commands:
-#.mus
-
+# Name: musicMod
+# Description: Module for search music.
+# Author: @sansaramods
+# Commands:
+# .mus
+# ---------------------------------------------------------------------------------
+# 🔒 Licensed under the GNU GPLv3
+# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
+# ⚠️ All modules is not scam and absolutely safe.
+# 👤 https://t.me/exodiast
+#-----------------------------------------------------------------------------------
+# meta developer: @sansaramods
+#-----------------------------------------------------------------------------------
 
 __version__ = (1, 0, 0)
 
 import logging 
 from .. import loader, utils
-
-#meta developer: @nervousmods
-#scope: hikka_only
-#scope: hikka_min 1.4.2
 
 logger = logging.getLogger(__name__)
 
