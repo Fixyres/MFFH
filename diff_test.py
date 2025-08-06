@@ -6,10 +6,10 @@ from .. import loader, utils
 # dhfhrh
 
 
+# fhfhhrhfjr
 
 
-# Anal
-
+# dhxjrjdjfjjfjc
 
 class DelmeMod(loader.Module):
     """Удаляет все сообщения"""
