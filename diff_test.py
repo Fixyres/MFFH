@@ -1,10 +1,6 @@
-__version__ = (1, 4, 8, 8)
+__version__ = (1, 3, 3, 7)
 from .. import loader, utils
 #Удаляет все сообщения
-# dhdhrj
-#ncjjcjf
-# djxjjrjfjf
-
 
 # jdjdjrm
 # xyi
