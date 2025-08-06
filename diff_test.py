@@ -1,12 +1,15 @@
-__version__ = (1, 3, 3, 6)
+__version__ = (9, 1, 5)
 from .. import loader, utils
 #Удаляет все сообщения
-
+#jdjfjrnd
 # jdjdjrm
 # алалкл
 # ,ллалал
-# xyi
 
+
+
+
+# Anal
 
 
 class DelmeMod(loader.Module):
