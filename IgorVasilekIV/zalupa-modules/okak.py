@@ -16,7 +16,7 @@
 # 
 # 
 #
-# based on: https://raw.githubusercontent.com/Fixyres/Modules/main/venom.py
+# based on: https://raw.githubusercontent.com/Fixyres/Modules/main/venom.py (<- ahaha a gde)
 from .. import loader, utils
 
 @loader.tds
@@ -33,7 +33,10 @@ class okakMod(loader.Module):
         self.db.set("okak", "on", not self.db.get("okak", "on", False))
         if self.db.get("okak", "on", False):
             await m.edit("<emoji document_id=5211078941153974712>😨</emoji>ACTIVATED")
+        else:
+            await m.edit("не не окак <emoji document_id=5368495273578356245>😒</emoji>")
 
+    @loader.command(no_stickers=True)
     async def watcher(self, m):
         if self.db.get("okak", "on", False) and m.out:
             await m.edit("окак")
