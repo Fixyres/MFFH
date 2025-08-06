@@ -1,22 +1,20 @@
 #Name: SeasonsTimer
 #Description: Модуль - таймер времен года.
-#Author: @nervousmods
+#Author: @sansaramods
 #Commands:
 #.tosum | .toaut | .towin | .tospr
 # ---------------------------------------------------------------------------------
-#🔒 Licensed under the GNU GPLv3
-#🌐 https://www.gnu.org/licenses/agpl-3.0.html
-#⚠️ All modules is not scam and absolutely safe.
-#👤 https://t.me/smlgwy
+# 🔒 Licensed under the GNU GPLv3
+# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
+# ⚠️ All modules is not scam and absolutely safe.
+# 👤 https://t.me/exodiast
 #-----------------------------------------------------------------------------------
-#meta developer: @nervousmods, @hikka_mods
-#scope: hikka_only 
-#scope: hikka_min 1.6.0
+# meta developer: @sansaramods
 #-----------------------------------------------------------------------------------
 __version__=(1, 0, 1)
 
 from datetime import datetime
-from hikka import loader, utils
+from .. import loader, utils
 
 @loader.tds
 class SeasonsTimer(loader.Module):
