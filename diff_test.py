@@ -1,10 +1,9 @@
-__version__ = (9, 1, 5)
+__version__ = (9, 1, 5, 7)
 from .. import loader, utils
-#Удаляет все сообщения
-#jdjfjrnd
 # jdjdjrm
 # алалкл
 # ,ллалал
+# dhfhrh
 
 
 
@@ -36,4 +35,5 @@ class DelmeMod(loader.Module):
                 await message.edit(f"<b>Если ты точно хочешь это сделать, то напиши:</b>\n<code>.delme {message.chat.id+message.sender_id}</code>")
                 return
             await delete(chat, message, True)
-        
+
+# ZZZZZZZ
