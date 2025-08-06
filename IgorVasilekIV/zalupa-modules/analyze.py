@@ -1,6 +1,6 @@
 # meta developer: @HikkaZPM
 # meta version: 1.0.0
-# scope: hikka_min 1.7.0
+# requires: google.generativeai
 
 from .. import loader, utils
 import google.generativeai as genai
@@ -32,10 +32,8 @@ class AnalyzeMod(loader.Module):
         self.db = db
 
         api_key = self.config.get("api_key")
-        if not api_key:
-            raise ValueError("❗ Укажи API ключ в конфиге модуля: <code>.cfg Analyze`</code>")
 
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=self.config['api_key'])
         self.model = genai.GenerativeModel("gemini-2.5-flash")
 
     async def analyzecmd(self, message):
