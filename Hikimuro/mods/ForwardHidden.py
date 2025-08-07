@@ -7,8 +7,8 @@
 
 # module ForwardHidden
 # meta developer: @Hikimuro, @kf_ic3peak
-# ver. 2.4.2
-__version__ = (2, 4, 2) 
+# ver. 2.5.2 
+__version__ = (2, 5, 2) 
 
 import logging
 import os
@@ -19,9 +19,7 @@ import uuid
 import time
 import gc
 import random
-import gzip
 from collections import defaultdict
-from functools import lru_cache
 from telethon import errors
 from telethon.tl.types import (
     Message,
@@ -29,6 +27,9 @@ from telethon.tl.types import (
     MessageMediaDocument,
     MessageActionTopicCreate,
     DocumentAttributeFilename,
+    DocumentAttributeVideo,
+    DocumentAttributeImageSize,
+    DocumentAttributeSticker,
 )
 from telethon.tl.functions.channels import GetForumTopicsRequest
 
@@ -37,7 +38,7 @@ from .. import loader, utils
 logger = logging.getLogger(__name__)
 
 class AdaptiveDelayController:
-    def __init__(self, base_delay=0.15):
+    def __init__(self, base_delay=0.6):
         self.base_delay = base_delay
         self.current_delay = base_delay
         self.response_times = []
@@ -52,7 +53,7 @@ class AdaptiveDelayController:
     def record_flood_wait(self):
         self.flood_wait_count += 1
         self.last_flood_time = time.time()
-        self.current_delay = min(self.current_delay * 1.1, 0.8)
+        self.current_delay = min(self.current_delay * 1.2, 2.0)
     
     def get_adaptive_delay(self):
         current_time = time.time()
@@ -62,21 +63,21 @@ class AdaptiveDelayController:
             self.last_flood_time = 0
         
         if not self.response_times:
-            return max(self.current_delay, 0.05)
+            return max(self.current_delay, 0.1)
             
         avg_time = sum(self.response_times) / len(self.response_times)
         
         if avg_time > 2.5 and self.flood_wait_count > 2:
-            self.current_delay = min(self.current_delay * 1.05, 0.8)
-        elif avg_time < 0.3 and self.flood_wait_count == 0:
-            self.current_delay = max(self.current_delay * 0.95, 0.05)
+            self.current_delay = min(self.current_delay * 1.1, 2.0)
+        elif avg_time < 0.5 and self.flood_wait_count == 0:
+            self.current_delay = max(self.current_delay * 0.95, 0.1)
         
-        return max(self.current_delay, 0.05)
+        return max(self.current_delay, 0.1)
     
     async def wait(self):
         delay = self.get_adaptive_delay()
-        jitter = random.uniform(0, delay * 0.05)
-        final_delay = max(0.05, delay + jitter)
+        jitter = random.uniform(0, delay * 0.1)
+        final_delay = max(0.1, delay + jitter)
         await asyncio.sleep(final_delay)
 
 @loader.tds
@@ -92,7 +93,7 @@ class ForwardHiddenMod(loader.Module):
             "• <code>{prefix}fh {{chat_id}} general {{count}}</code> — from General topic\n\n"
             "❓ <b>How to get chat_id:</b> use <code>{prefix}listch</code> or <code>{prefix}getid</code>\n"
             "❓ <b>How to get topic_id:</b> use <code>{prefix}listtopics {{chat_id}}</code>\n\n"
-            "⚡ <b>OPTIMIZED:</b> Faster processing, gentle FloodWait protection, proper filenames"
+            "⚡ <b>SPEED CONFIG FIXED:</b> Proper config control, ~100 msg/min default speed"
         ),
         "invalid_args": "❌ <b>Invalid arguments!</b>\n\n{help}",
         "invalid_count": "❌ <b>Count must be a positive number</b>",
@@ -101,6 +102,7 @@ class ForwardHiddenMod(loader.Module):
         "chat_not_found": "❌ <b>Could not find chat</b>",
         "topic_not_found": "❌ <b>Could not find topic with ID:</b> <code>{}</code>",
         "no_messages": "❌ <b>No messages found for forwarding</b>",
+        "limited_messages": "ℹ️ <b>Channel/topic has only {available} messages</b> (requested {requested})\n⏳ Forwarding all {available} available messages...",
         "processing": "⚡ <b>Processing messages...</b>\n📊 Progress: 0/{} | 🚀 Speed: 0 msg/min\n⏱️ ETA: calculating...",
         "processing_topic": "⚡ <b>Processing messages from topic...</b>\n📊 Progress: 0/{} | 🚀 Speed: 0 msg/min\n⏱️ ETA: calculating...",
         "progress_update": "📤 <b>Sending messages...</b>\n📊 Progress: {}/{} | 🚀 Speed: {:.0f} msg/min\n⏱️ ETA: {} | 🛡️ FloodWait: {}",
@@ -109,7 +111,9 @@ class ForwardHiddenMod(loader.Module):
             "📊 <b>Statistics:</b>\n"
             "✅ Text: {} messages\n"
             "📷 Photos: {} files\n"
+            "🎬 Videos: {} files\n"
             "📄 Documents: {} files\n"
+            "😄 Stickers: {} files\n"
             "💾 Buffered: {} files\n"
             "🛡️ FloodWait handled: {} times\n"
             "❌ Errors: {} messages\n"
@@ -120,7 +124,9 @@ class ForwardHiddenMod(loader.Module):
             "📊 <b>Statistics:</b>\n"
             "✅ Text: {} messages\n"
             "📷 Photos: {} files\n"
+            "🎬 Videos: {} files\n"
             "📄 Documents: {} files\n"
+            "😄 Stickers: {} files\n"
             "💾 Buffered: {} files\n"
             "🛡️ FloodWait handled: {} times\n"
             "❌ Errors: {} messages\n"
@@ -157,7 +163,7 @@ class ForwardHiddenMod(loader.Module):
     }
 
     strings_ru = {
-        "_cls_doc": "Оптимизированная пересылка с мягкой защитой.",
+        "_cls_doc": "Оптимизированная пересылка с исправленным контролем скорости в конфиге.",
         "help": (
             "❓ <b>Использование:</b>\n"
             "• <code>{prefix}fh {{chat_id}} {{количество}}</code> — из основного чата\n"
@@ -165,7 +171,7 @@ class ForwardHiddenMod(loader.Module):
             "• <code>{prefix}fh {{chat_id}} general {{количество}}</code> — из General топика\n\n"
             "❓ <b>Чтобы узнать chat_id:</b> используй <code>{prefix}listch</code> или <code>{prefix}getid</code>\n"
             "❓ <b>Чтобы узнать topic_id:</b> используй <code>{prefix}listtopics {{chat_id}}</code>\n\n"
-            "⚡ <b>ОПТИМИЗИРОВАНО:</b> Быстрая обработка, мягкая защита от FloodWait, правильные имена файлов"
+            "⚡ <b>КОНТРОЛЬ СКОРОСТИ ИСПРАВЛЕН:</b> Правильное применение конфига, ~100 сообщ/мин по умолчанию"
         ),
         "invalid_args": "❌ <b>Неверные аргументы!</b>\n\n{help}",
         "invalid_count": "❌ <b>Количество должно быть положительным числом</b>",
@@ -174,6 +180,7 @@ class ForwardHiddenMod(loader.Module):
         "chat_not_found": "❌ <b>Не удалось найти чат</b>",
         "topic_not_found": "❌ <b>Не удалось найти топик с ID:</b> <code>{}</code>",
         "no_messages": "❌ <b>Не найдено сообщений для пересылки</b>",
+        "limited_messages": "ℹ️ <b>В канале/топике всего {available} сообщений</b> (запрошено {requested})\n⏳ Пересылаю все {available} доступных сообщений...",
         "processing": "⚡ <b>Обрабатываю сообщения...</b>\n📊 Прогресс: 0/{} | 🚀 Скорость: 0 сообщ/мин\n⏱️ Осталось: вычисляется...",
         "processing_topic": "⚡ <b>Обрабатываю сообщения из топика...</b>\n📊 Прогресс: 0/{} | 🚀 Скорость: 0 сообщ/мин\n⏱️ Осталось: вычисляется...",
         "progress_update": "📤 <b>Отправляю сообщения...</b>\n📊 Прогресс: {}/{} | 🚀 Скорость: {:.0f} сообщ/мин\n⏱️ Осталось: {} | 🛡️ FloodWait: {}",
@@ -182,7 +189,9 @@ class ForwardHiddenMod(loader.Module):
             "📊 <b>Статистика:</b>\n"
             "✅ Текст: {} сообщений\n"
             "📷 Фото: {} файлов\n"
+            "🎬 Видео: {} файлов\n"
             "📄 Документы: {} файлов\n"
+            "😄 Стикеры: {} файлов\n"
             "💾 Буферизовано: {} файлов\n"
             "🛡️ FloodWait обработано: {} раз\n"
             "❌ Ошибки: {} сообщений\n"
@@ -193,7 +202,9 @@ class ForwardHiddenMod(loader.Module):
             "📊 <b>Статистика:</b>\n"
             "✅ Текст: {} сообщений\n"
             "📷 Фото: {} файлов\n"
+            "🎬 Видео: {} файлов\n"
             "📄 Документы: {} файлов\n"
+            "😄 Стикеры: {} файлов\n"
             "💾 Буферизовано: {} файлов\n"
             "🛡️ FloodWait обработано: {} раз\n"
             "❌ Ошибки: {} сообщений\n"
@@ -247,21 +258,21 @@ class ForwardHiddenMod(loader.Module):
             ),
             loader.ConfigValue(
                 "base_delay",
-                0.15,
+                0.6,
                 lambda: "Base delay between messages in seconds", 
-                validator=loader.validators.Float(minimum=0.05, maximum=2.0)
+                validator=loader.validators.Float(minimum=0.3, maximum=5.0)
+            ),
+            loader.ConfigValue(
+                "message_delay",
+                0.6,
+                lambda: "Main delay between sending messages (controls speed: 0.6s = ~100 msg/min)",
+                validator=loader.validators.Float(minimum=0.3, maximum=10.0)
             ),
             loader.ConfigValue(
                 "download_concurrency",
-                12,
+                10,
                 lambda: "Max concurrent downloads",
-                validator=loader.validators.Integer(minimum=3, maximum=25)
-            ),
-            loader.ConfigValue(
-                "send_concurrency",
-                15,
-                lambda: "Max concurrent sends",
-                validator=loader.validators.Integer(minimum=5, maximum=30)
+                validator=loader.validators.Integer(minimum=3, maximum=20)
             ),
             loader.ConfigValue(
                 "small_file_limit",
@@ -271,9 +282,15 @@ class ForwardHiddenMod(loader.Module):
             ),
             loader.ConfigValue(
                 "batch_size",
-                75,
+                60,
                 lambda: "Batch size for processing messages",
-                validator=loader.validators.Integer(minimum=10, maximum=200)
+                validator=loader.validators.Integer(minimum=10, maximum=150)
+            ),
+            loader.ConfigValue(
+                "preserve_media_format",
+                False,
+                lambda: "Preserve original media format (photos/videos as documents)",
+                validator=loader.validators.Boolean()
             )
         )
 
@@ -325,23 +342,26 @@ class ForwardHiddenMod(loader.Module):
         if not chat_id:
             return False
         
-        chat_id = str(chat_id).strip()
-        if not chat_id:
+        try:
+            chat_id = str(chat_id).strip()
+            if not chat_id:
+                return False
+                
+            if chat_id.startswith("-100") and chat_id[1:].isdigit():
+                return True
+            elif chat_id.startswith("-") and chat_id[1:].isdigit():
+                return True
+            elif chat_id.isdigit():
+                return True
+            elif chat_id.startswith("@") and len(chat_id) > 1:
+                return True
+        except Exception:
             return False
-            
-        if chat_id.startswith("-100") and chat_id[1:].isdigit():
-            return True
-        elif chat_id.startswith("-") and chat_id[1:].isdigit():
-            return True
-        elif chat_id.isdigit():
-            return True
-        elif chat_id.startswith("@") and len(chat_id) > 1:
-            return True
             
         return False
 
-    @lru_cache(maxsize=100)
     async def get_topic_info(self, chat_id, topic_id):
+        """ИСПРАВЛЕНО: Убран @lru_cache, используется обычный кэш"""
         cache_key = f"{chat_id}_{topic_id}"
         if cache_key in self.topic_cache:
             return self.topic_cache[cache_key]
@@ -373,36 +393,33 @@ class ForwardHiddenMod(loader.Module):
 
     async def safe_iter_messages(self, chat, count, topic_id=None):
         messages = []
-        batch_size = self.config["batch_size"]
         
         try:
             kwargs = {"limit": None}
             
-            if topic_id is not None and topic_id != "":
-                kwargs["reply_to"] = topic_id
+            if topic_id is not None:
+                try:
+                    topic_id_int = int(topic_id)
+                    kwargs["reply_to"] = topic_id_int
+                except (ValueError, TypeError):
+                    pass
                 
             collected = 0
-            batch = []
             
             async for msg in self.client.iter_messages(chat, **kwargs):
-                if msg and (msg.text or msg.media):
-                    batch.append(msg)
+                if msg and (msg.text or msg.media or msg.sticker):
+                    if hasattr(msg, 'text') and msg.text is not None:
+                        if not isinstance(msg.text, str):
+                            continue
+                    messages.append(msg)
                     collected += 1
-                    
-                    if len(batch) >= batch_size:
-                        messages.extend(batch)
-                        batch = []
-                        await asyncio.sleep(0.05)
-                        
                     if collected >= count:
                         break
-                        
-            messages.extend(batch)
                         
         except Exception as e:
             logger.error(f"Safe iter messages error: {e}")
             
-        return messages[:count]
+        return messages
 
     async def smart_download_with_retry(self, message, index, session_dir, stats, max_retries=None):
         if max_retries is None:
@@ -416,13 +433,26 @@ class ForwardHiddenMod(loader.Module):
         
         for attempt in range(max_retries + 1):
             try:
-                if message.media:
+                if message.sticker:
+                    file_bytes = await self.client.download_media(message, bytes)
+                    saved_items.append({
+                        "type": "sticker", 
+                        "data": file_bytes,
+                        "filename": f"sticker_{uuid.uuid4().hex[:8]}.webp",
+                        "caption": getattr(message, "text", "") or ""
+                    })
+                    stats["stickers"] += 1
+                    stats["buffered"] += 1
+                    
+                elif message.media:
                     if isinstance(message.media, MessageMediaPhoto):
                         file_bytes = await self.client.download_media(message, bytes)
                         saved_items.append({
-                            "type": "photo_buffer", 
-                            "data": file_bytes, 
-                            "caption": getattr(message, "text", "") or ""
+                            "type": "photo", 
+                            "data": file_bytes,
+                            "filename": f"photo_{uuid.uuid4().hex[:8]}.jpg",
+                            "caption": getattr(message, "text", "") or "",
+                            "force_document": self.config["preserve_media_format"]
                         })
                         stats["photos"] += 1
                         stats["buffered"] += 1
@@ -433,100 +463,190 @@ class ForwardHiddenMod(loader.Module):
                         small_file_limit = self.config["small_file_limit"] * 1024 * 1024
                         
                         original_name = None
-                        original_extension = ""
+                        is_video = False
+                        is_sticker = False
+                        is_image_document = False
+                        video_attributes = []
                         
                         for attr in doc.attributes:
                             if hasattr(attr, "file_name") and attr.file_name:
                                 original_name = attr.file_name
-                                if '.' in original_name:
-                                    original_extension = original_name[original_name.rfind('.'):]
                                 break
+                            elif isinstance(attr, DocumentAttributeSticker):
+                                is_sticker = True
                         
-                        if not original_name:
-                            base_name = f"file_{uuid.uuid4().hex[:8]}"
-                            
-                            if doc.mime_type:
-                                mime_extensions = {
-                                    "text/plain": ".txt",
-                                    "text/python": ".py", 
-                                    "application/x-python-code": ".py",
-                                    "text/x-python": ".py",
-                                    "application/x-sh": ".sh",
-                                    "text/x-shellscript": ".sh",
-                                    "application/zip": ".zip",
-                                    "application/x-rar-compressed": ".rar",
-                                    "application/x-7z-compressed": ".7z",
-                                    "application/x-tar": ".tar",
-                                    "application/gzip": ".gz",
-                                    "application/pdf": ".pdf",
-                                    "application/msword": ".doc",
-                                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-                                    "application/vnd.ms-excel": ".xls",
-                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
-                                    "application/json": ".json",
-                                    "application/xml": ".xml",
-                                    "text/xml": ".xml",
-                                    "text/html": ".html",
-                                    "text/css": ".css",
-                                    "application/javascript": ".js",
-                                    "text/javascript": ".js",
-                                    "image/jpeg": ".jpg",
-                                    "image/png": ".png",
-                                    "image/gif": ".gif",
-                                    "image/webp": ".webp",
-                                    "image/svg+xml": ".svg",
-                                    "video/mp4": ".mp4",
-                                    "video/avi": ".avi",
-                                    "video/mkv": ".mkv",
-                                    "video/webm": ".webm",
-                                    "audio/mpeg": ".mp3",
-                                    "audio/wav": ".wav",
-                                    "audio/ogg": ".ogg",
-                                    "audio/flac": ".flac",
-                                }
-                                
-                                extension = mime_extensions.get(doc.mime_type, "")
-                                if not extension:
-                                    if "/" in doc.mime_type:
-                                        subtype = doc.mime_type.split("/")[1]
-                                        if subtype and not subtype.startswith("x-"):
-                                            extension = f".{subtype}"
-                                        
-                                original_name = base_name + extension
-                            else:
-                                original_name = base_name + ".bin"
+                        mime_type = getattr(doc, 'mime_type', '') or ''
                         
-                        if file_size < small_file_limit:
+                        if is_sticker or mime_type == "image/webp":
                             file_bytes = await self.client.download_media(message, bytes)
-                            
                             saved_items.append({
-                                "type": "document_buffer",
+                                "type": "sticker", 
                                 "data": file_bytes,
-                                "filename": original_name,
+                                "filename": f"sticker_{uuid.uuid4().hex[:8]}.webp",
                                 "caption": getattr(message, "text", "") or ""
                             })
-                            stats["documents"] += 1
+                            stats["stickers"] += 1
                             stats["buffered"] += 1
-                        else:
-                            name_parts = os.path.splitext(original_name)
-                            if len(name_parts) == 2:
-                                unique_name = f"{name_parts[0]}_{uuid.uuid4().hex[:4]}{name_parts[1]}"
-                            else:
-                                unique_name = f"{original_name}_{uuid.uuid4().hex[:4]}"
                             
-                            filepath = os.path.join(session_dir, unique_name)
-                            await self.client.download_media(message, file=filepath)
-                            saved_items.append({
-                                "type": "document", 
-                                "path": filepath,
-                                "filename": original_name,
-                                "caption": getattr(message, "text", "") or ""
-                            })
-                            stats["documents"] += 1
+                        elif mime_type.startswith("video/") or any(hasattr(attr, 'duration') for attr in doc.attributes):
+                            is_video = True
+                            for attr in doc.attributes:
+                                if hasattr(attr, 'duration') or isinstance(attr, DocumentAttributeVideo):
+                                    video_attributes.append(attr)
+                            
+                            if not original_name:
+                                original_name = f"video_{uuid.uuid4().hex[:8]}.mp4"
+                            
+                            if file_size < small_file_limit:
+                                file_bytes = await self.client.download_media(message, bytes)
+                                saved_items.append({
+                                    "type": "video",
+                                    "data": file_bytes,
+                                    "filename": original_name,
+                                    "caption": getattr(message, "text", "") or "",
+                                    "attributes": video_attributes,
+                                    "force_document": self.config["preserve_media_format"]
+                                })
+                                stats["videos"] += 1
+                                stats["buffered"] += 1
+                            else:
+                                name_parts = os.path.splitext(original_name)
+                                if len(name_parts) == 2:
+                                    unique_name = f"{name_parts[0]}_{uuid.uuid4().hex[:4]}{name_parts[1]}"
+                                else:
+                                    unique_name = f"{original_name}_{uuid.uuid4().hex[:4]}"
+                                
+                                filepath = os.path.join(session_dir, unique_name)
+                                await self.client.download_media(message, file=filepath)
+                                saved_items.append({
+                                    "type": "video",
+                                    "path": filepath,
+                                    "filename": original_name,
+                                    "caption": getattr(message, "text", "") or "",
+                                    "attributes": video_attributes,
+                                    "force_document": self.config["preserve_media_format"]
+                                })
+                                stats["videos"] += 1
+                        
+                        elif mime_type.startswith("image/") or any(isinstance(attr, DocumentAttributeImageSize) for attr in doc.attributes):
+                            is_image_document = True
+                            
+                            if not original_name:
+                                original_name = f"image_{uuid.uuid4().hex[:8]}.jpg"
+                                
+                            if file_size < small_file_limit:
+                                file_bytes = await self.client.download_media(message, bytes)
+                                saved_items.append({
+                                    "type": "image_document",
+                                    "data": file_bytes,
+                                    "filename": original_name,
+                                    "caption": getattr(message, "text", "") or ""
+                                })
+                                stats["photos"] += 1
+                                stats["buffered"] += 1
+                            else:
+                                name_parts = os.path.splitext(original_name)
+                                if len(name_parts) == 2:
+                                    unique_name = f"{name_parts[0]}_{uuid.uuid4().hex[:4]}{name_parts[1]}"
+                                else:
+                                    unique_name = f"{original_name}_{uuid.uuid4().hex[:4]}"
+                                
+                                filepath = os.path.join(session_dir, unique_name)
+                                await self.client.download_media(message, file=filepath)
+                                saved_items.append({
+                                    "type": "image_document",
+                                    "path": filepath,
+                                    "filename": original_name,
+                                    "caption": getattr(message, "text", "") or ""
+                                })
+                                stats["photos"] += 1
+                        else:
+                            if not original_name:
+                                base_name = f"file_{uuid.uuid4().hex[:8]}"
+                                
+                                if mime_type:
+                                    mime_extensions = {
+                                        "text/plain": ".txt",
+                                        "text/python": ".py", 
+                                        "application/x-python-code": ".py",
+                                        "text/x-python": ".py",
+                                        "application/x-sh": ".sh",
+                                        "text/x-shellscript": ".sh",
+                                        "application/zip": ".zip",
+                                        "application/x-rar-compressed": ".rar",
+                                        "application/x-7z-compressed": ".7z",
+                                        "application/x-tar": ".tar",
+                                        "application/gzip": ".gz",
+                                        "application/pdf": ".pdf",
+                                        "application/msword": ".doc",
+                                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+                                        "application/vnd.ms-excel": ".xls",
+                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+                                        "application/json": ".json",
+                                        "application/xml": ".xml",
+                                        "text/xml": ".xml",
+                                        "text/html": ".html",
+                                        "text/css": ".css",
+                                        "application/javascript": ".js",
+                                        "text/javascript": ".js",
+                                        "image/jpeg": ".jpg",
+                                        "image/png": ".png",
+                                        "image/gif": ".gif",
+                                        "image/webp": ".webp",
+                                        "image/svg+xml": ".svg",
+                                        "video/mp4": ".mp4",
+                                        "video/avi": ".avi",
+                                        "video/mkv": ".mkv",
+                                        "video/webm": ".webm",
+                                        "audio/mpeg": ".mp3",
+                                        "audio/wav": ".wav",
+                                        "audio/ogg": ".ogg",
+                                        "audio/flac": ".flac",
+                                    }
+                                    
+                                    extension = mime_extensions.get(mime_type, "")
+                                    if not extension:
+                                        if "/" in mime_type:
+                                            subtype = mime_type.split("/")[1]
+                                            if subtype and not subtype.startswith("x-"):
+                                                extension = f".{subtype}"
+                                            
+                                    original_name = base_name + extension
+                                else:
+                                    original_name = base_name + ".bin"
+                            
+                            if file_size < small_file_limit:
+                                file_bytes = await self.client.download_media(message, bytes)
+                                saved_items.append({
+                                    "type": "document",
+                                    "data": file_bytes,
+                                    "filename": original_name,
+                                    "caption": getattr(message, "text", "") or ""
+                                })
+                                stats["documents"] += 1
+                                stats["buffered"] += 1
+                            else:
+                                name_parts = os.path.splitext(original_name)
+                                if len(name_parts) == 2:
+                                    unique_name = f"{name_parts[0]}_{uuid.uuid4().hex[:4]}{name_parts[1]}"
+                                else:
+                                    unique_name = f"{original_name}_{uuid.uuid4().hex[:4]}"
+                                
+                                filepath = os.path.join(session_dir, unique_name)
+                                await self.client.download_media(message, file=filepath)
+                                saved_items.append({
+                                    "type": "document",
+                                    "path": filepath,
+                                    "filename": original_name,
+                                    "caption": getattr(message, "text", "") or ""
+                                })
+                                stats["documents"] += 1
                         
                 elif message.text:
-                    saved_items.append({"type": "text", "text": message.text})
-                    stats["text"] += 1
+                    msg_text = str(message.text) if message.text is not None else ""
+                    if msg_text.strip():
+                        saved_items.append({"type": "text", "text": msg_text})
+                        stats["text"] += 1
                     
                 return saved_items
                 
@@ -540,9 +660,14 @@ class ForwardHiddenMod(loader.Module):
                     logger.error(f"Download failed after {max_retries + 1} attempts: {error_msg}")
                     stats["errors"] += 1
                     
-                    if message.text:
-                        saved_items.append({"type": "text", "text": message.text})
-                        stats["text"] += 1
+                    if hasattr(message, 'text') and message.text:
+                        try:
+                            msg_text = str(message.text)
+                            saved_items.append({"type": "text", "text": msg_text})
+                            stats["text"] += 1
+                        except:
+                            saved_items.append({"type": "text", "text": f"⚠️ Failed to download media: {error_msg}"})
+                            stats["text"] += 1
                     else:
                         saved_items.append({"type": "text", "text": f"⚠️ Failed to download media: {error_msg}"})
                         stats["text"] += 1
@@ -552,20 +677,41 @@ class ForwardHiddenMod(loader.Module):
         return saved_items
 
     async def optimized_send_content(self, saved_items, target_chat, target_topic_id=None, progress_msg=None, stats=None):
-        send_semaphore = asyncio.Semaphore(self.config["send_concurrency"])
+        """ИСПРАВЛЕНО: Прямое применение настройки message_delay из конфига"""
         sent_count = 0
         total = len(saved_items)
-        lock = asyncio.Lock()
         start_time = time.time()
         last_update_time = 0
         flood_wait_count = 0
+        last_progress_text = ""  
+        
+        
+        user_delay = float(self.config["message_delay"])
+        logger.info(f"Using message delay from config: {user_delay} seconds (~{60/user_delay:.0f} msg/min)")
+
+        async def safe_edit_message(msg, text):
+            nonlocal last_progress_text
+            try:
+                
+                if text == last_progress_text:
+                    return True
+                    
+                await msg.edit(text)
+                last_progress_text = text
+                return True
+            except errors.MessageNotModifiedError:
+                
+                return True
+            except Exception as e:
+                logger.error(f"Failed to update progress: {e}")
+                return False
 
         async def update_progress(force=False):
             nonlocal last_update_time
             
             current_time = time.time()
             
-            if not force and (current_time - last_update_time) < 0.8:
+            if not force and (current_time - last_update_time) < 1.0:  
                 return
                 
             if not progress_msg:
@@ -585,151 +731,198 @@ class ForwardHiddenMod(loader.Module):
                 sent_count, total, speed, eta_str, flood_wait_count
             )
             
-            try:
-                await progress_msg.edit(progress_text)
+            if await safe_edit_message(progress_msg, progress_text):
                 last_update_time = current_time
-            except Exception as e:
-                logger.error(f"Failed to update progress: {e}")
-
-        async def send_with_flood_protection(item):
-            nonlocal sent_count, flood_wait_count
-            
-            async with send_semaphore:
-                max_retries = self.config["max_retries"]
-                
-                for attempt in range(max_retries + 1):
-                    start_send_time = time.time()
-                    temp_file_path = None
-                    
-                    try:
-                        reply_to_param = None
-                        if target_topic_id and target_topic_id != 1:
-                            reply_to_param = target_topic_id
-                            
-                        if item["type"] == "text":
-                            await self.client.send_message(
-                                target_chat,
-                                item["text"],
-                                reply_to=reply_to_param
-                            )
-                            
-                        elif item["type"] == "photo_buffer":
-                            temp_file_path = os.path.join(tempfile.gettempdir(), f"photo_{uuid.uuid4().hex[:8]}.jpg")
-                            with open(temp_file_path, 'wb') as f:
-                                f.write(item["data"])
-                            
-                            await self.client.send_file(
-                                target_chat,
-                                temp_file_path,
-                                caption=item["caption"],
-                                reply_to=reply_to_param
-                            )
-                            
-                        elif item["type"] == "document_buffer":
-                            filename = item.get("filename", "unnamed.bin")
-                            temp_file_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}_{filename}")
-                            
-                            with open(temp_file_path, 'wb') as f:
-                                f.write(item["data"])
-                            
-                            await self.client.send_file(
-                                target_chat,
-                                temp_file_path,
-                                caption=item["caption"],
-                                file_name=filename,
-                                attributes=[DocumentAttributeFilename(file_name=filename)],
-                                reply_to=reply_to_param
-                            )
-                            
-                        elif item["type"] == "document":
-                            if os.path.exists(item["path"]):
-                                filename = item.get("filename")
-                                send_params = {
-                                    "entity": target_chat,
-                                    "file": item["path"], 
-                                    "caption": item.get("caption", ""),
-                                    "reply_to": reply_to_param
-                                }
-                                
-                                if filename:
-                                    send_params["file_name"] = filename
-                                    send_params["attributes"] = [DocumentAttributeFilename(file_name=filename)]
-                                
-                                await self.client.send_file(**send_params)
-                                
-                                try:
-                                    os.remove(item["path"])
-                                except Exception:
-                                    pass
-                                    
-                        elif item["type"] == "photo":
-                            if os.path.exists(item["path"]):
-                                await self.client.send_file(
-                                    target_chat,
-                                    item["path"],
-                                    caption=item.get("caption", ""),
-                                    reply_to=reply_to_param
-                                )
-                                try:
-                                    os.remove(item["path"])
-                                except Exception:
-                                    pass
-                        
-                        if temp_file_path and os.path.exists(temp_file_path):
-                            try:
-                                os.remove(temp_file_path)
-                            except Exception:
-                                pass
-                        
-                        response_time = time.time() - start_send_time
-                        self.delay_controller.record_response_time(response_time)
-                        
-                        async with lock:
-                            sent_count += 1
-                            await update_progress()
-                        
-                        await self.delay_controller.wait()
-                        break
-                        
-                    except errors.FloodWaitError as e:
-                        if temp_file_path and os.path.exists(temp_file_path):
-                            try:
-                                os.remove(temp_file_path)
-                            except Exception:
-                                pass
-                                
-                        flood_wait_count += 1
-                        self.delay_controller.record_flood_wait()
-                        wait_time = min(e.seconds + random.uniform(0.5, 1.5), 60)
-                        logger.warning(f"FloodWait: sleeping {wait_time:.1f} sec")
-                        await asyncio.sleep(wait_time)
-                        continue
-                        
-                    except Exception as e:
-                        if temp_file_path and os.path.exists(temp_file_path):
-                            try:
-                                os.remove(temp_file_path)
-                            except Exception:
-                                pass
-                                
-                        if attempt < max_retries:
-                            logger.warning(f"Send attempt {attempt + 1}/{max_retries + 1} failed: {e}")
-                            delay = min(1.5 ** attempt + random.uniform(0, 0.3), 5)
-                            await asyncio.sleep(delay)
-                        else:
-                            logger.error(f"Send failed after {max_retries + 1} attempts: {e}")
-                            if stats:
-                                stats["errors"] += 1
-                            break
 
         if progress_msg:
-            try:
-                initial_text = self.strings("progress_update").format(0, total, 0, "вычисляется...", 0)
-                await progress_msg.edit(initial_text)
-            except Exception as e:
-                logger.error(f"Failed to set initial progress: {e}")
+            initial_text = self.strings("progress_update").format(0, total, 0, "вычисляется...", 0)
+            await safe_edit_message(progress_msg, initial_text)
 
-        await asyncio.gather(*[send_with_flood_protection(item) for item in saved_items])
+        
+        for i, item in enumerate(saved_items):
+            max_retries = self.config["max_retries"]
+            
+            for attempt in range(max_retries + 1):
+                start_send_time = time.time()
+                temp_file_path = None
+                
+                try:
+                    reply_to_param = None
+                    if target_topic_id and target_topic_id != 1:
+                        reply_to_param = target_topic_id
+                        
+                    if item["type"] == "text":
+                        await self.client.send_message(
+                            target_chat,
+                            item["text"],
+                            reply_to=reply_to_param
+                        )
+                        
+                    elif item["type"] == "photo":
+                        temp_file_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}_{item.get('filename', 'photo.jpg')}")
+                        with open(temp_file_path, 'wb') as f:
+                            f.write(item["data"])
+                        
+                        send_params = {
+                            "entity": target_chat,
+                            "file": temp_file_path,
+                            "caption": item["caption"],
+                            "reply_to": reply_to_param
+                        }
+                        
+                        if item.get("force_document", False):
+                            send_params["force_document"] = True
+                            send_params["attributes"] = [DocumentAttributeFilename(file_name=item.get("filename", "photo.jpg"))]
+                        
+                        await self.client.send_file(**send_params)
+                        
+                    elif item["type"] == "sticker":
+                        temp_file_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}_{item.get('filename', 'sticker.webp')}")
+                        with open(temp_file_path, 'wb') as f:
+                            f.write(item["data"])
+                        
+                        await self.client.send_file(
+                            target_chat,
+                            temp_file_path,
+                            reply_to=reply_to_param
+                        )
+                        
+                    elif item["type"] == "video":
+                        filename = item.get("filename", "video.mp4")
+                        
+                        if "data" in item:
+                            temp_file_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}_{filename}")
+                            with open(temp_file_path, 'wb') as f:
+                                f.write(item["data"])
+                            file_path = temp_file_path
+                        else:
+                            file_path = item["path"]
+                        
+                        send_params = {
+                            "entity": target_chat,
+                            "file": file_path,
+                            "caption": item["caption"],
+                            "reply_to": reply_to_param
+                        }
+                        
+                        if item.get("force_document", False):
+                            send_params["force_document"] = True
+                            attributes = [DocumentAttributeFilename(file_name=filename)]
+                            if item.get("attributes"):
+                                attributes.extend(item["attributes"])
+                            send_params["attributes"] = attributes
+                        
+                        await self.client.send_file(**send_params)
+                        
+                        if "path" in item and os.path.exists(item["path"]):
+                            try:
+                                os.remove(item["path"])
+                            except Exception:
+                                pass
+                        
+                    elif item["type"] == "image_document":
+                        filename = item.get("filename", "image.jpg")
+                        
+                        if "data" in item:
+                            temp_file_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}_{filename}")
+                            with open(temp_file_path, 'wb') as f:
+                                f.write(item["data"])
+                            file_path = temp_file_path
+                        else:
+                            file_path = item["path"]
+                        
+                        await self.client.send_file(
+                            target_chat,
+                            file_path,
+                            caption=item["caption"],
+                            force_document=True,
+                            attributes=[DocumentAttributeFilename(file_name=filename)],
+                            reply_to=reply_to_param
+                        )
+                        
+                        if "path" in item and os.path.exists(item["path"]):
+                            try:
+                                os.remove(item["path"])
+                            except Exception:
+                                pass
+                        
+                    elif item["type"] == "document":
+                        filename = item.get("filename", "document.bin")
+                        
+                        if "data" in item:
+                            temp_file_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}_{filename}")
+                            with open(temp_file_path, 'wb') as f:
+                                f.write(item["data"])
+                            file_path = temp_file_path
+                        else:
+                            file_path = item["path"]
+                        
+                        await self.client.send_file(
+                            target_chat,
+                            file_path,
+                            caption=item["caption"],
+                            file_name=filename,
+                            attributes=[DocumentAttributeFilename(file_name=filename)],
+                            reply_to=reply_to_param
+                        )
+                        
+                        if "path" in item and os.path.exists(item["path"]):
+                            try:
+                                os.remove(item["path"])
+                            except Exception:
+                                pass
+                    
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        try:
+                            os.remove(temp_file_path)
+                        except Exception:
+                            pass
+                    
+                    response_time = time.time() - start_send_time
+                    self.delay_controller.record_response_time(response_time)
+                    
+                    sent_count += 1
+                    
+                    
+                    if sent_count % 5 == 0 or sent_count == total:
+                        await update_progress()
+                    
+                    
+                    if sent_count < total:  
+                        await asyncio.sleep(user_delay)
+                    
+                    break
+                    
+                except errors.FloodWaitError as e:
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        try:
+                            os.remove(temp_file_path)
+                        except Exception:
+                            pass
+                            
+                    flood_wait_count += 1
+                    self.delay_controller.record_flood_wait()
+                    wait_time = min(e.seconds + random.uniform(0.5, 1.5), 60)
+                    logger.warning(f"FloodWait: sleeping {wait_time:.1f} sec")
+                    await asyncio.sleep(wait_time)
+                    continue
+                    
+                except Exception as e:
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        try:
+                            os.remove(temp_file_path)
+                        except Exception:
+                            pass
+                            
+                    if attempt < max_retries:
+                        logger.warning(f"Send attempt {attempt + 1}/{max_retries + 1} failed: {e}")
+                        delay = min(1.5 ** attempt + random.uniform(0, 0.3), 5)
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.error(f"Send failed after {max_retries + 1} attempts: {e}")
+                        if stats:
+                            stats["errors"] += 1
+                        break
         
         if stats:
             stats["flood_wait_handled"] = flood_wait_count
@@ -738,7 +931,7 @@ class ForwardHiddenMod(loader.Module):
         return sent_count
 
     @loader.command(
-        ru_doc="Оптимизированная пересылка с мягкой защитой.",
+        ru_doc="Оптимизированная пересылка с исправленным контролем скорости в конфиге.",
         de_doc="Optimized message forwarding.",
     )
     async def fh(self, message: Message):
@@ -746,6 +939,8 @@ class ForwardHiddenMod(loader.Module):
         args = utils.get_args_raw(message)
         prefix = self.get_prefix()
         help_text = self.strings("help").format(prefix=prefix)
+        
+        session_dir = None
         
         if not args:
             await utils.answer(message, self.strings("invalid_args").format(help=help_text))
@@ -797,16 +992,6 @@ class ForwardHiddenMod(loader.Module):
                 )
                 await asyncio.sleep(1)
             
-            initial_msg_key = "processing_topic" if topic_id else "processing"
-            progress_msg = await utils.answer(
-                message,
-                self.strings(initial_msg_key).format(count),
-            )
-            
-            start_time = time.time()
-            session_dir = None
-            stats = defaultdict(int)
-            
             try:
                 if chat_id_str.lstrip("-").isdigit():
                     chat_id = int(chat_id_str)
@@ -816,7 +1001,7 @@ class ForwardHiddenMod(loader.Module):
                 source_chat = await self.client.get_entity(chat_id)
                 
             except Exception as e:
-                await utils.answer(progress_msg, self.strings("chat_not_found"))
+                await utils.answer(message, self.strings("chat_not_found"))
                 logger.error(f"Chat not found: {e}")
                 return
 
@@ -824,16 +1009,32 @@ class ForwardHiddenMod(loader.Module):
                 messages = await self.safe_iter_messages(source_chat, count, topic_id)
             except Exception as e:
                 txt = self.strings("topic_not_found").format(topic_id) if topic_id else self.strings("chat_not_found")
-                await utils.answer(progress_msg, txt)
+                await utils.answer(message, txt)
                 logger.error(f"Message fetch error: {e}")
                 return
 
             if not messages:
-                await utils.answer(progress_msg, self.strings("no_messages"))
+                await utils.answer(message, self.strings("no_messages"))
                 return
 
+            if len(messages) < count:
+                await utils.answer(
+                    message,
+                    self.strings("limited_messages").format(available=len(messages), requested=count)
+                )
+                await asyncio.sleep(2)
+
+            initial_msg_key = "processing_topic" if topic_id else "processing"
+            progress_msg = await utils.answer(
+                message,
+                self.strings(initial_msg_key).format(len(messages)),
+            )
+            
+            start_time = time.time()
+            stats = defaultdict(int)
+            
             messages.reverse()
-            session_dir = tempfile.mkdtemp(prefix="fh_rel_", suffix="_" + uuid.uuid4().hex[:6])
+            session_dir = tempfile.mkdtemp(prefix="fh_speed_config_", suffix="_" + uuid.uuid4().hex[:6])
             all_saved_items = []
             
             download_semaphore = asyncio.Semaphore(self.config["download_concurrency"])
@@ -872,14 +1073,15 @@ class ForwardHiddenMod(loader.Module):
                 topic_name = await self.get_topic_info(chat_id, topic_id)
                 final_msg = self.strings("success_topic").format(
                     sent_count, topic_name, stats["text"], stats["photos"], 
-                    stats["documents"], stats.get("buffered", 0), stats.get("flood_wait_handled", 0),
+                    stats.get("videos", 0), stats["documents"], stats.get("stickers", 0),
+                    stats.get("buffered", 0), stats.get("flood_wait_handled", 0), 
                     stats["errors"], total_time, avg_speed
                 )
             else:
                 final_msg = self.strings("success").format(
-                    sent_count, stats["text"], stats["photos"], 
-                    stats["documents"], stats.get("buffered", 0), stats.get("flood_wait_handled", 0),
-                    stats["errors"], total_time, avg_speed
+                    sent_count, stats["text"], stats["photos"], stats.get("videos", 0),
+                    stats["documents"], stats.get("stickers", 0), stats.get("buffered", 0), 
+                    stats.get("flood_wait_handled", 0), stats["errors"], total_time, avg_speed
                 )
                 
             await progress_msg.edit(final_msg)
