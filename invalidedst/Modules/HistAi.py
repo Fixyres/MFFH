@@ -14,7 +14,7 @@ import asyncio
 import google.generativeai as genai
 import os
 import re
-from typing import List
+from typing import List, Optional
 
 CHUNK_SEP = "\n"
 MAX_PAGE = 3900
@@ -36,6 +36,7 @@ class HistAI(loader.Module):
         "done_all": "<emoji document_id=5328311576736833844>🤖</emoji> <b>AI analysed the last {limit} messages.\nHere's what you missed:</b>",
         "done_user": "<emoji document_id=5328311576736833844>🤖</emoji> <b>AI analysed the last {limit} messages from {nick}.\nHere's what you missed:</b>",
         "no_target": "<b>Who to check? Reply or mention a user.</b>",
+        "invalid_limit": "<b>Неверное количество сообщений. Максимум: {max}</b>",
         "page": "📄 {cur}/{total}",
         "blocked": "<emoji document_id=5312526098750252863>🚫</emoji> <b>Gemini refused to analyse the chat.</b>",
     }
@@ -61,6 +62,44 @@ class HistAI(loader.Module):
         if isinstance(ent, Channel):
             return ent.title or "Канал"
         return "Unknown"
+
+    def _parse_args(self, args_text: str) -> tuple[Optional[int], Optional[str]]:
+        if not args_text:
+            return None, None
+            
+        parts = args_text.split()
+        limit = None
+        target = None
+        
+        for part in parts:
+            if part.isdigit():
+                limit = int(part)
+            elif part.startswith("@") or not part.isdigit():
+                target = part
+                
+        return limit, target
+
+    async def _get_target_user(self, message: Message, target_arg: Optional[str]) -> tuple[Optional[int], Optional[str]]:
+        if reply := await message.get_reply_message():
+            return reply.sender_id, self.safe_name(reply.sender)
+            
+        if not target_arg:
+            return None, None
+            
+        if target_arg.startswith("@"):
+            try:
+                ent = await self.client.get_entity(target_arg[1:])
+                return ent.id, self.safe_name(ent)
+            except Exception:
+                pass
+        elif target_arg.isdigit():
+            try:
+                ent = await self.client.get_entity(int(target_arg))
+                return ent.id, self.safe_name(ent)
+            except Exception:
+                pass
+                
+        return None, None
 
     async def _ask(self, prompt: str, text: str) -> str:
         key = self.config["gemini_key"].strip() or os.getenv("GOOGLE_API_KEY")
@@ -100,18 +139,37 @@ class HistAI(loader.Module):
     async def _prep_all(self, msgs: List[Message]) -> str:
         lines = []
         for m in reversed(msgs):
-            if not m.sender:
+            sender_username = ""
+            if m.sender and hasattr(m.sender, "username"):
+                sender_username = m.sender.username or ""
+            if sender_username.endswith("_bot"):
                 continue
-            if (getattr(m.sender, "username", "") or "").endswith("_bot"):
-                continue
-            name = self.safe_name(m.sender)
+            
+            if m.sender:
+                name = self.safe_name(m.sender)
+            else:
+                try:
+                    chat = await self.client.get_entity(m.chat_id)
+                    if hasattr(chat, 'title') and chat.title:
+                        name = chat.title
+                    else:
+                        name = "Канал"
+                except:
+                    name = "Канал"
+                
             time = m.date.strftime("%H:%M")
             body = self._clean(m.raw_text) or await self._media(m)
             if m.is_reply and m.reply_to:
                 try:
                     replied = await m.get_reply_message()
-                    replied_name = self.safe_name(replied.sender) if replied else "Unknown"
-                    snippet = (replied.raw_text or "")[:40].replace("\n", " ")
+                    if replied:
+                        if replied.sender:
+                            replied_name = self.safe_name(replied.sender)
+                        else:
+                            replied_name = "Канал"
+                    else:
+                        replied_name = "Unknown"
+                    snippet = (replied.raw_text or "")[:40].replace("\n", " ") if replied else ""
                     body = f"→ to {replied_name}: {snippet}… | {body}"
                 except Exception:
                     body = f"→ reply | {body}"
@@ -119,16 +177,33 @@ class HistAI(loader.Module):
         return "\n".join(lines)
 
     async def _prep_user(self, msgs: List[Message], uid: int) -> str:
-        msgs = [m for m in msgs if m.sender_id == uid]
+        user_msgs = []
+        for m in msgs:
+            if m.sender_id == uid:
+                user_msgs.append(m)
+            elif not m.sender:
+                try:
+                    chat = await self.client.get_entity(m.chat_id)
+                    if hasattr(chat, 'id') and chat.id == uid:
+                        user_msgs.append(m)
+                except:
+                    pass
+        
         lines = []
-        for m in reversed(msgs):
+        for m in reversed(user_msgs):
             time = m.date.strftime("%H:%M")
             body = self._clean(m.raw_text) or await self._media(m)
             if m.is_reply and m.reply_to:
                 try:
                     replied = await m.get_reply_message()
-                    replied_name = self.safe_name(replied.sender) if replied else "Unknown"
-                    snippet = (replied.raw_text or "")[:40].replace("\n", " ")
+                    if replied:
+                        if replied.sender:
+                            replied_name = self.safe_name(replied.sender)
+                        else:
+                            replied_name = "Канал"
+                    else:
+                        replied_name = "Unknown"
+                    snippet = (replied.raw_text or "")[:40].replace("\n", " ") if replied else ""
                     body = f"→ to {replied_name}: {snippet}… | {body}"
                 except Exception:
                     body = f"→ reply | {body}"
@@ -146,7 +221,7 @@ class HistAI(loader.Module):
                 pages[-1] = buf
         return pages or [""]
 
-    async def _send_page(self, cid: int, pages: List[str], idx: int, hdr: str, rpl: int):
+    async def _send_page(self, message: Message, pages: List[str], idx: int, hdr: str):
         kb = []
         if len(pages) > 1:
             row = []
@@ -156,71 +231,28 @@ class HistAI(loader.Module):
             if idx < len(pages) - 1:
                 row.append(Button.inline("➡️", f"{CB_PREFIX}{idx+1}"))
             kb = [row]
-        await self.client.send_message(
-            entity=cid,
-            message=f"{hdr}\n\n<blockquote expandable>{pages[idx]}</blockquote>",
+        
+        reply_to = None
+        if message.reply_to:
+            if hasattr(message.reply_to, 'reply_to_top_id') and message.reply_to.reply_to_top_id:
+                reply_to = message.reply_to.reply_to_top_id
+            elif hasattr(message.reply_to, 'reply_to_msg_id') and message.reply_to.reply_to_msg_id:
+                reply_to = message.reply_to.reply_to_msg_id
+        
+        await message.respond(
+            f"{hdr}\n\n<blockquote expandable>{pages[idx]}</blockquote>",
             buttons=kb or None,
-            reply_to=rpl
+            reply_to=reply_to
         )
 
-    @loader.command(
-        ru_doc="Показать всё, что происходило пока ты отошёл. Можно указать @username или реплай.",
-        en_doc="Show what happened while you were away. Use @username or reply to filter.",
-    )
-    async def ch(self, message: Message):
-        if not self.config["gemini_key"] and not os.getenv("GOOGLE_API_KEY"):
-            await utils.answer(message, self.strings["no_key"])
-            return
-
-        cid = utils.get_chat_id(message)
-        limit = min(self.config["history_limit"], HARD_LIMIT)
-
-        msgs = []
-        async for m in self.client.iter_messages(cid, limit=limit + 50):
-            if m.sender and not (getattr(m.sender, "username", "") or "").endswith("_bot"):
-                msgs.append(m)
-            if len(msgs) >= limit:
-                break
-        msgs = msgs[-limit:]
-
-        user_id = None
-        user_name = None
-        if reply := await message.get_reply_message():
-            user_id = reply.sender_id
-            user_name = self.safe_name(reply.sender)
-        else:
-            arg = utils.get_args_raw(message).strip()
-            if arg.startswith("@"):
-                try:
-                    ent = await self.client.get_entity(arg[1:])
-                    user_id = ent.id
-                    user_name = self.safe_name(ent)
-                except Exception:
-                    pass
-            elif arg.isdigit():
-                try:
-                    ent = await self.client.get_entity(int(arg))
-                    user_id = ent.id
-                    user_name = self.safe_name(ent)
-                except Exception:
-                    pass
-
+    async def _generate_summary(self, msgs: List[Message], user_id: Optional[int], user_name: Optional[str]) -> tuple[str, str]:
         if user_id is not None:
             msgs = [m for m in msgs if m.sender_id == user_id]
-            if not msgs:
-                await utils.answer(message, "<b>Нет сообщений от этого пользователя в выбранном диапазоне.</b>")
-                return
             raw_text = await self._prep_user(msgs, user_id)
             header = self.strings["done_user"].format(limit=len(msgs), nick=user_name)
         else:
             raw_text = await self._prep_all(msgs)
             header = self.strings["done_all"].format(limit=len(msgs))
-
-        if not msgs:
-            await utils.answer(message, "<b>Сообщений нет.</b>")
-            return
-
-        await message.delete()
 
         mode = self.config["mode"]
         tone_map = {
@@ -248,15 +280,90 @@ class HistAI(loader.Module):
 
         ai_text = await self._ask(prompt, raw_text)
         if ai_text == "BLOCKED":
-            pages = [self.strings["blocked"]]
+            return self.strings["blocked"], header
         elif ai_text.startswith("Ошибка") or ai_text.startswith("Gemini error"):
-            pages = [ai_text]
+            return ai_text, header
         else:
             ai_text = ai_text.replace("**", "")
-            pages = self._paginate(ai_text)
+            return ai_text, header
 
+    @loader.command(
+        ru_doc="Показать всё, что происходило пока ты отошёл. Использование: .ch [количество] [@username/reply]",
+        en_doc="Show what happened while you were away. Usage: .ch [count] [@username/reply]",
+    )
+    async def ch(self, message: Message):
+        if not self.config["gemini_key"] and not os.getenv("GOOGLE_API_KEY"):
+            await utils.answer(message, self.strings["no_key"])
+            return
+
+        args = utils.get_args_raw(message)
+        limit_arg, target_arg = self._parse_args(args)
+        
+        limit = limit_arg if limit_arg else self.config["history_limit"]
+        if limit > HARD_LIMIT:
+            await utils.answer(message, self.strings["invalid_limit"].format(max=HARD_LIMIT))
+            return
+
+        cid = utils.get_chat_id(message)
+        user_id, user_name = await self._get_target_user(message, target_arg)
+
+        topic_id = None
+        if hasattr(message, 'reply_to') and message.reply_to:
+            if hasattr(message.reply_to, 'reply_to_top_id') and message.reply_to.reply_to_top_id:
+                topic_id = message.reply_to.reply_to_top_id
+            elif hasattr(message.reply_to, 'reply_to_msg_id') and message.reply_to.reply_to_msg_id:
+                topic_id = message.reply_to.reply_to_msg_id
+        else:
+            try:
+                chat = await self.client.get_entity(cid)
+                if hasattr(chat, 'forum') and chat.forum:
+                    topic_id = 1
+            except:
+                pass
+
+        msgs = []
+        try:
+            async for m in self.client.iter_messages(cid, limit=limit + 50, reply_to=topic_id):
+                sender_username = ""
+                if m.sender and hasattr(m.sender, "username"):
+                    sender_username = m.sender.username or ""
+                
+                if not sender_username.endswith("_bot"):
+                    msgs.append(m)
+                if len(msgs) >= limit:
+                    break
+        except Exception as e:
+            if "MsgIdInvalidError" in str(e) or "invalid" in str(e).lower():
+                async for m in self.client.iter_messages(cid, limit=limit + 50):
+                    sender_username = ""
+                    if m.sender and hasattr(m.sender, "username"):
+                        sender_username = m.sender.username or ""
+                    
+                    if not sender_username.endswith("_bot"):
+                        msgs.append(m)
+                    if len(msgs) >= limit:
+                        break
+            else:
+                raise
+        msgs = msgs[-limit:]
+
+        if user_id is not None:
+            msgs = [m for m in msgs if m.sender_id == user_id]
+            if not msgs:
+                await utils.answer(message, "<b>Нет сообщений от этого пользователя в выбранном диапазоне.</b>")
+                return
+
+        if not msgs:
+            await utils.answer(message, "<b>Сообщений нет.</b>")
+            return
+
+        await message.delete()
+        
+        ai_text, header = await self._generate_summary(msgs, user_id, user_name)
+        pages = self._paginate(ai_text)
+        
         self._db[f"hist:{cid}"] = pages if pages != [""] else None
-        await self._send_page(cid, pages, 0, header, message.reply_to_msg_id or message.id)
+        await self._send_page(message, pages, 0, header)
 
     @loader.callback_handler()
     async def _flip_page(self, call):
@@ -280,6 +387,25 @@ class HistAI(loader.Module):
             return
 
         header = call.message.text.split("\n\n<blockquote expandable>")[0]
-        await self._send_page(cid, pages, idx, header,
-                              call.message.reply_to_msg_id or call.message.id)
-        await call.message.delete()
+        
+        reply_to = None
+        if hasattr(call.message, 'reply_to') and call.message.reply_to:
+            if hasattr(call.message.reply_to, 'reply_to_top_id') and call.message.reply_to.reply_to_top_id:
+                reply_to = call.message.reply_to.reply_to_top_id
+            elif hasattr(call.message.reply_to, 'reply_to_msg_id') and call.message.reply_to.reply_to_msg_id:
+                reply_to = call.message.reply_to.reply_to_msg_id
+        
+        kb = []
+        if len(pages) > 1:
+            row = []
+            if idx:
+                row.append(Button.inline("⬅️", f"{CB_PREFIX}{idx-1}"))
+            row.append(Button.inline(self.strings["page"].format(cur=idx+1, total=len(pages)), "noop"))
+            if idx < len(pages) - 1:
+                row.append(Button.inline("➡️", f"{CB_PREFIX}{idx+1}"))
+            kb = [row]
+        
+        await call.message.edit(
+            f"{header}\n\n<blockquote expandable>{pages[idx]}</blockquote>",
+            buttons=kb or None
+        )
