@@ -116,7 +116,7 @@ class Gemini(loader.Module):
                 "api_key", "", self.strings["cfg_api_key_doc"],
                 validator=loader.validators.Hidden()
             ),
-            loader.ConfigValue("model_name", "gemini-1.5-flash", self.strings["cfg_model_name_doc"]),
+            loader.ConfigValue("model_name", "gemini-2.5-flash", self.strings["cfg_model_name_doc"]),
             loader.ConfigValue("interactive_buttons", True, self.strings["cfg_buttons_doc"], validator=loader.validators.Boolean()),
             loader.ConfigValue("system_instruction", "", self.strings["cfg_system_instruction_doc"], validator=loader.validators.String()),
             loader.ConfigValue("max_history_length", 800, self.strings["cfg_max_history_length_doc"], validator=loader.validators.Integer(minimum=0)),
