@@ -1,7 +1,6 @@
-# meta developer: bio.kezuhiro.fun
+# meta developer: @cachedfiles
 
 import subprocess
-import traceback
 from .. import loader, utils
 
 @loader.tds
@@ -32,3 +31,4 @@ class NeofetchMod(loader.Module):
             
         except FileNotFoundError:
             await utils.answer(message, self.strings("not_installed"))
+    
