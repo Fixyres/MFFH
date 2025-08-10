@@ -1,4 +1,4 @@
-# meta developer: bio.kezuhiro.fun
+# meta developer: @cachedfiles
 
 from .. import loader, utils
 import os
@@ -66,3 +66,4 @@ class VoiceToTextMod(loader.Module):
         finally:
             os.remove(media_file)
             os.remove(wav_file)
+    
