@@ -7,7 +7,6 @@
 # meta banner: https://i.ibb.co/3yNfKRLL/image-10490.jpg
 # meta developer: @toxano_modules 
 # scope: @toxano_modules
-# ТЕСТИИИИИИИИИИНГГГГГГГГГГГГГ
 
 import asyncio
 import random
