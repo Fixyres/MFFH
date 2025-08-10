@@ -1,8 +1,14 @@
-# meta developer: @radiocycle
+# meta developer: @cachedfiles
 
 import requests
 import asyncio
+import logging
+import traceback
+from logging import basicConfig
 from .. import loader, utils
+
+basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @loader.tds
 class RandomAnimePicMod(loader.Module):
@@ -25,7 +31,7 @@ class RandomAnimePicMod(loader.Module):
   async def rapiccmd(self, message):
     """- fetch random anime-pic 👀"""
     
-    msg = await utils.answer(message, self.strings("loading"))
+    await utils.answer(message, self.strings("loading"))
 
     try:
       res = requests.get("https://api.nekosia.cat/api/v1/images/cute?count=1")
@@ -35,13 +41,11 @@ class RandomAnimePicMod(loader.Module):
       
       await asyncio.sleep(2)
       
-      await self._client.send_file(message.peer_id, image_url, caption=self.strings("img").format(image_url), reply=message.reply_to_msg_id)
-      
-      await msg.delete()
+      await utils.answer(message, self.strings("img").format(image_url), file=image_url, reply_to=message.reply_to_msg_id)
     
     except Exception:
-      msg = await utils.answer(message, self.strings("error"))
+      logger.error("Error fetching random anime pic: %s", traceback.format_exc())
+
+      await utils.answer(message, self.strings("error"))
       
       await asyncio.sleep(5)
-      
-      await msg.delete()
