@@ -1,14 +1,12 @@
-# meta developer: bio.kezuhiro.fun
+# meta developer: @cachedfiles
 
 from .. import loader, utils
 import asyncio
-import os
-import requests
 
 @loader.tds
 class PlayerCTLMod(loader.Module):
     """Управление музыкой через playerctl. Только для Linux."""
-    strings_ru = {
+    strings = {
         "name": "PlayerCTL",
         "no_player": "<b>Нет доступного плеера</b>",
         "now_playing": (
