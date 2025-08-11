@@ -10,9 +10,9 @@ class UserChecker(loader.Module):
 
     strings = {
         "name": "UserChecker",
-        "searching": "🔍 Ищу 5 свободных юзернеймов...",
+        "searching": "🔍 Ищу свободные юзернеймы...",
         "found": "🎉 Найдены свободные юзернеймы:\n\n{}",
-        "not_found": "😕 Не удалось найти 5 свободных юзернеймов за 100 попыток",
+        "not_found": "😕 Не удалось найти свободные юзернеймы за 100 попыток",
         "error": "⚠️ Ошибка: {}",
     }
 
@@ -24,11 +24,11 @@ class UserChecker(loader.Module):
         """Проверка через client.get_entity()"""
         try:
             await self.client.get_entity(username)
-            return False  
+            return False  # Если юзернейм существует
         except ValueError:
-            return True   
+            return True   # Если юзернейм свободен
         except Exception:
-            return False  
+            return False  # Другие ошибки считаем занятым
 
     @loader.command(
         ru_doc="Найти 5 свободных юзернеймов",
@@ -48,7 +48,7 @@ class UserChecker(loader.Module):
                 if await self.check_username(username):
                     usernames.append(f"• @{username} - t.me/{username}")
                 attempts += 1
-                await asyncio.sleep(0.3)  
+                await asyncio.sleep(0.3)  # Оптимальная задержка
 
             if usernames:
                 result = self.strings["found"].format("\n".join(usernames[:5]))  # Берем первые 5
