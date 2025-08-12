@@ -27,7 +27,7 @@ class NeofetchMod(loader.Module):
         try:
             result = subprocess.run(["neofetch", "--stdout"], capture_output=True, text=True)
             output = result.stdout
-            await utils.answer(message, f"<blockquote expandable>{utils.escape_html(output)}</blockquote>")
+            await utils.answer(message, f"<pre>{utils.escape_html(output)}</pre>")
             
         except FileNotFoundError:
             await utils.answer(message, self.strings("not_installed"))
