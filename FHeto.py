@@ -7,7 +7,7 @@ class FHeto(loader.Module):
     strings = {"name": "FHeto"}
 
     def __init__(self):
-        self._url = "https://"
+        self._url = "https://raw.githubusercontent.com/Fixyres/MFFH/refs/heads/main/FHeto.py"
 
     async def client_ready(self, client, db):
         data = requests.get("https://api.fixyres.com/modules_db", verify=False).json()
