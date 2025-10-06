@@ -48,8 +48,5 @@ class FHeto(loader.Module):
 
     async def on_unload(self):
         lm = self.lookup("loader")
-        try:
-            await asyncio.wait_for(lm.download_and_install(self._url, None), timeout=10)
-            getattr(lm, "fully_loaded", False) and lm.update_modules_in_db()
-        except asyncio.TimeoutError:
-            pass
+        await asyncio.wait_for(lm.download_and_install(self._url, None), timeout=10)
+        getattr(lm, "fully_loaded", False) and lm.update_modules_in_db()
