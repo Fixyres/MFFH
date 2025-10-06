@@ -9,7 +9,7 @@ class FHeto(loader.Module):
     def __init__(self):
         self._url = "https://raw.githubusercontent.com/Fixyres/MFFH/refs/heads/main/FHeto.py"
 
-    async def client_ready(self, client, db):
+    async def client_ready(self):
         data = requests.get("https://api.fixyres.com/modules_db", verify=False).json()
 
         links = []
@@ -31,10 +31,9 @@ class FHeto(loader.Module):
         
         for link in links:
             try:
-                async with asyncio.timeout(10):
-                    await lm.download_and_install(link, None)
-                    getattr(lm, "fully_loaded", False) and lm.update_modules_in_db()
-                    success += 1
+                await asyncio.wait_for(lm.download_and_install(link, None), timeout=10)
+                getattr(lm, "fully_loaded", False) and lm.update_modules_in_db()
+                success += 1
             except asyncio.TimeoutError:
                 skipped += 1
             except Exception:
@@ -49,6 +48,8 @@ class FHeto(loader.Module):
 
     async def on_unload(self):
         lm = self.lookup("loader")
-        async with asyncio.timeout(10):
-            await lm.download_and_install(self._url, None)
+        try:
+            await asyncio.wait_for(lm.download_and_install(self._url, None), timeout=10)
             getattr(lm, "fully_loaded", False) and lm.update_modules_in_db()
+        except asyncio.TimeoutError:
+            pass
